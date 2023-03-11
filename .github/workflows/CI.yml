@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.0'
+         # - '1.0' using too many new features not compatible with 1.0
           - '1.8'
-          - 'nightly'
+         # - 'nightly' not interested in nightly for now
         os:
           - ubuntu-latest
         arch:
