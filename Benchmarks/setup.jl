@@ -1,5 +1,5 @@
 using Symbolics
-using Differentiation.SphericalHarmonics
+using FastSymbolicDifferentiation.SphericalHarmonics
 using DataFrames
 using DifferentiationBenchmarks
 using Plots

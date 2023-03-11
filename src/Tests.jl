@@ -6,8 +6,8 @@ import Symbolics
 using StaticArrays
 
 using ..SphericalHarmonics
-using ..Differentiation
-using ..Differentiation.GraphProcessing
+using ..FastSymbolicDifferentiation
+using ..FastSymbolicDifferentiation.GraphProcessing
 
 using TestItems
 
@@ -139,13 +139,13 @@ with these factorable subgraphs
 function complex_dominator_dag()
     Symbolics.@variables zz
     # generate node dag explicitly rather than starting from Symbolics expression because don't know how Symbolics might rearrange the nodes, causing the postorder numbers to change for tests.
-    nx = Differentiation.Node(zz.val)
-    sinx = Differentiation.Node(sin, MVector(nx))
-    cosx = Differentiation.Node(cos, MVector(nx))
-    A = Differentiation.Node(*, MVector(cosx, sinx))
-    sinA = Differentiation.Node(sin, MVector(A))
-    expsin = Differentiation.Node(*, MVector(A, Differentiation.Node(exp, MVector(sinx))))
-    plus = Differentiation.Node(+, MVector(sinA, expsin))
+    nx = FastSymbolicDifferentiation.Node(zz.val)
+    sinx = FastSymbolicDifferentiation.Node(sin, MVector(nx))
+    cosx = FastSymbolicDifferentiation.Node(cos, MVector(nx))
+    A = FastSymbolicDifferentiation.Node(*, MVector(cosx, sinx))
+    sinA = FastSymbolicDifferentiation.Node(sin, MVector(A))
+    expsin = FastSymbolicDifferentiation.Node(*, MVector(A, FastSymbolicDifferentiation.Node(exp, MVector(sinx))))
+    plus = FastSymbolicDifferentiation.Node(+, MVector(sinA, expsin))
     return plus
 end
 export complex_dominator_dag
@@ -216,8 +216,8 @@ end
     expr_to_dag.(A)
 end
 
-@testitem "conversion from graph of Differentiation.Node to Symbolics expression" begin
-    using Differentiation.SphericalHarmonics
+@testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
+    using FastSymbolicDifferentiation.SphericalHarmonics
     import Symbolics
 
     order = 7
@@ -622,7 +622,7 @@ end
 
     previous_edges = unique_edges(graph)
     new_edge = PathEdge(1, 7, Node(y), length(variables), length(roots))
-    Differentiation.add_edge!(graph, new_edge)
+    FastSymbolicDifferentiation.add_edge!(graph, new_edge)
 
     #make sure existing edges are still in the graph.
     for edge in previous_edges
@@ -655,7 +655,7 @@ end
 
             #can't delete edge till roots or variables are all unreachable
 
-            Differentiation.delete_edge!(graph, edge)
+            FastSymbolicDifferentiation.delete_edge!(graph, edge)
             @test !edge_exists(graph, edge) #make sure edge has been deleted from graph
 
             delete!(all_edges, edge) #now delete edge and see if all the other edges that are still supposed to be in the graph are still there
@@ -799,7 +799,7 @@ end
 @testitem "dom_subgraph && pdom_subgraph" begin
     using Symbolics
     using .GraphProcessing
-    using Differentiation: dom_subgraph, pdom_subgraph
+    using FastSymbolicDifferentiation: dom_subgraph, pdom_subgraph
 
     @variables x, y
 
@@ -1037,7 +1037,7 @@ end
 
     function edges(a::FactorableSubgraph{T}, is_dominator::Bool) where {T}
         result = PathEdge{T}[]
-        path_constraint = Differentiation.next_edge_constraint(a)
+        path_constraint = FastSymbolicDifferentiation.next_edge_constraint(a)
 
         for start_edge in GraphProcessing.relation_edges(path_constraint, dominated_node(a))
             pedges = edges_on_path(path_constraint, dominating_node(a), is_dominator, start_edge)
@@ -1047,8 +1047,8 @@ end
     end
 
     "returns edges in the subgraph `a` satisfying the constraint `dominance_mask(a) ⊆ reachable_roots(a)`"
-    edges(a::FactorableSubgraph{T,Differentiation.DominatorSubgraph}) where {T} = edges(a, true)
-    edges(a::FactorableSubgraph{T,Differentiation.PostDominatorSubgraph}) where {T} = edges(a, false)
+    edges(a::FactorableSubgraph{T,FastSymbolicDifferentiation.DominatorSubgraph}) where {T} = edges(a, true)
+    edges(a::FactorableSubgraph{T,FastSymbolicDifferentiation.PostDominatorSubgraph}) where {T} = edges(a, false)
 
     @variables x y
 
@@ -1375,7 +1375,7 @@ end
 end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
-    using Differentiation.SphericalHarmonics
+    using FastSymbolicDifferentiation.SphericalHarmonics
     using FiniteDifferences
 
     fsd_graph, x, y, z = to_graph(10)
@@ -1411,7 +1411,7 @@ end
 end
 
 @testitem "Chebyshev jacobian evaluation test" begin
-    using Differentiation.SphericalHarmonics
+    using FastSymbolicDifferentiation.SphericalHarmonics
     using FiniteDifferences
 
     fsd_graph = chebyshev_graph(20)

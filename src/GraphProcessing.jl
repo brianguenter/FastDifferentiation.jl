@@ -1,5 +1,5 @@
 module GraphProcessing
-using Differentiation: RnToRmGraph, roots, variables, nodes, _node_edges, children, parents, root_index_to_postorder_number, variable_index_to_postorder_number, each_vertex, top_vertex, bott_vertex, PathEdge, edges, reachable_roots, reachable_variables, codomain_dimension, domain_dimension, subset, is_zero, to_string, EdgeRelations
+using FastSymbolicDifferentiation: RnToRmGraph, roots, variables, nodes, _node_edges, children, parents, root_index_to_postorder_number, variable_index_to_postorder_number, each_vertex, top_vertex, bott_vertex, PathEdge, edges, reachable_roots, reachable_variables, codomain_dimension, domain_dimension, subset, is_zero, to_string, EdgeRelations
 using StaticArrays
 using DataStructures
 
@@ -295,12 +295,12 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
     #ERROR: TaskFailedException
     # Stacktrace:
     # [1] wait @ .\task.jl:345 [inlined]
-    # [2] threading_run(fun::Differentiation.GraphProcessing.var"#279#threadsfor_fun#74"{Differentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}},
+    # [2] threading_run(fun::FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}},
     # static::Bool) @ Base.Threads .\threadingconstructs.jl:38
     # [3] macro expansion @ .\threadingconstructs.jl:89 [inlined]       
-    # [4] compute_dominance_tables(graph::RnToRmGraph{Int64}, compute_dominators::Bool) @ Differentiation.GraphProcessing c:\Users\seatt\source\Differentiation\src\GraphProcessing.jl:207
-    # [5] factor @ c:\Users\seatt\source\Differentiation\src\RnToRmGraph.jl:287 [inlined]
-    # [6] test(dag::Vector{Node}) @ Differentiation c:\Users\seatt\source\Differentiation\src\Test.jl:159
+    # [4] compute_dominance_tables(graph::RnToRmGraph{Int64}, compute_dominators::Bool) @ FastSymbolicDifferentiation.GraphProcessing c:\Users\seatt\source\FastSymbolicDifferentiation\src\GraphProcessing.jl:207
+    # [5] factor @ c:\Users\seatt\source\FastSymbolicDifferentiation\src\RnToRmGraph.jl:287 [inlined]
+    # [6] test(dag::Vector{Node}) @ FastSymbolicDifferentiation c:\Users\seatt\source\FastSymbolicDifferentiation\src\Test.jl:159
     # [7] top-level scope @ REPL[73]:1
 
     #    nested task error: MethodError: no method matching firstindex(::Dict{Int64, Int64})
@@ -312,7 +312,7 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
     #    Stacktrace:
     #     [1] #279#threadsfor_fun#70 @ .\threadingconstructs.jl:69 [inlined]
     #     [2] #279#threadsfor_fun @ .\threadingconstructs.jl:51 [inlined]
-    #     [3] (::Base.Threads.var"#1#2"{Differentiation.GraphProcessing.var"#279#threadsfor_fun#74"{Differentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}}, Int64})() @ Base.Threads .\threadingconstructs.jl:30  
+    #     [3] (::Base.Threads.var"#1#2"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}}, Int64})() @ Base.Threads .\threadingconstructs.jl:30  
 
 
     for (start_index, node_postorder_number) in pairs(start_vertices)

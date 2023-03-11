@@ -226,8 +226,8 @@ SymbolicUtils.@number_methods(Node, check_cache((f, a), EXPRESSION_CACHE), simpl
 # end
 
 # struct Differential
-#     expression::Differentiation.Node #expression to take derivative of
-#     with_respect_to::Differentiation.Node #variable or internal node to take derivative wrt
+#     expression::FastSymbolicDifferentiation.Node #expression to take derivative of
+#     with_respect_to::FastSymbolicDifferentiation.Node #variable or internal node to take derivative wrt
 # end
 
 # derivative(f, args, v) = NoDeriv()

@@ -1,6 +1,6 @@
 module SphericalHarmonics
 using Symbolics
-using Differentiation
+using FastSymbolicDifferentiation
 using Memoize
 
 @memoize function P(l, m, z)

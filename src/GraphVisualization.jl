@@ -3,7 +3,7 @@ module Vis
 using Colors
 using ColorTypes
 using FixedPointNumbers
-using ..Differentiation
+using ..FastSymbolicDifferentiation
 
 using GraphRecipes
 using Plots
