@@ -1,0 +1,1 @@
+#TODO need to add a test that deletes all the edges incident on a vertex and ensures that vertex is deleted.
