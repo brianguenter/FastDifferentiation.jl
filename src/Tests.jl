@@ -7,7 +7,6 @@ using StaticArrays
 
 using ..SphericalHarmonics
 using ..FastSymbolicDifferentiation
-using ..FastSymbolicDifferentiation.GraphProcessing
 
 using TestItems
 
@@ -510,9 +509,9 @@ end
         BitArray([1, 1])
     ]
 
-    variable_path_masks = GraphProcessing.compute_paths_to_variables(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph))
+    variable_path_masks = compute_paths_to_variables(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph))
     @test variable_path_masks == correct_variable_pathmasks
-    parent_path_masks = GraphProcessing.compute_paths_to_roots(num_vertices(graph), edges(graph), root_index_to_postorder_number(graph))
+    parent_path_masks = compute_paths_to_roots(num_vertices(graph), edges(graph), root_index_to_postorder_number(graph))
     @test parent_path_masks == correct_roots_pathmasks
 end
 
@@ -530,33 +529,33 @@ end
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
     graph = RnToRmGraph(roots)
-    root_masks = GraphProcessing.compute_paths_to_roots(num_vertices(graph), edges(graph), root_index_to_postorder_number(graph))
-    variable_masks = GraphProcessing.compute_paths_to_variables(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph))
+    root_masks = compute_paths_to_roots(num_vertices(graph), edges(graph), root_index_to_postorder_number(graph))
+    variable_masks = compute_paths_to_variables(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph))
 
-    piterator = GraphProcessing.DomPathConstraint(graph, true, 1)
+    piterator = DomPathConstraint(graph, true, 1)
 
     parents = Int64[]
     correct_parents = (postorder_number(graph, xy))
-    for parent in GraphProcessing.relation_node_indices(piterator, postorder_number(graph, nx))
+    for parent in relation_node_indices(piterator, postorder_number(graph, nx))
         push!(parents, parent)
     end
 
     @test length(parents) == 1
     @test parents[1] == postorder_number(graph, xy)
 
-    piterator = GraphProcessing.DomPathConstraint(graph, true, 1)
+    piterator = DomPathConstraint(graph, true, 1)
     parents = Int64[]
     pnum = postorder_number(graph, xy)
-    for parent in GraphProcessing.relation_node_indices(piterator, pnum)
+    for parent in relation_node_indices(piterator, pnum)
         push!(parents, parent)
     end
     @test length(parents) == 1
     @test postorder_number(graph, f1) == parents[1]
 
-    piterator = GraphProcessing.DomPathConstraint(graph, true, 2)
+    piterator = DomPathConstraint(graph, true, 2)
 
     parents = Int64[]
-    for parent in GraphProcessing.relation_node_indices(piterator, postorder_number(graph, xy))
+    for parent in relation_node_indices(piterator, postorder_number(graph, xy))
         push!(parents, parent)
     end
 
@@ -564,17 +563,17 @@ end
     @test postorder_number(graph, f2) == parents[1]
 
 
-    viterator = GraphProcessing.DomPathConstraint(graph, false, 1)
+    viterator = DomPathConstraint(graph, false, 1)
     children = Int64[]
-    for child in GraphProcessing.relation_node_indices(viterator, postorder_number(graph, xy))
+    for child in relation_node_indices(viterator, postorder_number(graph, xy))
         push!(children, child)
     end
     @test length(children) == 1
     @test children[1] == postorder_number(graph, nx)
 
-    viterator = GraphProcessing.DomPathConstraint(graph, false, 2)
+    viterator = DomPathConstraint(graph, false, 2)
     children = Int64[]
-    for child in GraphProcessing.relation_node_indices(viterator, postorder_number(graph, xy))
+    for child in relation_node_indices(viterator, postorder_number(graph, xy))
         push!(children, child)
     end
     @test length(children) == 1
@@ -685,7 +684,7 @@ end
 
 @testitem "compute_edge_paths" begin
     using Symbolics
-    using .GraphProcessing
+
 
     @variables x, y
 
@@ -699,7 +698,7 @@ end
     roots = [f1, f2]
     variables = [nx, ny]
     graph = RnToRmGraph(roots)
-    GraphProcessing.compute_edge_paths!(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
+    compute_edge_paths!(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
     correct_root_masks = Dict(
         (4, 2) => BitVector([1, 1]),
@@ -730,7 +729,7 @@ end
 
 @testitem "dominators RnToRmGraph" begin
     using Symbolics
-    using .GraphProcessing
+
 
     @variables x, y
 
@@ -743,7 +742,7 @@ end
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
     graph = RnToRmGraph(roots)
-    idoms = GraphProcessing.compute_dominance_tables(graph, true)
+    idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 5, 4 => 5, 2 => 4, 3 => 4, 5 => 5),
@@ -768,7 +767,7 @@ end
 
     roots = [n7, nexp]
     graph = RnToRmGraph(roots)
-    idoms = GraphProcessing.compute_dominance_tables(graph, true)
+    idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 2, 2 => 5, 3 => 7, 4 => 5, 5 => 7, 6 => 7, 7 => 7),
@@ -781,7 +780,7 @@ end
         end
     end
 
-    pidoms = GraphProcessing.compute_dominance_tables(graph, false)
+    pidoms = compute_dominance_tables(graph, false)
 
     correct_post_dominators = [
         (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 8 => 6),
@@ -798,7 +797,7 @@ end
 
 @testitem "dom_subgraph && pdom_subgraph" begin
     using Symbolics
-    using .GraphProcessing
+
     using FastSymbolicDifferentiation: dom_subgraph, pdom_subgraph
 
     @variables x, y
@@ -809,8 +808,8 @@ end
     ntimes2 = Node(*, ncos, ntimes1)
     roots = [ntimes2, ntimes1]
     graph = RnToRmGraph(roots)
-    idoms = GraphProcessing.compute_dominance_tables(graph, true)
-    pidoms = GraphProcessing.compute_dominance_tables(graph, false)
+    idoms = compute_dominance_tables(graph, true)
+    pidoms = compute_dominance_tables(graph, false)
 
     r1_doms = ((4, 1), (4, 2))
     v1_pdoms = ((1, 3), (1, 4))
@@ -985,20 +984,20 @@ end
 
     rmask = dominance_mask(sub_5_3)
     V = reachable_variables(sub_5_3)
-    up_constraint = GraphProcessing.PathConstraint(dominating_node(sub_5_3), graph, true, rmask, V)
+    up_constraint = PathConstraint(dominating_node(sub_5_3), graph, true, rmask, V)
     dominating = sub_5_3.subgraph[1]
     dominated = sub_5_3.subgraph[2]
     path_edges1 = [edges(graph, 4, 3)[1], edges(graph, 5, 4)[1]]
     path_edges2 = [edges(graph, 5, 3)[1]]
 
     #test for dominator subgraph (5,3)
-    up_edges = GraphProcessing.relation_edges(up_constraint, dominated)
+    up_edges = relation_edges(up_constraint, dominated)
     @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(up_constraint, dominating, true, up_edges[1])))
     @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(up_constraint, dominating, true, up_edges[2])))
 
     #test for postdominator subgraph (3,5)
-    down_constraint = GraphProcessing.PathConstraint(dominating_node(sub_3_5), graph, false, reachable_roots(sub_3_5), dominance_mask(sub_3_5))
-    down_edges = GraphProcessing.relation_edges(down_constraint, dominating)
+    down_constraint = PathConstraint(dominating_node(sub_3_5), graph, false, reachable_roots(sub_3_5), dominance_mask(sub_3_5))
+    down_edges = relation_edges(down_constraint, dominating)
     @test all(x -> x[1] == x[2], zip(reverse(path_edges1), edges_on_path(down_constraint, dominated, false, down_edges[1])))
     @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(down_constraint, dominated, false, down_edges[2])))
 
@@ -1011,16 +1010,16 @@ end
     dominated = sub_4_1.subgraph[2]
 
     #test for dominator subgraph (4,1)
-    up_constraint = GraphProcessing.PathConstraint(dominating_node(sub_4_1), graph, true, dominance_mask(sub_4_1), reachable_variables(sub_4_1))
-    up_edges = GraphProcessing.relation_edges(up_constraint, dominated)
+    up_constraint = PathConstraint(dominating_node(sub_4_1), graph, true, dominance_mask(sub_4_1), reachable_variables(sub_4_1))
+    up_edges = relation_edges(up_constraint, dominated)
     @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(up_constraint, dominating, true, up_edges[1])))
     @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(up_constraint, dominating, true, up_edges[2])))
 
     dominating = sub_1_4.subgraph[1]
     dominated = sub_1_4.subgraph[2]
     #test for postdominator subgraph (1,4)
-    down_constraint = GraphProcessing.PathConstraint(dominating_node(sub_1_4), graph, false, reachable_roots(sub_1_4), dominance_mask(sub_1_4))
-    down_edges = GraphProcessing.relation_edges(down_constraint, dominated)
+    down_constraint = PathConstraint(dominating_node(sub_1_4), graph, false, reachable_roots(sub_1_4), dominance_mask(sub_1_4))
+    down_edges = relation_edges(down_constraint, dominated)
     @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(down_constraint, dominating, false, down_edges[1])))
     @test all(x -> x[1] == x[2], zip(reverse(path_edges2), edges_on_path(down_constraint, dominating, false, down_edges[2])))
 end
@@ -1039,7 +1038,7 @@ end
         result = PathEdge{T}[]
         path_constraint = FastSymbolicDifferentiation.next_edge_constraint(a)
 
-        for start_edge in GraphProcessing.relation_edges(path_constraint, dominated_node(a))
+        for start_edge in relation_edges(path_constraint, dominated_node(a))
             pedges = edges_on_path(path_constraint, dominating_node(a), is_dominator, start_edge)
             append!(result, pedges)
         end

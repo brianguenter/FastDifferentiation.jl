@@ -9,10 +9,7 @@ using Profile
 using PProf
 
 function test()
-    order = 7
-    Symbolics.@variables x y z
-
-    derivs = SHDerivatives(order, x, y, z)
+    graph, four_2_subgraph, one_3_subgraph, _ = simple_dominator_dgraph()
 end
 export test
 

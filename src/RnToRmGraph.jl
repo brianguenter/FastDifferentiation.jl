@@ -132,7 +132,7 @@ struct RnToRmGraph{T<:Integer}
         end
 
         num_nodes = length(postorder_number)
-        GraphProcessing.compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
+        compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
         # show(timer)
         return new{index_type}(
             postorder_number,

@@ -17,16 +17,16 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
     function FactorableSubgraph{T,DominatorSubgraph}(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node > dominated_node
         dominator_relation_edges = length(child_edges(graph, dominating_node)) #when graph is created all children of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
-        constraint = GraphProcessing.PathConstraint(dominating_node, graph, true, dom_mask, variables_reachable)
-        dominated_relation_edges = length(GraphProcessing.relation_edges(constraint, dominated_node))
+        constraint = PathConstraint(dominating_node, graph, true, dom_mask, variables_reachable)
+        dominated_relation_edges = length(relation_edges(constraint, dominated_node))
         return new{T,DominatorSubgraph}(graph, (dominating_node, dominated_node), sum(dom_mask) * sum(variables_reachable), roots_reachable, variables_reachable, dom_mask, nothing, dominator_relation_edges, dominated_relation_edges)
     end
 
     function FactorableSubgraph{T,PostDominatorSubgraph}(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node < dominated_node
         dominator_relation_edges = length(parent_edges(graph, dominating_node)) #when graph is created all parents of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
-        constraint = GraphProcessing.PathConstraint(dominating_node, graph, false, roots_reachable, pdom_mask)
-        dominated_relation_edges = length(GraphProcessing.relation_edges(constraint, dominated_node))
+        constraint = PathConstraint(dominating_node, graph, false, roots_reachable, pdom_mask)
+        dominated_relation_edges = length(relation_edges(constraint, dominated_node))
         return new{T,PostDominatorSubgraph}(graph, (dominating_node, dominated_node), sum(roots_reachable) * sum(pdom_mask), roots_reachable, variables_reachable, nothing, pdom_mask, dominator_relation_edges, dominated_relation_edges)
     end
 end
@@ -128,7 +128,7 @@ end
 
 """Traverse edges in `subgraph` to see if `dominating_node(subgraph)` is still the idom of `dominated_node(subgraph)` or if factorization has destroyed the subgraph. If there are two or more paths from dominated to dominating node and there are no branches on these paths then the subgraph still exists."""
 function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{PostDominatorSubgraph,DominatorSubgraph}}
-    start_edges = GraphProcessing.relation_edges(constraint, dominated_node(subgraph))
+    start_edges = relation_edges(constraint, dominated_node(subgraph))
     if length(start_edges) == 0 || length(start_edges) == 1
         return false #subgraph has been destroyed
     else
@@ -156,7 +156,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
     constraint = next_edge_constraint(subgraph)
     dgraph = graph(subgraph)
 
-    sub_edges = GraphProcessing.relation_edges(constraint, dominated_node(subgraph)) #need at least two parent edges from dominated_node or subgraph doesn't exist
+    sub_edges = relation_edges(constraint, dominated_node(subgraph)) #need at least two parent edges from dominated_node or subgraph doesn't exist
     if sub_edges === nothing
         return false
     elseif length(sub_edges) < 2
@@ -205,11 +205,11 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
     constraint = next_edge_constraint(subgraph)
     dgraph = graph(subgraph)
 
-    g_edges = GraphProcessing.edges(dgraph)
+    g_edges = edges(dgraph)
     if get(g_edges, dominated_node(subgraph), nothing) === nothing
         return false
     else
-        sub_edges = GraphProcessing.relation_edges(constraint, dominated_node(subgraph))
+        sub_edges = relation_edges(constraint, dominated_node(subgraph))
         if length(sub_edges) < 2
             return false
         else

@@ -1,5 +1,5 @@
-module GraphProcessing
-using FastSymbolicDifferentiation: RnToRmGraph, roots, variables, nodes, _node_edges, children, parents, root_index_to_postorder_number, variable_index_to_postorder_number, each_vertex, top_vertex, bott_vertex, PathEdge, edges, reachable_roots, reachable_variables, codomain_dimension, domain_dimension, subset, is_zero, to_string, EdgeRelations
+# module GraphProcessing
+# using FastSymbolicDifferentiation: RnToRmGraph, roots, variables, nodes, _node_edges, children, parents, root_index_to_postorder_number, variable_index_to_postorder_number, each_vertex, top_vertex, bott_vertex, PathEdge, edges, reachable_roots, reachable_variables, codomain_dimension, domain_dimension, subset, is_zero, to_string, EdgeRelations
 using StaticArrays
 using DataStructures
 
@@ -20,6 +20,7 @@ struct DomPathConstraint{T<:Integer}
         return new{T}(graph, iterate_parents, roots_mask, variables_mask, relations)
     end
 end
+export DomPathConstraint
 
 function DomPathConstraint(graph::RnToRmGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
@@ -57,6 +58,7 @@ struct PathConstraint{T<:Integer}
         return new{T}(dominating_node::T, graph, iterate_parents, roots_mask, variables_mask, relations)
     end
 end
+export PathConstraint
 
 function PathConstraint(graph::RnToRmGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
@@ -186,12 +188,6 @@ function relation_edges(a::PathConstraint, edge::PathEdge)
 end
 export relation_edges
 
-function zero_bit_vector(num_bits)
-    tmp = BitArray(undef, num_bits)
-    return xor.(tmp, tmp) #this is a fast way to generate all zero BitArray.
-end
-export zero_bit_vector
-
 function _compute_paths!(path_masks, graph_edges::Dict{T,EdgeRelations{T}}, current_node_index, origin_index, relation_function) where {T}
     @assert current_node_index <= length(path_masks)
     if path_masks[current_node_index][origin_index] == 1
@@ -295,10 +291,10 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
     #ERROR: TaskFailedException
     # Stacktrace:
     # [1] wait @ .\task.jl:345 [inlined]
-    # [2] threading_run(fun::FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}},
+    # [2] threading_run(fun::FastSymbolicDifferentiation.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}},
     # static::Bool) @ Base.Threads .\threadingconstructs.jl:38
     # [3] macro expansion @ .\threadingconstructs.jl:89 [inlined]       
-    # [4] compute_dominance_tables(graph::RnToRmGraph{Int64}, compute_dominators::Bool) @ FastSymbolicDifferentiation.GraphProcessing c:\Users\seatt\source\FastSymbolicDifferentiation\src\GraphProcessing.jl:207
+    # [4] compute_dominance_tables(graph::RnToRmGraph{Int64}, compute_dominators::Bool) @ FastSymbolicDifferentiation.GraphProcessing c:\Users\seatt\source\FastSymbolicDifferentiation\src\jl:207
     # [5] factor @ c:\Users\seatt\source\FastSymbolicDifferentiation\src\RnToRmGraph.jl:287 [inlined]
     # [6] test(dag::Vector{Node}) @ FastSymbolicDifferentiation c:\Users\seatt\source\FastSymbolicDifferentiation\src\Test.jl:159
     # [7] top-level scope @ REPL[73]:1
@@ -312,7 +308,7 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
     #    Stacktrace:
     #     [1] #279#threadsfor_fun#70 @ .\threadingconstructs.jl:69 [inlined]
     #     [2] #279#threadsfor_fun @ .\threadingconstructs.jl:51 [inlined]
-    #     [3] (::Base.Threads.var"#1#2"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.GraphProcessing.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}}, Int64})() @ Base.Threads .\threadingconstructs.jl:30  
+    #     [3] (::Base.Threads.var"#1#2"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}}, Int64})() @ Base.Threads .\threadingconstructs.jl:30  
 
 
     for (start_index, node_postorder_number) in pairs(start_vertices)
@@ -341,17 +337,6 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
                 parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
                 fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
-                # if parent_vertices === nothing
-                #     current_dom[curr_node] = curr_node
-                # elseif length(parent_vertices) == 1
-                #     current_dom[curr_node] = parent_vertices[1]
-                # else
-                #     br1 = parent_vertices[1]
-                #     for relation_vertex in view(parent_vertices, 2:length(parent_vertices))
-                #         br1 = intersection(order_test, br1, relation_vertex, current_dom)
-                #     end
-                #     current_dom[curr_node] = br1
-                # end
 
                 if next_vertices_relation(curr_node) !== nothing
                     #get next set of vertices
@@ -368,6 +353,7 @@ function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Boo
     end
     return doms
 end
+export compute_dominance_tables
 
 
 function pdom(idoms::Dict{T,T}, bott::T, top::T) where {T<:Integer}
@@ -407,37 +393,7 @@ function check_dominance(idoms::Dict{T,T}, top::T, bott::T, test1, test2) where 
     end
 end
 
-#TODO
-"""computes the savings in operations (*,+) if the subgraph (a,b) is factored out"""
-function factor_value(idoms::Vector{T}, pidoms::Vector{T}, subgraph::Tuple{T,T}) where {T<:Integer}
-end
-
-"""Returns the number of paths from the start node to every node in the graph, including the start node which has number of paths = 1. 
-
-If starting from the root `fan_in` is `parent_numbers` and `fan_out` is `children_numbers`. 
-
-If starting from a leaf `fan_in` is `children_numbers` and `fan_out` is `parent_numbers`."""
-function number_of_paths(start_node::T, fan_in::Vector{Vector{T}}, fan_out::Vector{Vector{T}}) where {T}
-    times_visited = [T(0) for _ in 1:length(graph)]
-    total_paths = [BigInt(0) for _ in 1:length(graph)] #number of paths can grow exponentially in the depth of the graph potentially exceeding the capacity of Int64 - this would only require 64 stacked branch/merge's. Start with BigInt and see how often this is truly necessary. Then maybe go back to Int64. BigInt allocates when doing addition so this might interact badly with threading.
-
-    _number_of_paths(start_node, fan_in, fan_out, times_visited, total_paths, BigInt(1))
-    return total_paths
-end
-export number_of_paths
-
-function _number_of_paths(current_node::T, fan_in::Vector{Vector{T}}, fan_out::Vector{Vector{T}}, times_visited::AbstractVector, total_paths::AbstractVector, current_path_count::BigInt) where {T}
-    times_visited[current_node] += 1
-    total_paths[current_node] += current_path_count
-
-    if times_visited[current_node] >= length(fan_in[current_node]) #have special case at the root which has zero parents but will be visited once which makes test >= rather than ==. Doesn't affect descendant nodes since their visited counts will equal their parent counts.
-        for relation in fan_out[current_node]
-            _number_of_paths(relation, fan_in, fan_out, times_visited, total_paths, total_paths[current_node])
-        end
-    end
-end
-
-#TODO old code that uses Vector{T} instead of Dict{T,T}. Eventually remove this or archive it for reference.
+#TODO old code that uses Vector{T} instead of Dict{T,T}. Eventually remove this or archive it for reference. This should be significantly faster for computing dom tables but doesn't work with multi-root postorder numbering.
 """To compute dominators set `start_node` to root of graph, `order_test` to `<`, `node_relations` to parents. 
 
 To compute postdominators set `start_node` to the variable leaf of the graph, `order_test` to `>`, node_relations to children.
@@ -488,5 +444,5 @@ If it has multiple leaves then `idoms[leafᵢ] = leafᵢ`"""
 # end
 
 
-end #module
-export GraphProcessing
+# end #module
+# export GraphProcessing
