@@ -34,19 +34,6 @@ export S
 end
 export C
 
-function factorial_approximation(x)
-    local n1 = x
-    sqrt(2 * π * n1) * (n1 / ℯ * sqrt(n1 * sinh(1 / n1) + 1 / (810 * n1^6)))^n1
-end
-export factorial_approximation
-
-function compare_factorial_approximation()
-    for n in 1:30
-        println("n $n relative error $((factorial(big(n))-factorial_approximation(n))/factorial(big(n)))")
-    end
-end
-export compare_factorial_approximation
-
 @memoize function N(l, m)
     @assert m >= 0
     if m == 0
