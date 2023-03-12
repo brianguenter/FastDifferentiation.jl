@@ -125,10 +125,36 @@ function relation_node_indices(a::DomPathConstraint, node_index::T) where {T<:In
     end
 end
 export relation_node_indices
+# struct RelationIterator{T<:Integer}
+#     constraint::PathConstraint{T}
+#     edges_of_node::EdgeRelations{T}
+# end
+
+# function iterate(a::RelationIterator) 
+#     tmp_edges = _node_edges(graph_edges(a), node_index)
+#     if a.iterate_parents
+#         for edge in parents(tmp_edges)
+#             if subset(roots_mask(a), reachable_roots(edge)) && any(variables_mask(a) .& reachable_variables(edge))
+#                 push!(result, edge)
+#             end
+#         end
+#     else
+#         for edge in children(tmp_edges)
+#             if subset(variables_mask(a), reachable_variables(edge)) && any(roots_mask(a) .& reachable_roots(edge))
+#                 push!(result, edge)
+#             end
+#         end
+#     end
+# end
 
 """returns edges emanating from a vertex which satisfy the PathConstraint"""
-function relation_edges(a::PathConstraint{T}, node_index::Integer) where {T<:Integer}
-    result = PathEdge{T}[]
+function relation_edges(a::PathConstraint{T}, node_index::Integer, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
+    if result === nothing
+        result = PathEdge{T}[]
+    else
+        empty!(result)
+    end
+
     tmp_edges = _node_edges(graph_edges(a), node_index)
     if tmp_edges === nothing
         return nothing
@@ -153,7 +179,12 @@ function relation_edges(a::PathConstraint{T}, node_index::Integer) where {T<:Int
 end
 
 """returns edges along a single path which satisfy the PathConstraint"""
-function relation_edges(a::PathConstraint, edge::PathEdge)
+function relation_edges(a::PathConstraint{T}, edge::PathEdge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
+    if result === nothing
+        result = PathEdge{T}[]
+    else
+        empty!(result)
+    end
     #these tests do not allow for empty variables_mask or roots_mask. The functions which call this variant of this function depend on this. Hacky, should be fixed. Later.
     if a.iterate_parents
         tmp = _node_edges(graph_edges(a), top_vertex(edge))
@@ -163,11 +194,11 @@ function relation_edges(a::PathConstraint, edge::PathEdge)
         end
 
         tmp_edges = parents(tmp)
-        result = filter(x ->
-                top_vertex(x) ≤ dominating_node(a) &&
-                    bott_vertex(x) == top_vertex(edge) &&
-                    subset(roots_mask(a), reachable_roots(x)) &&
-                    any(variables_mask(a) .& reachable_variables(x)), tmp_edges)
+        for one_edge in tmp_edges
+            if top_vertex(one_edge) ≤ dominating_node(a) && subset(roots_mask(a), reachable_roots(one_edge)) && any(variables_mask(a) .& reachable_variables(one_edge))
+                push!(result, one_edge)
+            end
+        end
     else
         tmp = _node_edges(graph_edges(a), bott_vertex(edge))
 
@@ -177,12 +208,11 @@ function relation_edges(a::PathConstraint, edge::PathEdge)
 
         tmp_edges = children(tmp)
 
-        #debugger behaves badly when encountering filter so stash result in temp variable
-        result = filter(x ->
-                bott_vertex(x) ≥ dominating_node(a) &&
-                    top_vertex(x) == bott_vertex(edge) &&
-                    subset(variables_mask(a), reachable_variables(x)) &&
-                    any(roots_mask(a) .& reachable_roots(x)), tmp_edges)
+        for one_edge in tmp_edges
+            if bott_vertex(one_edge) ≥ dominating_node(a) && subset(variables_mask(a), reachable_variables(one_edge)) && any(roots_mask(a) .& reachable_roots(one_edge))
+                push!(result, one_edge)
+            end
+        end
     end
     return result
 end

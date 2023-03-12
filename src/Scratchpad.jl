@@ -9,7 +9,22 @@ using Profile
 using PProf
 
 function test()
-    graph, four_2_subgraph, one_3_subgraph, _ = simple_dominator_dgraph()
+    _, graph, _, _ = simple_dominator_graph()
+    factor!(graph)
+    fedge = edges(graph, 1, 4)[1]
+    dfsimp = dag_to_function(edge_value(fedge))
+    _, graph, _, _ = simple_dominator_graph()
+    origfsimp = dag_to_function(root(graph, 1))
+    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
+
+    graph = complex_dominator_graph()
+    factor!(graph)
+    fedge = edges(graph, 1, 8)[1]
+    df = dag_to_function(edge_value(fedge))
+
+    graph = complex_dominator_graph()
+    origf = dag_to_function(root(graph, 1))
+    @assert isapprox(central_fdm(5, 1)(origf, 3), df(3))
 end
 export test
 

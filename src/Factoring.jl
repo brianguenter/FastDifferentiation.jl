@@ -290,31 +290,34 @@ function path_sort_order(x, y)
 end
 export path_sort_order
 
-#TODO delete this after finished debugging
-# function edges_in_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
-#     constraint = next_edge_constraint(subgraph)
-#     sub_edges = PathEdge{T}[]
-#     is_dom_subgraph = S == DominatorSubgraph
-#     for edge in relation_edges(constraint, dominated_node(subgraph))
-#         pedges = edges_on_path(constraint, dominating_node(subgraph), is_dom_subgraph, edge)
-#         if is_dom_subgraph #make sure first edge includes the dominated node and last edge includes the dominator node
-#             f_edge = first(pedges)
-#             l_edge = last(pedges)
-#             @assert bott_vertex(f_edge) == dominated_node(subgraph) "first edge in path $pedges should be connected to dominated node $(dominated_node(subgraph)) but wasn't"
-#             @assert top_vertex(l_edge) == dominating_node(subgraph) "last edge in path $pedges should be connected to dominating node $(dominating_node(subgraph)) but wastn't"
-#         end
+const EDGE_CACHE = Vector{PathEdge{Int64}}[]
+peak_cache_size = 0
 
-#         append!(sub_edges, pedges)
-#     end
-#     return sub_edges
-# end
-# export evaluate_subgraph
+function get_edge_vector()
+    if length(EDGE_CACHE) != 0
+        tmp = pop!(EDGE_CACHE)
+        empty!(tmp)
+    else
+        PathEdge{Int64}[]
+    end
+end
+
+function return_edge_vector(edges::Vector{PathEdge{Int64}})
+    global peak_cache_size
+    push!(EDGE_CACHE, edges)
+    if length(EDGE_CACHE) > peak_cache_size
+        peak_cache_size = length(EDGE_CACHE)
+    end
+    return nothing
+end
 
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
 
-    for edge in relation_edges(constraint, dominated_node(subgraph))
+    rel_edges = get_edge_vector()
+    for edge in relation_edges(constraint, dominated_node(subgraph), rel_edges)
+        pedges = get_edge_vector()
         pedges = edges_on_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, edge)
         #sort by num_uses then from largest to smallest postorder number
         @assert pedges !== nothing
@@ -322,7 +325,9 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
         sort!(pedges, lt=path_sort_order)
         sum += multiply_sequence(pedges)
         #find sequences of equal times_used and multiply them. Then multiply each of the collapsed sequences to get the final result
+        return_edge_vector(pedges)
     end
+    return_edge_vector(rel_edges)
     return sum
 end
 export evaluate_subgraph
@@ -357,19 +362,24 @@ end
 
 
 #not efficient. Make code work correctly then optimize.
-function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, current_edge) where {T}
-    edges_on_path = PathEdge{T}[]
+function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T}
+    if result === nothing
+        result = get_edge_vector()
+        empty!(result)
+    else
+        result = PathEdge{T}[]
+    end
 
     while true
-        push!(edges_on_path, current_edge)
+        push!(result, current_edge)
         if is_dominator && top_vertex(current_edge) == dominating
             break
         end
         if !is_dominator && bott_vertex(current_edge) == dominating
             break
         end
-
-        edge_array = relation_edges(next_node_constraint, current_edge)
+        tmp = get_edge_vector()
+        edge_array = relation_edges(next_node_constraint, current_edge, tmp)
 
         if length(edge_array) == 0 || length(edge_array) ≥ 2
             return nothing #there is either a branch in the edge path or there is no edge beyond current_edge that leads to the dominating node. This can only occur if the subgraph has been destroyed by factorization so stop processing
@@ -377,15 +387,17 @@ function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, 
 
 
         current_edge = edge_array[1]
+        return_edge_vector(edge_array)
     end
-    return edges_on_path
+    return result
 end
 export edges_on_path
 
 function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
     Vset = trues(domain_dimension(graph(constraint)))
-
-    for start_edge in relation_edges(constraint, dominated_node)
+    tmp = get_edge_vector()
+    relation_edges(constraint, dominated_node, tmp)
+    for start_edge in tmp
         pedges = edges_on_path(constraint, dominating_node, true, start_edge)
 
         #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
@@ -393,6 +405,7 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
             Vset .= Vset .& reachable_variables(pedge)
         end
     end
+    return_edge_vector(tmp)
     return Vset
 end
 
@@ -439,8 +452,9 @@ export factor_subgraph!
 
 function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
     Rset = trues(codomain_dimension(graph(constraint)))
-
-    for start_edge in relation_edges(constraint, dominated_node)
+    tmp = get_edge_vector()
+    relation_edges(constraint, dominated_node, tmp)
+    for start_edge in tmp
         pedges = edges_on_path(constraint, dominating_node, false, start_edge)
 
         #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
@@ -448,6 +462,7 @@ function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominat
             Rset .= Rset .& reachable_roots(pedge)
         end
     end
+    return_edge_vector(tmp)
     return Rset
 end
 
@@ -461,8 +476,6 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph},
     V_edges_up = next_edge_constraint(subgraph)
     dominator = dominating_node(subgraph)
     dominated = dominated_node(subgraph)
-
-    tmp = relation_edges(V_edges_up, dominated)
 
     Rset = compute_Rset(V_edges_up, dominator, dominated) #these are the roots for which this subgraph is factorable, i.e., only paths that include these roots will get the factored value of the subgraph.
 
