@@ -156,7 +156,8 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
     constraint = next_edge_constraint(subgraph)
     dgraph = graph(subgraph)
 
-    sub_edges = relation_edges(constraint, dominated_node(subgraph)) #need at least two parent edges from dominated_node or subgraph doesn't exist
+    sub_edges = get_edge_vector()
+    relation_edges(constraint, dominated_node(subgraph), sub_edges) #need at least two parent edges from dominated_node or subgraph doesn't exist
     if sub_edges === nothing
         return false
     elseif length(sub_edges) < 2
@@ -187,6 +188,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
         end
     end
 
+    return_edge_vector(sub_edges)
     #TODO remove when done testing
     if valid_paths(constraint, subgraph)
         evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes
@@ -209,7 +211,8 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
     if get(g_edges, dominated_node(subgraph), nothing) === nothing
         return false
     else
-        sub_edges = relation_edges(constraint, dominated_node(subgraph))
+        sub_edges = get_edge_vector()
+        relation_edges(constraint, dominated_node(subgraph), sub_edges)
         if length(sub_edges) < 2
             return false
         else
@@ -237,6 +240,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
         end
     end
 
+    return_edge_vector(sub_edges)
     #TODO remove when done testing
     if valid_paths(constraint, subgraph)
         evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes
