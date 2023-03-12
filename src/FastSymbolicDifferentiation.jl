@@ -11,6 +11,12 @@ using TimerOutputs #WARNING:TODO remember to remove this when done benchmarking
 using Statistics
 using RuntimeGeneratedFunctions
 
+module AutomaticDifferentiation
+struct NoDeriv
+end
+export NoDeriv
+end #module
+export AutomaticDifferentiation
 
 """
 Created this because it is not safe to use @infiltrate. If you use `@infiltrate` then you also must have a `using` or `import Infiltrator` 

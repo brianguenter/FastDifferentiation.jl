@@ -9,17 +9,10 @@ using Profile
 using PProf
 
 function test()
-    @variables x y
+    order = 7
+    Symbolics.@variables x y z
 
-    nv1 = Node(x)
-    nv2 = Node(y)
-    n3 = nv1 * nv2
-    n4 = n3 * nv1
-    n5 = n3 * n4
-
-    graph = RnToRmGraph([n4, n5])
-    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    subs, _ = compute_factorable_subgraphs(graph)
+    derivs = SHDerivatives(order, x, y, z)
 end
 export test
 

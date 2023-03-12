@@ -1,9 +1,4 @@
-module AutomaticDifferentiation
-struct NoDeriv
-end
-export NoDeriv
-end #module
-export AutomaticDifferentiation
+
 
 #until I can think of a better way of structing the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately.
 EXPRESSION_CACHE = IdDict()
