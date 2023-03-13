@@ -376,15 +376,15 @@ function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, 
             break
         end
         tmp = get_edge_vector()
-        edge_array = relation_edges(next_node_constraint, current_edge, tmp)
+        relation_edges(next_node_constraint, current_edge, tmp)
 
-        if length(edge_array) == 0 || length(edge_array) ≥ 2
+        if length(tmp) == 0 || length(tmp) ≥ 2
             return nothing #there is either a branch in the edge path or there is no edge beyond current_edge that leads to the dominating node. This can only occur if the subgraph has been destroyed by factorization so stop processing
         end
 
 
-        current_edge = edge_array[1]
-        reclaim_edge_vector(edge_array)
+        current_edge = tmp[1]
+        reclaim_edge_vector(tmp)
     end
     return result
 end
