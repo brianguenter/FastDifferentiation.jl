@@ -32,7 +32,7 @@ function Symbolics_Spherical_Harmonics(filename, min_order, max_order)
 end
 export Symbolics_Spherical_Harmonics
 
-function DStar_Spherical_Harmonics(filename, min_order, max_order)
+function FSD_Spherical_Harmonics(filename, min_order, max_order)
     output = DataFrame()
 
     for n in min_order:2:max_order
@@ -42,11 +42,11 @@ function DStar_Spherical_Harmonics(filename, min_order, max_order)
     CSV.write(filename, output)
     return output
 end
-export DStar_Spherical_Harmonics
+export FSD_Spherical_Harmonics
 
 function Run_Spherical_Harmonics(min_order, max_order)
     Symbolics_Spherical_Harmonics("Data/SymbolicsSH.csv", min_order, max_order)
-    DStar_Spherical_Harmonics("Data/DStarSH.csv", min_order, max_order)
+    FSD_Spherical_Harmonics("Data/FSDSH.csv", min_order, max_order)
 end
 export Run_Spherical_Harmonics
 
