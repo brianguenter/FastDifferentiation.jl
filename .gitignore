@@ -1,3 +1,6 @@
+#Scratchpad file used for debugging. Don't need to track
+Scratchpad.jl
+
 # Don't track sysimage file: dll on windows, so on linux
 *.dll
 *.so
