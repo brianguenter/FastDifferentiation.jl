@@ -1,8 +1,3 @@
-module SphericalHarmonics
-using Symbolics
-using FastSymbolicDifferentiation
-using Memoize
-
 @memoize function P(l, m, z)
     if l == 0 && m == 0
         return 1.0
@@ -72,7 +67,7 @@ end
 export Y
 
 SHFunctions(max_l, x::Node, y::Node, z::Node) = SHFunctions(Vector{Node}(undef, 0), max_l, x, y, z)
-SHFunctions(max_l, x::Num, y::Num, z::Num) = SHFunctions(Vector{Num}(undef, 0), max_l, x, y, z)
+SHFunctions(max_l, x::Symbolics.Num, y::Symbolics.Num, z::Symbolics.Num) = SHFunctions(Vector{Symbolics.Num}(undef, 0), max_l, x, y, z)
 
 function SHFunctions(shfunc, max_l, x, y, z)
     for l in 0:max_l-1
@@ -86,18 +81,18 @@ end
 export SHFunctions
 
 
-function SHDerivatives(max_l, x::Num, y::Num, z::Num)
-    local derivatives = Vector{Num}(undef, 0)
-    dx = Differential(x)
-    dy = Differential(y)
-    dz = Differential(z)
+function SHDerivatives(max_l, x::Symbolics.Num, y::Symbolics.Num, z::Symbolics.Num)
+    local derivatives = Vector{Symbolics.Num}(undef, 0)
+    dx = Symbolics.Differential(x)
+    dy = Symbolics.Differential(y)
+    dz = Symbolics.Differential(z)
 
     for l in 0:max_l-1
         for m in -l:l
             tmp = Y(l, m, x, y, z)
-            push!(derivatives, expand_derivatives(dx(tmp), true))
-            push!(derivatives, expand_derivatives(dy(tmp), true))
-            push!(derivatives, expand_derivatives(dz(tmp), true))
+            push!(derivatives, Symbolics.expand_derivatives(dx(tmp), true))
+            push!(derivatives, Symbolics.expand_derivatives(dy(tmp), true))
+            push!(derivatives, Symbolics.expand_derivatives(dz(tmp), true))
         end
     end
 
@@ -109,7 +104,7 @@ to_dag(max_l, x, y, z) = expr_to_dag.(SHDerivatives(max_l, x, y, z))
 export to_dag
 
 function to_graph(max_l)
-    @variables x, y, z
+    Symbolics.@variables x, y, z
     nx = Node(x)
     ny = Node(y)
     nz = Node(z)
@@ -125,38 +120,3 @@ function spherical_harmonics_jacobian(order)
 end
 export spherical_harmonics_jacobian
 
-@memoize function Chebyshev(n, x)
-    if n == 0
-        return 1
-    elseif n == 1
-        return x
-    else
-        return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
-    end
-end
-export Chebyshev
-
-@memoize function Chebyshev(n, x::Node{T,0}) where {T}
-    if n == 0
-        return 1
-    elseif n == 1
-        return x
-    else
-        return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
-    end
-end
-export Chebyshev
-
-Chebyshev_exe(n, x) = to_function(RnToRmGraph([expr_to_dag(Chebyshev(n, x))]))
-export Chebyshev_exe
-
-function chebyshev_graph(order)
-    @variables x
-    nx = Node(x)
-    # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
-    return RnToRmGraph([Chebyshev(order, nx)])
-end
-export chebyshev_graph
-
-end #module
-export SphericalHarmonics

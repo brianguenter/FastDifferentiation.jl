@@ -2,7 +2,6 @@
 
 using FastSymbolicDifferentiation
 using FastSymbolicDifferentiation.TestCases
-using FastSymbolicDifferentiation.SphericalHarmonics
 
 using Symbolics
 

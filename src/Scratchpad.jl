@@ -1,30 +1,18 @@
 #this file is for temporary testing code since it is so hard to debug tests using the VSCode test system. 
 
 using Symbolics
-using .TestCases
+using FastSymbolicDifferentiation.TestCases
 using StaticArrays
-using .SphericalHarmonics
 using FiniteDifferences
 using Profile
 using PProf
+using .TestCases
 
 function test()
-    _, graph, _, _ = simple_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 4)[1]
-    dfsimp = dag_to_function(edge_value(fedge))
-    _, graph, _, _ = simple_dominator_graph()
-    origfsimp = dag_to_function(root(graph, 1))
-    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
+    order = 7
+    Symbolics.@variables x y z
 
-    graph = complex_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 8)[1]
-    df = dag_to_function(edge_value(fedge))
-
-    graph = complex_dominator_graph()
-    origf = dag_to_function(root(graph, 1))
-    @assert isapprox(central_fdm(5, 1)(origf, 3), df(3))
+    derivs = SHDerivatives(order, x, y, z)
 end
 export test
 

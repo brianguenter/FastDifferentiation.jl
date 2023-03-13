@@ -1,5 +1,4 @@
 module DifferentiationBenchmarks
-using FastSymbolicDifferentiation.SphericalHarmonics
 using Symbolics
 using FileIO
 using BenchmarkTools

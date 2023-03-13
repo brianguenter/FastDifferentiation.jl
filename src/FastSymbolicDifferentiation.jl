@@ -51,7 +51,6 @@ include("GraphProcessing.jl")
 include("FactorableSubgraph.jl")
 include("Factoring.jl")
 include("Analysis.jl")
-include("SphericalHarmonics.jl")
 include("GraphVisualization.jl")
 
 include("Tests.jl")
