@@ -364,9 +364,6 @@ end
 #not efficient. Make code work correctly then optimize.
 function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T}
     if result === nothing
-        result = get_edge_vector()
-        empty!(result)
-    else
         result = PathEdge{T}[]
     end
 
@@ -398,12 +395,14 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
     tmp = get_edge_vector()
     relation_edges(constraint, dominated_node, tmp)
     for start_edge in tmp
-        pedges = edges_on_path(constraint, dominating_node, true, start_edge)
+        pedges = get_edge_vector()
+        edges_on_path(constraint, dominating_node, true, start_edge, pedges)
 
         #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
         for pedge in pedges
             Vset .= Vset .& reachable_variables(pedge)
         end
+        reclaim_edge_vector(pedges)
     end
     reclaim_edge_vector(tmp)
     return Vset
@@ -455,12 +454,14 @@ function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominat
     tmp = get_edge_vector()
     relation_edges(constraint, dominated_node, tmp)
     for start_edge in tmp
-        pedges = edges_on_path(constraint, dominating_node, false, start_edge)
+        pedges = get_edge_vector()
+        edges_on_path(constraint, dominating_node, false, start_edge, pedges)
 
         #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
         for pedge in pedges
             Rset .= Rset .& reachable_roots(pedge)
         end
+        reclaim_edge_vector(pedges)
     end
     reclaim_edge_vector(tmp)
     return Rset
