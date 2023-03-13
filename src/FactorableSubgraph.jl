@@ -188,7 +188,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
         end
     end
 
-    return_edge_vector(sub_edges)
+    reclaim_edge_vector(sub_edges)
     #TODO remove when done testing
     if valid_paths(constraint, subgraph)
         evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes
@@ -240,7 +240,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
         end
     end
 
-    return_edge_vector(sub_edges)
+    reclaim_edge_vector(sub_edges)
     #TODO remove when done testing
     if valid_paths(constraint, subgraph)
         evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes

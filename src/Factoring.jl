@@ -302,7 +302,7 @@ function get_edge_vector()
     end
 end
 
-function return_edge_vector(edges::Vector{PathEdge{Int64}})
+function reclaim_edge_vector(edges::Vector{PathEdge{Int64}})
     global peak_cache_size
     push!(EDGE_CACHE, edges)
     if length(EDGE_CACHE) > peak_cache_size
@@ -325,9 +325,9 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
         sort!(pedges, lt=path_sort_order)
         sum += multiply_sequence(pedges)
         #find sequences of equal times_used and multiply them. Then multiply each of the collapsed sequences to get the final result
-        return_edge_vector(pedges)
+        reclaim_edge_vector(pedges)
     end
-    return_edge_vector(rel_edges)
+    reclaim_edge_vector(rel_edges)
     return sum
 end
 export evaluate_subgraph
@@ -387,7 +387,7 @@ function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, 
 
 
         current_edge = edge_array[1]
-        return_edge_vector(edge_array)
+        reclaim_edge_vector(edge_array)
     end
     return result
 end
@@ -405,7 +405,7 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
             Vset .= Vset .& reachable_variables(pedge)
         end
     end
-    return_edge_vector(tmp)
+    reclaim_edge_vector(tmp)
     return Vset
 end
 
@@ -462,7 +462,7 @@ function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominat
             Rset .= Rset .& reachable_roots(pedge)
         end
     end
-    return_edge_vector(tmp)
+    reclaim_edge_vector(tmp)
     return Rset
 end
 
