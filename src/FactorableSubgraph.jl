@@ -170,7 +170,8 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
             edge_count = 0
 
             for x in cedges
-                if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .&& reachable_variables(x))
+                if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.1.5/.37
+
                     edge_count += 1
                 end
             end
@@ -179,6 +180,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
                 return false
             end
 
+            #     #this test appears to be wrong. Not sure why but it appears to be possible to have subgraph destroyed without having an edge at either the dominated or dominating node destroyed. 
             # dedges = filter(x -> subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .&& reachable_variables(x)), cedges) #need at least two constrained child edges that satisfy reachable roots and reachable variables or subgraph doesn't exist. This is a necessary but not sufficient condition for existence. Could have two properly constrained child edges and subgraph still might have been destroyed.
             # if length(dedges) < 2
             #     return false
@@ -223,7 +225,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
                 edge_count = 0
 
                 for x in pedges
-                    if subset(dominance_mask(subgraph), reachable_variables(x)) && any(reachable_roots(subgraph) .&& reachable_roots(x))
+                    if subset(dominance_mask(subgraph), reachable_variables(x)) && any(reachable_roots(subgraph) .& reachable_roots(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.
                         edge_count += 1
                     end
                 end
