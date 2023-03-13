@@ -20,8 +20,11 @@ export Chebyshev
 end
 export Chebyshev
 
-Chebyshev_exe(n, x) = to_function(RnToRmGraph([expr_to_dag(Chebyshev(n, x))]))
+"""WARNING: slow for large n"""
+Chebyshev_exe(n, x::Symbolics.Num) = to_function(RnToRmGraph([expr_to_dag(Chebyshev(n, x))]))
 export Chebyshev_exe
+
+Chebyshev_exe(n, x::Node) = to_function(RnToRmGraph([Chebyshev(n, x)]))
 
 function chebyshev_graph(order)
     Symbolics.@variables x
