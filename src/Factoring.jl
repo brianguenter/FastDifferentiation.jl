@@ -365,6 +365,8 @@ end
 function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T}
     if result === nothing
         result = PathEdge{T}[]
+    else
+        empty!(result)
     end
 
     while true
