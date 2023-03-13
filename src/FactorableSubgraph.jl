@@ -170,6 +170,7 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
             edge_count = 0
 
             for x in cedges
+                #can save approximately 2e6 allocations and 100MiB for symbolic_jacobian! of sphericalharmonics(30) if do this: global_variables .= reachable_variables(subgraph) .& reachable_variables(x); any(global_variables). But this is not the major cause of allocations now. Revisit later when other allocations have been eliminated.
                 if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.1.5/.37
 
                     edge_count += 1
@@ -191,11 +192,6 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
     end
 
     reclaim_edge_vector(sub_edges)
-    #TODO remove when done testing
-    if valid_paths(constraint, subgraph)
-        evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes
-    end
-    #end testing
 
     return valid_paths(constraint, subgraph)
 
@@ -243,11 +239,6 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
     end
 
     reclaim_edge_vector(sub_edges)
-    #TODO remove when done testing
-    if valid_paths(constraint, subgraph)
-        evaluate_subgraph(subgraph) #this should not fail if subgraph exists passes
-    end
-    #end testing
 
     return valid_paths(constraint, subgraph)
 end
