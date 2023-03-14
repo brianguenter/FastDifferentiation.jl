@@ -164,7 +164,7 @@ end
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
-using .TestCases
+    using .TestCases
     import Symbolics
 
     order = 7
@@ -851,8 +851,8 @@ end
 
 
     doms = dominator_subgraph.((
-        (graph, 4, 2, BitVector([1, 0]), BitVector([1]), BitVector([1, 0])),
-        (graph, 4, 1, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))))
+        (graph, 4, 2, BitVector([1, 0]), BitVector([1, 0])BitVector([1])),
+        (graph, 4, 1, BitVector([1, 1]), BitVector([1, 0])BitVector([1]))))
     pdoms = postdominator_subgraph.((
         (graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1])),
         (graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))))
@@ -862,7 +862,7 @@ end
     sort_in_factor_order!(subs2)
     println(subs2)
     index_1_4 = findfirst(x -> equal_subgraphs(x, postdominator_subgraph(graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))), subs2)
-    index_4_2 = findfirst(x -> equal_subgraphs(x, dominator_subgraph(graph, 4, 2, BitVector([1, 0]), BitVector([1]), BitVector([1, 0]))), subs2)
+    index_4_2 = findfirst(x -> equal_subgraphs(x, dominator_subgraph(graph, 4, 2, BitVector([1, 0]), BitVector([1, 0]), BitVector([1]))), subs2)
     index_1_3 = findfirst(x -> equal_subgraphs(x, postdominator_subgraph(graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1]))), subs2)
 
     println(index_1_3, index_1_4, index_4_2)

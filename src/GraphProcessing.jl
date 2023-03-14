@@ -96,6 +96,7 @@ end
 """Returns node indices connected to `node_index` which satisfy the path constraint. This is different from edge_relations functions below which return edges, not node indices."""
 function relation_node_indices(a::DomPathConstraint, node_index::T) where {T<:Integer}
     node_relations = a.relations #use scratch array in path constraint. This should only be used by a single thread so this should be multi-thread safe and avoids allocating many small arrays.
+    #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a PathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
     empty!(node_relations) #reset array to zero
 
     curr_edges = _node_edges(graph_edges(a), node_index)

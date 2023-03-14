@@ -8,10 +8,13 @@ using PProf
 using .TestCases
 
 function test()
-    order = 7
-    Symbolics.@variables x y z
-
-    derivs = SHDerivatives(order, x, y, z)
+    doms = dominator_subgraph.((
+        (graph, 4, 2, BitVector([1, 0]), BitVector([1, 0])BitVector([1])),
+        (graph, 4, 1, BitVector([1, 1]), BitVector([1, 0])BitVector([1]))))
+    pdoms = postdominator_subgraph.((
+        (graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1])),
+        (graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))))
+    subs2 = collect((pdoms..., doms...))
 end
 export test
 
