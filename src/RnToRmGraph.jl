@@ -488,10 +488,10 @@ function delete_edge!(graph::RnToRmGraph, edge::PathEdge, force::Bool=false)
 end
 export delete_edge!
 
-to_function(graph::RnToRmGraph) = to_function(graph, variables(graph))
+make_function(graph::RnToRmGraph) = make_function(graph, variables(graph))
 
 """Returns an n vector of Julia functions"""
-function to_function(graph::RnToRmGraph, variable_order::AbstractVector{S}) where {S<:Node}
+function make_function(graph::RnToRmGraph, variable_order::AbstractVector{S}) where {S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     body = Expr(:block)
     push!(body.args, :(result = fill(0.0, $(length(roots(graph))))))
@@ -514,4 +514,4 @@ function to_function(graph::RnToRmGraph, variable_order::AbstractVector{S}) wher
 
     return @RuntimeGeneratedFunction(Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body))
 end
-export to_function
+export make_function

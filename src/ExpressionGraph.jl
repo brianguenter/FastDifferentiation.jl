@@ -427,9 +427,9 @@ function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sym
 end
 
 # # NOTE: if the dag is Node(x) or Node(1) then this will return a function that returns nothing. TODO: think about whether this is correct or whether want to make dag_to_function(Node(x)) return a function with one argument that returns that argument and dag_to_function(Node(1)) return a function with no arguments that returns 1. Not sure if this is necessary.
-dag_to_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}} = @RuntimeGeneratedFunction(dag_to_Expr(dag, variable_order, node_to_var))
-export dag_to_function
-dag_to_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = dag_to_function(expr_to_dag(a), variable_order)
+make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}} = @RuntimeGeneratedFunction(dag_to_Expr(dag, variable_order, node_to_var))
+export make_function
+make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
 
 """`variable_order` contains `Symbolics` variables in the order you want them to appear in the generated function. You can have more variables in `variable_order` than are present in the dag. Those input variables to the generated function will have no effect on the output."""
 function dag_to_Expr(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
@@ -451,7 +451,7 @@ function dag_to_Expr(dag::Node, variable_order::Union{T,Nothing}=nothing, node_t
 
     return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
 end
-export dag_to_function
+export make_function
 
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)

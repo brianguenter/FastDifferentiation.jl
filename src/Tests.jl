@@ -162,7 +162,7 @@ end
         y^2+x 0 0]
     dag = expr_to_dag.(A)
     synmbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
-    FSD_func = to_function.(dag)
+    FSD_func = make_function.(dag)
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
@@ -218,7 +218,7 @@ end
     @test derivative(Node(1)) == Node(0)
 end
 
-@testitem "simple dag_to_function" begin
+@testitem "simple make_function" begin
     using .TestCases
 
     graph, four_2_subgraph, one_3_subgraph, _ = simple_dominator_dgraph()
@@ -229,10 +229,10 @@ end
     #directly would make the test fragile. Instead verify that the functions evaluate to the same thing.
 
     for testval in -π:0.08345:π
-        correct_4_2_value = dag_to_function(four_2_subgraph)
-        computed_4_2_value = dag_to_function(four_2_subgraph)
-        correct_1_3_value = dag_to_function(one_3_subgraph)
-        computed_1_3_value = dag_to_function(one_3_subgraph)
+        correct_4_2_value = make_function(four_2_subgraph)
+        computed_4_2_value = make_function(four_2_subgraph)
+        correct_1_3_value = make_function(one_3_subgraph)
+        computed_1_3_value = make_function(one_3_subgraph)
         @test isapprox(correct_4_2_value(testval), computed_4_2_value(testval), atol=1e-14)
         @test isapprox(correct_1_3_value(testval), computed_1_3_value(testval), atol=1e-14)
     end
@@ -307,7 +307,7 @@ end
     @test index_1_7 < index_8_1p
 end
 
-@testitem "dag_to_function" begin #test generation of derivative functions
+@testitem "make_function" begin #test generation of derivative functions
     import Symbolics
     using Symbolics: substitute
     using .TestCases
@@ -317,7 +317,7 @@ end
 
     symbol_result = substitute(dom_expr, zz => 3.7)
 
-    exe = dag_to_function(dom_expr)
+    exe = make_function(dom_expr)
 
     @test exe(3.7) ≈ symbol_result
 
@@ -325,25 +325,25 @@ end
     sym_expr = cos(log(x) + sin(y)) * zz
     symbol_result = substitute(sym_expr, Dict([zz => 3.2, x => 2.5, y => 7.0]))
 
-    exe = dag_to_function(sym_expr)
+    exe = make_function(sym_expr)
 
     sym_expr2 = cos(2.0 * x) - sqrt(y)
     symbol_result = substitute(sym_expr2, Dict([x => 5.0, y => 3.2]))
-    exe2 = dag_to_function(sym_expr2, [x, y])
+    exe2 = make_function(sym_expr2, [x, y])
 
     symbol_val = symbol_result.val
     @test symbol_val ≈ exe2(5.0, 3.2)
 
     sym_expr3 = sin(x^3 + y^0.3)
     symbol_result3 = substitute(sym_expr3, Dict([x => 7.0, y => 0.4]))
-    exe3 = dag_to_function(sym_expr3, [x, y])
+    exe3 = make_function(sym_expr3, [x, y])
     symbol_val3 = symbol_result3.val
     @test symbol_val3 ≈ exe3(7.0, 0.4)
 
     #test to ensure that common terms are not reevaluated.
     sym_expr4 = sin(cos(x)) * cos(cos(x))
     symbol_result4 = substitute(sym_expr4, Dict([x => 7.0]))
-    exe4 = dag_to_function(sym_expr4, [x])
+    exe4 = make_function(sym_expr4, [x])
     symbol_val4 = symbol_result4.val
     @test symbol_val4 ≈ exe4(7.0)
 end
@@ -1260,18 +1260,18 @@ end
     _, graph, _, _ = simple_dominator_graph()
     factor!(graph)
     fedge = edges(graph, 1, 4)[1]
-    dfsimp = dag_to_function(edge_value(fedge))
+    dfsimp = make_function(edge_value(fedge))
     _, graph, _, _ = simple_dominator_graph()
-    origfsimp = dag_to_function(root(graph, 1))
+    origfsimp = make_function(root(graph, 1))
     @test isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
 
     graph = complex_dominator_graph()
     factor!(graph)
     fedge = edges(graph, 1, 8)[1]
-    df = dag_to_function(edge_value(fedge))
+    df = make_function(edge_value(fedge))
 
     graph = complex_dominator_graph()
-    origf = dag_to_function(root(graph, 1))
+    origf = make_function(root(graph, 1))
     @test isapprox(central_fdm(5, 1)(origf, 3), df(3))
 end
 
@@ -1311,7 +1311,7 @@ end
 
     correct_jacobian = [df11 df12; df21 df22]
 
-    computed_jacobian = dag_to_function.(symbolic_jacobian!(graph, [nx, ny]), Ref([x, y]))
+    computed_jacobian = make_function.(symbolic_jacobian!(graph, [nx, ny]), Ref([x, y]))
 
 
     #verify the computed and hand caluclated jacobians agree.
@@ -1329,7 +1329,7 @@ end
     using FiniteDifferences
 
     fsd_graph, x, y, z = to_graph(10)
-    fsd_func = to_function(fsd_graph, Node.([x, y, z]))
+    fsd_func = make_function(fsd_graph, Node.([x, y, z]))
 
     #hand computed derivative for order = 3
     # correct_derivatives(x, y, z) = [
@@ -1365,7 +1365,7 @@ end
     using .TestCases
 
     fsd_graph = chebyshev_graph(20)
-    fsd_func = to_function(fsd_graph)
+    fsd_func = make_function(fsd_graph)
 
     func_wrap(x) = fsd_func(x)[1]
 
