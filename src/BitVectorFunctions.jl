@@ -1,7 +1,9 @@
-#These functions appear to be """returns true if a ⊆ b, false otherwise"""
+#These functions appear to be 
 bitvector_cache::Vector{BitVector} = BitVector[]
 
-"""WARNING not multithread safe"""
+"""WARNING not multithread safe
+
+returns true if a ⊆ b, false otherwise"""
 function subset(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     index = findfirst(x -> length(x) == length(a), bitvector_cache)
