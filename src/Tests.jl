@@ -152,7 +152,7 @@ export simple_dominator_dgraph
 end
 
 # #TODO turn this into a real test
-@testitem "expr_to_dag" begin
+@testitem "make_function for Node" begin
     import Symbolics
 
     Symbolics.@variables x y
@@ -161,8 +161,18 @@ end
         0 0 2y
         y^2+x 0 0]
     dag = expr_to_dag.(A)
-    synmbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
-    FSD_func = make_function.(dag)
+    symbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
+    float_answer = similar(symbolics_answer, Float64)
+    for index in eachindex(symbolics_answer)
+        float_answer[index] = symbolics_answer[index].val
+    end
+
+    FSD_func = make_function.(dag, Ref([x, y]))
+    res = [FSD_func[1, 1](1.1, 2.3) FSD_func[1, 2](0.0,0.0) FSD_func[1, 3](1.1,0.0)
+        FSD_func[2, 1](0.0,0.0) FSD_func[2, 2](0.0,0.0) FSD_func[2, 3](0,2.3)
+        FSD_func[3, 1](1.1,2.3) FSD_func[3, 2](0,0) FSD_func[3, 3](0,0)
+    ]
+    @assert isapprox(res, float_answer)
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
