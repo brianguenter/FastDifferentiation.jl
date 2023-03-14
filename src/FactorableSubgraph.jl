@@ -103,7 +103,7 @@ function subgraph_nodes(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where
     result = T[]
 
     start_node = dominated_node(subgraph)
-    constraint = x -> subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .&& reachable_variables(x))
+    constraint = x -> subset(dominance_mask(subgraph), reachable_roots(x)) && overlap(reachable_variables(subgraph), reachable_variables(x))
     push!(result, start_node)
     current_level = Set{T}(start_node)
     next_level = Set{T}()
@@ -179,8 +179,9 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
             edge_count = 0
 
             for x in cedges
-                #can save approximately 2e6 allocations and 100MiB for symbolic_jacobian! of sphericalharmonics(30) if do this: global_variables .= reachable_variables(subgraph) .& reachable_variables(x); any(global_variables). But this is not the major cause of allocations now. Revisit later when other allocations have been eliminated.
-                if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.1.5/.37
+
+                if subset(dominance_mask(subgraph), reachable_roots(x)) && overlap(reachable_variables(subgraph), reachable_variables(x))
+                    # if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.1.5/.37
 
                     edge_count += 1
                 end
@@ -230,7 +231,8 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) 
                 edge_count = 0
 
                 for x in pedges
-                    if subset(dominance_mask(subgraph), reachable_variables(x)) && any(reachable_roots(subgraph) .& reachable_roots(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.
+                    if subset(dominance_mask(subgraph), reachable_variables(x)) && overlap(reachable_roots(subgraph), reachable_roots(x))
+                        # if subset(dominance_mask(subgraph), reachable_variables(x)) && any(reachable_roots(subgraph) .& reachable_roots(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.
                         edge_count += 1
                     end
                 end

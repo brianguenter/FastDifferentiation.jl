@@ -164,13 +164,13 @@ function relation_edges(a::PathConstraint{T}, node_index::Integer, result::Union
     #these tests allow for either empty variables_mask or roots_mask. The functions which call this depend on being able to do this.
     if a.iterate_parents
         for edge in parents(tmp_edges)
-            if subset(roots_mask(a), reachable_roots(edge)) && any(variables_mask(a) .& reachable_variables(edge))
+            if subset(roots_mask(a), reachable_roots(edge)) && overlap(variables_mask(a), reachable_variables(edge))
                 push!(result, edge)
             end
         end
     else
         for edge in children(tmp_edges)
-            if subset(variables_mask(a), reachable_variables(edge)) && any(roots_mask(a) .& reachable_roots(edge))
+            if subset(variables_mask(a), reachable_variables(edge)) && overlap(roots_mask(a), reachable_roots(edge))
                 push!(result, edge)
             end
         end
@@ -196,7 +196,7 @@ function relation_edges(a::PathConstraint{T}, edge::PathEdge, result::Union{Noth
 
         tmp_edges = parents(tmp)
         for one_edge in tmp_edges
-            if top_vertex(one_edge) ≤ dominating_node(a) && subset(roots_mask(a), reachable_roots(one_edge)) && any(variables_mask(a) .& reachable_variables(one_edge))
+            if top_vertex(one_edge) ≤ dominating_node(a) && subset(roots_mask(a), reachable_roots(one_edge)) && overlap(variables_mask(a), reachable_variables(one_edge))
                 push!(result, one_edge)
             end
         end
@@ -210,7 +210,7 @@ function relation_edges(a::PathConstraint{T}, edge::PathEdge, result::Union{Noth
         tmp_edges = children(tmp)
 
         for one_edge in tmp_edges
-            if bott_vertex(one_edge) ≥ dominating_node(a) && subset(variables_mask(a), reachable_variables(one_edge)) && any(roots_mask(a) .& reachable_roots(one_edge))
+            if bott_vertex(one_edge) ≥ dominating_node(a) && subset(variables_mask(a), reachable_variables(one_edge)) && overlap(roots_mask(a), reachable_roots(one_edge))
                 push!(result, one_edge)
             end
         end

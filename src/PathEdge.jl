@@ -94,7 +94,7 @@ export zero_roots!
 zero_variables!(e::PathEdge, variable_mask::BitVector) = @. e.reachable_variables = e.reachable_variables & (!variable_mask)
 export zero_variables!
 
-roots_resettable(e::PathEdge, root_mask::BitVector) = any(e.reachable_roots .& root_mask)
+roots_resettable(e::PathEdge, root_mask::BitVector) = overlap(e.reachable_roots, root_mask)
 export roots_resettable
-variables_resettable(e::PathEdge, variable_mask::BitVector) = any(e.reachable_variables .& variable_mask)
+variables_resettable(e::PathEdge, variable_mask::BitVector) = overlap(e.reachable_variables, variable_mask)
 export variables_resettable
