@@ -18,7 +18,11 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
         @assert dominating_node > dominated_node
         dominator_relation_edges = length(child_edges(graph, dominating_node)) #when graph is created all children of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
         constraint = PathConstraint(dominating_node, graph, true, dom_mask, variables_reachable)
-        dominated_relation_edges = length(relation_edges(constraint, dominated_node))
+        tmp_edges = get_edge_vector()
+        relation_edges(constraint, dominated_node, tmp_edges)
+        dominated_relation_edges = length(tmp_edges)
+        reclaim_edge_vector(tmp_edges)
+        sum(dom_mask) * sum(variables_reachable)
         return new{T,DominatorSubgraph}(graph, (dominating_node, dominated_node), sum(dom_mask) * sum(variables_reachable), roots_reachable, variables_reachable, dom_mask, nothing, dominator_relation_edges, dominated_relation_edges)
     end
 
@@ -26,7 +30,10 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
         @assert dominating_node < dominated_node
         dominator_relation_edges = length(parent_edges(graph, dominating_node)) #when graph is created all parents of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
         constraint = PathConstraint(dominating_node, graph, false, roots_reachable, pdom_mask)
-        dominated_relation_edges = length(relation_edges(constraint, dominated_node))
+        tmp_edges = get_edge_vector()
+        relation_edges(constraint, dominated_node, tmp_edges)
+        dominated_relation_edges = length(tmp_edges)
+        reclaim_edge_vector(tmp_edges)
         return new{T,PostDominatorSubgraph}(graph, (dominating_node, dominated_node), sum(roots_reachable) * sum(pdom_mask), roots_reachable, variables_reachable, nothing, pdom_mask, dominator_relation_edges, dominated_relation_edges)
     end
 end

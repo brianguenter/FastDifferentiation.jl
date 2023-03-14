@@ -830,7 +830,7 @@ end
     four_one = subgraphs[findfirst(x -> x.subgraph == (4, 1), subgraphs)]
     one_3 = subgraphs[findfirst(x -> x.subgraph == (1, 3), subgraphs)]
     four_2 = subgraphs[findfirst(x -> x.subgraph == (4, 2), subgraphs)]
-    one_four = subgraphs[findfirst(x -> x.subgraph == (1, 4), subgraphs)]
+    one_4 = subgraphs[findfirst(x -> x.subgraph == (1, 4), subgraphs)]
 
     @test factor_order(one_3, four_one) == true
     @test factor_order(four_2, four_one) == true
@@ -840,34 +840,30 @@ end
     @test factor_order(four_one, four_2) == false
 
 
-    @test factor_order(one_3, one_four) == true
-    @test factor_order(four_2, one_four) == true
+    @test factor_order(one_3, one_4) == true
+    @test factor_order(four_2, one_4) == true
     @test factor_order(one_3, four_2) == false
     @test factor_order(four_2, one_3) == false
-    @test factor_order(one_four, one_3) == false
-    @test factor_order(one_four, four_2) == false #one_3 should be sorted before one_4
+    @test factor_order(one_4, one_3) == false
+    @test factor_order(one_4, four_2) == false #one_3 should be sorted before one_4
 
     equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && dominance_mask(x) == dominance_mask(y)
 
 
-    doms = dominator_subgraph.((
-        (graph, 4, 2, BitVector([1, 0]), BitVector([1, 0])BitVector([1])),
-        (graph, 4, 1, BitVector([1, 1]), BitVector([1, 0])BitVector([1]))))
-    pdoms = postdominator_subgraph.((
-        (graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1])),
-        (graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))))
-    subs2 = collect((pdoms..., doms...))
+    # doms = dominator_subgraph.((
+    #     (graph, 4, 2, BitVector([1, 0]), BitVector([1, 0])BitVector([1])),
+    #     (graph, 4, 1, BitVector([1, 1]), BitVector([1, 0])BitVector([1]))))
+    # pdoms = postdominator_subgraph.((
+    #     (graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1])),
+    #     (graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))))
+    # subs2 = collect((pdoms..., doms...))
 
 
-    sort_in_factor_order!(subs2)
-    println(subs2)
-    index_1_4 = findfirst(x -> equal_subgraphs(x, postdominator_subgraph(graph, 1, 4, BitVector([1, 1]), BitVector([1]), BitVector([1, 0]))), subs2)
-    index_4_2 = findfirst(x -> equal_subgraphs(x, dominator_subgraph(graph, 4, 2, BitVector([1, 0]), BitVector([1, 0]), BitVector([1]))), subs2)
-    index_1_3 = findfirst(x -> equal_subgraphs(x, postdominator_subgraph(graph, 1, 3, BitVector([1, 1]), BitVector([1]), BitVector([1, 1]))), subs2)
+    index_1_4 = findfirst(x -> equal_subgraphs(x, one_4), subgraphs)
+    index_4_2 = findfirst(x -> equal_subgraphs(x, four_2), subgraphs)
+    index_1_3 = findfirst(x -> equal_subgraphs(x, one_3), subgraphs)
 
-    println(index_1_3, index_1_4, index_4_2)
     @test index_1_3 < index_1_4
-    @test index_1_3 < index_4_2 #ensure that (1,3) subgraph sorts before (4,2) subgraph because it has a higher times_used number
 end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin

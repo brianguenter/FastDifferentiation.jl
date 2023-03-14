@@ -1,24 +1,25 @@
 #These functions appear to be 
 bitvector_cache::Vector{BitVector} = BitVector[]
 
+peak_bitvector_cache_size::Int64 = 0
+
 function get_bitvector(numbits::T) where {T<:Integer}
     global bitvector_cache
+    global peak_bitvector_cache_size
 
     index = findfirst(x -> length(x) == numbits, bitvector_cache)
     if index !== nothing
         temp = bitvector_cache[index]
     else
-        temp = BitVector(undef, length(a))
+        temp = BitVector(undef, numbits)
         push!(bitvector_cache, temp)
+        if length(bitvector_cache) > peak_bitvector_cache_size
+            peak_bitvector_cache_size = length(bitvector_cache)
+        end
     end
     return temp
 end
 
-function reclaim_bitvector(a::BitVector)
-    global bitvector_cache
-
-    push!(bitvector_cache, a)
-end
 
 """WARNING not multithread safe
 
@@ -28,7 +29,6 @@ function subset(a::BitVector, b::BitVector)
     temp = get_bitvector(length(a))
     temp .= a .& b
     result = sum(temp) == sum(a)
-    reclaim_bitvector(temp)
     return result
 end
 export subset
@@ -45,7 +45,6 @@ function overlap(a::BitVector, b::BitVector)
     temp = get_bitvector(length(a))
     temp .= a .& b
     result = any(temp)
-    reclaim_bitvector(temp)
     return result
 end
 
