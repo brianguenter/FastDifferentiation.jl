@@ -111,22 +111,6 @@ function pdom_subgraph(graph::RnToRmGraph, variable_index::Integer, dominated_no
     end
 end
 
-#No longer used but may be useful for something in the future. TODO: delete if not used soon.
-# """Necessary but not sufficient conditions for gr2 ⊂ gr1. Used to determine order to process subgraphs. Contained subgraphs must always be processed first, then sort by number of uses."""
-# function maybe_contains(gr1::FactorableSubgraph, gr2::FactorableSubgraph)
-#     (a, b) = gr2.subgraph
-#     (c, d) = gr1.subgraph
-#     if isdominator(gr2) && isdominator(gr1) #dom,dom case
-#         return d < a ≤ c && d < b < c
-#     elseif isdominator(gr2) && ispostdominator(gr1) #dom,pdom case
-#         return c < a ≤ d && c ≤ b < d
-#     elseif ispostdominator(gr2) && isdominator(gr1) #pdom,dom case
-#         return d ≤ a < c && d < b ≤ c
-#     else #pdom,pdom case
-#         return c ≤ a < d && c < b < d
-#     end
-# end
-
 """returns true if a should be sorted before b"""
 function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
     if times_used(a) > times_used(b) #num_uses of contained subgraphs always ≥ num_uses of containing subgraphs. Contained subgraphs should always be factored first. It might be that a ⊄ b, but it's still correct to factor a before b.

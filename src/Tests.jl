@@ -160,7 +160,9 @@ end
     A = [x^2+y 0 2x
         0 0 2y
         y^2+x 0 0]
-    expr_to_dag.(A)
+    dag = expr_to_dag.(A)
+    synmbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
+    FSD_func = to_function.(dag)
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
@@ -865,6 +867,11 @@ end
 
     @test index_1_3 < index_1_4
 end
+
+@testitem "TODO factor order with times used" begin
+    #create test that checks order with different times used values for subgraphs
+end
+
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
     using Symbolics

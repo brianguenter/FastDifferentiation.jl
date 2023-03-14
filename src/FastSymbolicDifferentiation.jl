@@ -7,7 +7,6 @@ using SymbolicUtils: arguments
 using StaticArrays
 using SpecialFunctions
 using NaNMath
-using TimerOutputs #WARNING:TODO remember to remove this when done benchmarking
 using Statistics
 using RuntimeGeneratedFunctions
 

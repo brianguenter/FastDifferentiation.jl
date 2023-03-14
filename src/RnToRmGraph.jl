@@ -101,7 +101,6 @@ struct RnToRmGraph{T<:Integer}
     function RnToRmGraph(roots::AbstractVector, index_type::Type=Int64)
         postorder_number = IdDict{Node,index_type}()
         vars = Set{Node}()
-        timer = TimerOutput()
 
         visited = Dict{Node,Bool}()
 
@@ -133,7 +132,7 @@ struct RnToRmGraph{T<:Integer}
 
         num_nodes = length(postorder_number)
         compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
-        # show(timer)
+
         return new{index_type}(
             postorder_number,
             nodes,
