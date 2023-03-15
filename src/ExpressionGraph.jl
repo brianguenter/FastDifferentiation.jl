@@ -398,7 +398,22 @@ function node_symbol(a::Node)
 end
 
 
-"""Create body of Expr that will evaluate the function"""
+"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variables names. This is an example for a simple function:
+```
+quote
+    var"##343" = 2x
+    var"##342" = var"##343" + y
+    var"##341" = var"##342" + 1
+end
+```
+The last automatically generated name (in this example var"##341") is the second return value of `function_body`. This variable will hold the value of evaluating the dag at runtime.
+If the dag is a constant then the function body will be empty:
+```
+quote
+end
+```
+and the second return value will be the constant value.
+"""
 function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing)
     if node_to_var === nothing
         node_to_var = Dict{Node,Union{Symbol,Real}}()
@@ -426,20 +441,6 @@ function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sym
     return body, _dag_to_function(dag)
 end
 
-# # NOTE: if the dag is Node(x) or Node(1) then this will return a function that returns nothing. TODO: think about whether this is correct or whether want to make dag_to_function(Node(x)) return a function with one argument that returns that argument and dag_to_function(Node(1)) return a function with no arguments that returns 1. Not sure if this is necessary.
-function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
-    if is_constant(dag)
-        f = let r = node_value(dag)
-            () -> r
-        end
-        return f
-    else
-        return @RuntimeGeneratedFunction(_make_function(dag, variable_order, node_to_var))
-    end
-end
-export make_function
-make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
-
 """`variable_order` contains `Symbolics` variables in the order you want them to appear in the generated function. You can have more variables in `variable_order` than are present in the dag. Those input variables to the generated function will have no effect on the output."""
 function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
     if node_to_var === nothing
@@ -457,9 +458,22 @@ function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, nod
 
     body, variable = function_body(dag, node_to_var)
     push!(body.args, :(return $variable))
-
+    println(ordering)
     return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
 end
+
+"""Creates a runtime generated function that returns the value of the dag evaluated at the runtime variable values. If `variable_order` is `nothing` then the order of the arguments to the function will be however the variables happen to be ordered in the dag which is unpredictable and can lead to confusing results. In general you should set `variable_order` to non-nothing value. 
+
+Variables can disappear from the dag during differentiation. For example, if  your dag is `2x+y^2` and you compute just the partial with respect to `x` the derivative function is the constant 2. If you call `make_function` on this dag with `variable_order=nothing` then the runtime derivative function will not have any arguments. 
+
+Since, in general, you do not know what the derivative of your function will be you will also not be able to predict what variables will be present in the derivative function. This makes it difficult to figure out how the runtime generated functions should be called. A simple solution is to always set `variable_order` to be all the variables in the original dag. Then the runtime function will take all those variables as arguments, even if none of them are present in the computed derivative.
+"""
+function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
+    return @RuntimeGeneratedFunction(_make_function(dag, variable_order, node_to_var))
+end
+export make_function
+
+make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
 
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)

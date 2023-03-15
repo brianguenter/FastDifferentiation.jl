@@ -168,11 +168,11 @@ end
     end
 
     FSD_func = make_function.(dag, Ref([x, y]))
-    res = [FSD_func[1, 1](1.1, 2.3) FSD_func[1, 2](0.0,0.0) FSD_func[1, 3](1.1,0.0)
-        FSD_func[2, 1](0.0,0.0) FSD_func[2, 2](0.0,0.0) FSD_func[2, 3](0,2.3)
-        FSD_func[3, 1](1.1,2.3) FSD_func[3, 2](0,0) FSD_func[3, 3](0,0)
+    res = [FSD_func[1, 1](1.1, 2.3) FSD_func[1, 2](0.0, 0.0) FSD_func[1, 3](1.1, 0.0)
+        FSD_func[2, 1](0.0, 0.0) FSD_func[2, 2](0.0, 0.0) FSD_func[2, 3](0, 2.3)
+        FSD_func[3, 1](1.1, 2.3) FSD_func[3, 2](0, 0) FSD_func[3, 3](0, 0)
     ]
-    @assert isapprox(res, float_answer)
+    @test isapprox(res, float_answer)
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
