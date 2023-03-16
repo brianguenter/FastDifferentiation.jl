@@ -12,6 +12,7 @@ using TestItems
 
 include("TestFunctions/Chebyshev.jl")
 include("TestFunctions/SphericalHarmonics.jl")
+include("TestFunctions/LagrangianDynamics.jl")
 
 
 """ Utility function for working with symbolic expressions as Symbolics.jl defines them."""
