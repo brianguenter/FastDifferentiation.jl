@@ -5,6 +5,7 @@ import SymbolicUtils
 import Symbolics
 using StaticArrays
 using Memoize
+using Rotations
 
 using ..FastSymbolicDifferentiation
 

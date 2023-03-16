@@ -741,3 +741,19 @@ function num_unique_nodes(jacobian::Matrix{Node})
     return length(nodes)
 end
 export num_unique_nodes
+
+"""Computes the derivative of the function matrix `A` with respect to the variable `with_respect_to`."""
+function derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
+    #convert A into vector then compute jacobian
+    vecA = vec(A)
+    graph = RnToRmGraph(vecA)
+    temp = symbolic_jacobian!(graph)
+    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A.
+    column_index = variable_node_to_index(graph, variable)
+    column = temp[:, column_index]
+    mat_column = reshape(column, size(A))
+    result = copy(mat_column)
+
+    return result
+end
+export derivative
