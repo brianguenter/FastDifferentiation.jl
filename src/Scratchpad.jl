@@ -5,7 +5,7 @@ using StaticArrays
 using FiniteDifferences
 using Profile
 using PProf
-using .TestCases
+using .FSDTests
 
 function test()
     Symbolics.@variables x y

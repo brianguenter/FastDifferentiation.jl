@@ -52,7 +52,7 @@ include("Factoring.jl")
 include("Analysis.jl")
 include("GraphVisualization.jl")
 
-include("Tests.jl")
+include("FSDTests.jl")
 include("Scratchpad.jl")
 
 

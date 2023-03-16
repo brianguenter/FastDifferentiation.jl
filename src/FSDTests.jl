@@ -1,4 +1,4 @@
-module TestCases
+module FSDTests
 using DiffRules
 using TermInterface
 import SymbolicUtils
@@ -10,9 +10,9 @@ using ..FastSymbolicDifferentiation
 
 using TestItems
 
-include("TestFunctions/Chebyshev.jl")
-include("TestFunctions/SphericalHarmonics.jl")
-include("TestFunctions/LagrangianDynamics.jl")
+include("BenchmarkFunctions/Chebyshev.jl")
+include("BenchmarkFunctions/SphericalHarmonics.jl")
+include("BenchmarkFunctions/LagrangianDynamics.jl")
 
 
 """ Utility function for working with symbolic expressions as Symbolics.jl defines them."""
@@ -135,9 +135,7 @@ end
 export simple_dominator_dgraph
 
 @testitem "all_nodes" begin
-    #this test no longer works correctly. The order in which the expressions end up in the node array of dag is not
-    #guaranteed so can't just make correct set of node expressions as done here.
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     cache = IdDict()
     dag, x, y = simple_dag(cache)
@@ -177,7 +175,7 @@ end
 end
 
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
     import Symbolics
 
     order = 7
@@ -230,7 +228,7 @@ end
 end
 
 @testitem "simple make_function" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     graph, four_2_subgraph, one_3_subgraph, _ = simple_dominator_dgraph()
     #not practical to compare the graphs directly since the order in which nodes come out of the differentiation
@@ -282,7 +280,7 @@ end
 end
 
 @testitem "compute_factorable_subgraphs" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     dgraph = RnToRmGraph(complex_dominator_dag())
 
@@ -321,7 +319,7 @@ end
 @testitem "make_function" begin #test generation of derivative functions
     import Symbolics
     using Symbolics: substitute
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     Symbolics.@variables zz
     dom_expr = zz * (cos(zz) + sin(zz))
@@ -832,7 +830,7 @@ end
 end
 
 @testitem "factor_order" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     _, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
 
@@ -1167,7 +1165,7 @@ end
 # end
 
 @testitem "evaluate_subgraph" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     _, graph, _, _ = simple_dominator_graph()
 
@@ -1265,7 +1263,7 @@ end
 
 
 @testitem "factor ℝ¹->ℝ¹ " begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences
 
     _, graph, _, _ = simple_dominator_graph()
@@ -1336,7 +1334,7 @@ end
 end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences
 
     fsd_graph, x, y, z = to_graph(10)
@@ -1373,7 +1371,7 @@ end
 
 @testitem "Chebyshev jacobian evaluation test" begin
     using FiniteDifferences
-    using .TestCases
+    using FastSymbolicDifferentiation.FSDTests
 
     fsd_graph = chebyshev_graph(20)
     fsd_func = make_function(fsd_graph)
@@ -1392,4 +1390,4 @@ end
 end
 
 end #module
-export TestCases
+export Tests
