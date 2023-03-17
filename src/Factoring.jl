@@ -706,7 +706,7 @@ symbolic_jacobian!(a::RnToRmGraph) = symbolic_jacobian!(a, variables(a))
 
 jacobian_function!(graph::RnToRmGraph) = jacobian_function!(graph, variables(graph))
 
-function jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+function jacobian_Expr!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = symbolic_jacobian!(graph, variable_order)
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     all_vars = variables(graph)
@@ -731,8 +731,15 @@ function jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S
 
     push!(body.args, :(return result))
 
-    return @RuntimeGeneratedFunction(Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body))
+    if in_place
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)..., :result), body)
+    else
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
+    end
 end
+export jacobian_Expr!
+
+jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
 export jacobian_function!
 
 """Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""

@@ -27,9 +27,9 @@ function create_Symbolics_exe(max_l)
 end
 export create_Symbolics_exe
 
-function make_FSD_exe(max_l)
+function make_FSD_exe(max_l; in_place=false)
     graph, x, y, z = to_graph(max_l)
-    return jacobian_function!(graph, Node.([x, y, z]))
+    return jacobian_function!(graph, Node.([x, y, z]); in_place)
 end
 export make_FSD_exe
 

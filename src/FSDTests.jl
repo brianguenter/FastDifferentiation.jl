@@ -1389,10 +1389,19 @@ end
         @test isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
     end
 
-    # tmp = Matrix{Float64}(undef, 1, 1)
-    # fsd_graph = chebyshev_graph(20)
-    # sym_func = jacobian_function!(fsd_graph)
-    # sym_func([1.0], tmp)
+    tmp = Matrix{Float64}(undef, 1, 1)
+    fsd_graph = chebyshev_graph(20)
+    sym_func = jacobian_function!(fsd_graph)
+
+    #test the in place form of jacobian function
+    for xr in -1.0:0.214:1.0
+        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
+
+        symbolic = sym_func(xr, tmp)
+
+        @test isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
+    end
+
 end
 
 end #module
