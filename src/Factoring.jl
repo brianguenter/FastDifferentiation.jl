@@ -742,7 +742,7 @@ function num_unique_nodes(jacobian::Matrix{Node})
 end
 export num_unique_nodes
 
-"""Computes the derivative of the function matrix `A` with respect to the variable `with_respect_to`."""
+"""Computes the derivative of the function matrix `A` with respect to  `variable`."""
 function derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)

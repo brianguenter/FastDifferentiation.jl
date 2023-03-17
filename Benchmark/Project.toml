@@ -1,0 +1,7 @@
+name = "Benchmark"
+uuid = "d5ead2d2-1426-48f4-8f7d-c71f6431810f"
+authors = ["brianguenter <1brianguenter@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+FastSymbolicDifferentiation = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
