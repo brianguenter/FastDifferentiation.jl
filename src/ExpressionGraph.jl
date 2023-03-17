@@ -454,7 +454,7 @@ function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, nod
         ordering = Node.(variable_order)
     end
 
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
+    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable." #In a future version plan to eliminate this restriction to allow computation of sparse Jacobians.
 
     body, variable = function_body(dag, node_to_var)
     push!(body.args, :(return $variable))

@@ -182,7 +182,7 @@ end
     order = 7
     Symbolics.@variables x y z
 
-    derivs = SHDerivatives(order, x, y, z)
+    derivs = Symbolics.jacobian(SHFunctions(order, x, y, z), [x, y, z]; simplify=true)
     # show(@time SHDerivatives(order,x,y,z))
     tmp = expr_to_dag.(derivs)
     # show(@time expr_to_dag.(derivs))
@@ -1388,6 +1388,11 @@ end
 
         @test isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
     end
+
+    # tmp = Matrix{Float64}(undef, 1, 1)
+    # fsd_graph = chebyshev_graph(20)
+    # sym_func = jacobian_function!(fsd_graph)
+    # sym_func([1.0], tmp)
 end
 
 end #module

@@ -81,29 +81,10 @@ end
 export SHFunctions
 
 
-function SHDerivatives(max_l, x::Symbolics.Num, y::Symbolics.Num, z::Symbolics.Num)
-    local derivatives = Vector{Symbolics.Num}(undef, 0)
-    dx = Symbolics.Differential(x)
-    dy = Symbolics.Differential(y)
-    dz = Symbolics.Differential(z)
-
-    for l in 0:max_l-1
-        for m in -l:l
-            tmp = Y(l, m, x, y, z)
-            push!(derivatives, Symbolics.expand_derivatives(dx(tmp), true))
-            push!(derivatives, Symbolics.expand_derivatives(dy(tmp), true))
-            push!(derivatives, Symbolics.expand_derivatives(dz(tmp), true))
-        end
-    end
-
-    return derivatives
-end
-export SHDerivatives
-
 to_dag(max_l, x, y, z) = expr_to_dag.(SHDerivatives(max_l, x, y, z))
 export to_dag
-
 function to_graph(max_l)
+
     Symbolics.@variables x, y, z
     nx = Node(x)
     ny = Node(y)
@@ -114,9 +95,9 @@ function to_graph(max_l)
 end
 export to_graph
 
-function spherical_harmonics_jacobian(order)
-    gr, x, y, z = to_graph(order)
+function compute_SH_function_jacobian(gr)
     return jacobian_function!(gr)
 end
-export spherical_harmonics_jacobian
+export compute_SH_function_jacobian
+
 

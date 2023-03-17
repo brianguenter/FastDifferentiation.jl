@@ -706,19 +706,22 @@ symbolic_jacobian!(a::RnToRmGraph) = symbolic_jacobian!(a, variables(a))
 
 jacobian_function!(graph::RnToRmGraph) = jacobian_function!(graph, variables(graph))
 
-function jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}) where {S<:Node}
+function jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = symbolic_jacobian!(graph, variable_order)
-
     node_to_var = Dict{Node,Union{Symbol,Real}}()
-    body = Expr(:block)
-    push!(body.args, :(result = fill(0.0, $(size(tmp)))))
     all_vars = variables(graph)
+
     if variable_order === nothing
         ordering = all_vars
     else
         ordering = Node.(variable_order)
     end
     @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
+
+    body = Expr(:block)
+    if !in_place
+        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian.
+    end
 
     for (i, node) in pairs(tmp)
         node_body, variable = function_body(node, node_to_var)
