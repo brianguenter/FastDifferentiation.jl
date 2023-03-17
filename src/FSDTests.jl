@@ -11,9 +11,9 @@ using ..FastSymbolicDifferentiation
 
 using TestItems
 
-include("../Benchmark/src/Chebyshev.jl")
-include("../Benchmark/src/SphericalHarmonics.jl")
-include("../Benchmark/src/LagrangianDynamics.jl")
+include("../FSDBenchmark/src/Chebyshev.jl")
+include("../FSDBenchmark/src/SphericalHarmonics.jl")
+include("../FSDBenchmark/src/LagrangianDynamics.jl")
 
 
 """ Utility function for working with symbolic expressions as Symbolics.jl defines them."""
