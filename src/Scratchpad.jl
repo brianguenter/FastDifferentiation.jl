@@ -3,8 +3,6 @@
 using Symbolics
 using StaticArrays
 using FiniteDifferences
-using Profile
-using PProf
 using .FSDTests
 
 function test()
@@ -31,14 +29,6 @@ function test()
     return FSD_func
 end
 export test
-
-function profile()
-    graph, qx, qy, qz = to_graph(25)
-    Profile.clear()
-    @profile symbolic_jacobian!(graph, [Node(qx), Node(qy), Node(qz)])
-    pprof()
-end
-export profile
 
 #changed
 #change

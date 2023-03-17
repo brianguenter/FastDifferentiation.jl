@@ -64,7 +64,7 @@ function plot_data(bench1, bench2)
 
     # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
-    plot(data1[:, :SHOrder], data1[:, :minimum] ./ data2[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Relative Speed",)
+    plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Speed of FSD relative to Symbolics",)
 end
 export plot_data
 

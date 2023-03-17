@@ -2,76 +2,11 @@ module Vis
 
 using Colors
 using ColorTypes
-using FixedPointNumbers
 using ..FastSymbolicDifferentiation
 
 using GraphRecipes
 using Plots
 using Graphs
-
-# digraph graphname {
-#     // This attribute applies to the graph itself
-#     size="1,1";
-#     // The label attribute can be used to change the label of a node
-#     a [label="Foo"];
-#     // Here, the node shape is changed.
-#     b [shape=box];
-#     // These edges both have different line properties
-#     a -> b -> c [color=blue];
-#     b -> d [style=dotted];
-#     // [style=invis] hides a node.
-# }
-function to_dot(graph::RnToRmGraph, filename)
-    data = """
-    graph graphname {
-        // This attribute applies to the graph itself
-         size="1,1";
-         // The label attribute can be used to change the label of a node
-         a [label="Foo"];
-         // Here, the node shape is changed.
-         b [shape=box];
-         // These edges both have different line properties
-         a -- b -- c [color=blue];
-         b -- d [style=dotted];
-         // [style=invis] hides a node.
-    }"""
-    f = open(filename, "w")
-    write(f, data)
-    close(f)
-end
-export to_dot
-
-function explot()
-    n = 8
-    g = wheel_digraph(n)
-    edgelabel_dict = Dict()
-    edgelabel_mat = Array{String}(undef, n, n)
-    for j in 1:n
-        for i in 1:n
-            # edgelabel_mat[i, j] = 
-            edgelabel_dict[(i, j)] = string("edge ", i, " to ", j)
-        end
-    end
-    # edgelabel_vec = edgelabel_mat[:]
-
-    graphplot(g, names=1:n, edgelabel=edgelabel_dict, curves=false, nodeshape=:rect)  # Or edgelabel=edgelabel_mat, or edgelabel=edgelabel_vec.
-end
-export explot
-
-function graph_recipes_example()
-    # default(size=(2000, 2000))
-
-    #         out += 1
-    #     end
-    #     out
-    # end
-    # )
-
-    code = dag_to_Expr(complex_dominator_dag(), Dict{Node,Union{Symbol,Real}}())
-
-    plot(code, fontsize=7, shorten=0.01, axis_buffer=0.15, nodeshape=:rect, nodecolor="pink")
-end
-export graph_recipes_example
 
 function label_func(mask::BitVector, label_string::String)
     root_string = ""
