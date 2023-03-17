@@ -7,6 +7,14 @@ using DataFrames
 using CSV
 using CurveFit
 using Plots
+using Memoize
+using FastSymbolicDifferentiation
+using StaticArrays
+
+include("Chebyshev.jl")
+include("SphericalHarmonics.jl")
+include("StructureFromMotion.jl")
+include("LagrangianDynamics.jl")
 
 @variables x, y, z
 
@@ -19,7 +27,7 @@ preprocess_trial(t::BenchmarkTools.Trial, SHOrder::AbstractString) =
         memory_estimate=t.memory)
 export preprocess_trial
 
-function Symbolics_Spherical_Harmonics(filename, min_order, max_order)
+function symbolics_spherical_harmonics(filename, min_order, max_order)
     output = DataFrame()
 
     for n in min_order:2:max_order
@@ -29,9 +37,9 @@ function Symbolics_Spherical_Harmonics(filename, min_order, max_order)
     CSV.write(filename, output)
     return output
 end
-export Symbolics_Spherical_Harmonics
+export symbolics_spherical_harmonics
 
-function FSD_Spherical_Harmonics(filename, min_order, max_order)
+function FSD_spherical_harmonics(filename, min_order, max_order)
     output = DataFrame()
 
     for n in min_order:2:max_order
@@ -41,13 +49,13 @@ function FSD_Spherical_Harmonics(filename, min_order, max_order)
     CSV.write(filename, output)
     return output
 end
-export FSD_Spherical_Harmonics
+export FSD_spherical_harmonics
 
-function Run_Spherical_Harmonics(min_order, max_order)
-    Symbolics_Spherical_Harmonics("Data/SymbolicsSH.csv", min_order, max_order)
-    FSD_Spherical_Harmonics("Data/FSDSH.csv", min_order, max_order)
+function benchmark_spherical_harmonics(min_order, max_order)
+    symbolics_spherical_harmonics("Data/SymbolicsSH.csv", min_order, max_order)
+    FSD_spherical_harmonics("Data/FSDSH.csv", min_order, max_order)
 end
-export Run_Spherical_Harmonics
+export benchmark_spherical_harmonics
 
 
 function plot_data(bench1, bench2)
