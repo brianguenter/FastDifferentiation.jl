@@ -90,7 +90,7 @@ function to_graph(max_l)
     ny = Node(y)
     nz = Node(z)
 
-    graph = RnToRmGraph(SHFunctions(max_l, nx, ny, nz))
+    graph = DerivativeGraph(SHFunctions(max_l, nx, ny, nz))
     return graph, x, y, z
 end
 export to_graph
