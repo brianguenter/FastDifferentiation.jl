@@ -6,14 +6,14 @@ using DataStructures
 
 """This and PathConstraint are highly redundant. There is one function, compute_dominance_tables, which used PathConstraint in a slightly different way than all the other code. This caused endless bugs. For now make a new constraint struct just for compute_dominance_tables, since that code is complicated and don't want to rewrite it now. Later get rid of DomPathConstraint struct, since it is only used by one function."""
 struct DomPathConstraint{T<:Integer}
-    graph::RnToRmGraph{T}
+    graph::DerivativeGraph{T}
     iterate_parents::Bool
     roots_mask::BitVector
     variables_mask::BitVector
     relations::Vector{T} #scratch vector that is used to hold temporary values for iteration
 
 
-    function DomPathConstraint(graph::RnToRmGraph{T}, iterate_parents::Bool, roots_mask::BitVector, variables_mask::BitVector) where {T}
+    function DomPathConstraint(graph::DerivativeGraph{T}, iterate_parents::Bool, roots_mask::BitVector, variables_mask::BitVector) where {T}
         relations = Vector{T}(undef, 5) #initialize to small size since num parents or children is likely to be small for any given node. 
         # @assert !is_zero(roots_mask) #can't iterate with all roots constrained out
         # @assert !is_zero(variables_mask) #can't iterate with all variables constrained out
@@ -22,7 +22,7 @@ struct DomPathConstraint{T<:Integer}
 end
 export DomPathConstraint
 
-function DomPathConstraint(graph::RnToRmGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
+function DomPathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
         roots_mask = falses(codomain_dimension(graph))
         roots_mask[root_or_leaf_index] = 1
@@ -44,14 +44,14 @@ relations(a::DomPathConstraint) = a.relations
 """Contains information used to constrain graph traversal to only edges/vertices that are on the path to a root or variable vertex"""
 struct PathConstraint{T<:Integer}
     dominating_node::T
-    graph::RnToRmGraph{T}
+    graph::DerivativeGraph{T}
     iterate_parents::Bool
     roots_mask::BitVector
     variables_mask::BitVector
     relations::Vector{T} #scratch vector that is used to hold temporary values for iteration
 
 
-    function PathConstraint(dominating_node::T, graph::RnToRmGraph{T}, iterate_parents::Bool, roots_mask::BitVector, variables_mask::BitVector) where {T}
+    function PathConstraint(dominating_node::T, graph::DerivativeGraph{T}, iterate_parents::Bool, roots_mask::BitVector, variables_mask::BitVector) where {T}
         relations = Vector{T}(undef, 5) #initialize to small size since num parents or children is likely to be small for any given node. 
         # @assert !is_zero(roots_mask) #can't iterate with all roots constrained out
         # @assert !is_zero(variables_mask) #can't iterate with all variables constrained out
@@ -60,7 +60,7 @@ struct PathConstraint{T<:Integer}
 end
 export PathConstraint
 
-function PathConstraint(graph::RnToRmGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
+function PathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
         roots_mask = falses(codomain_dimension(graph))
         roots_mask[root_or_leaf_index] = 1
@@ -303,7 +303,7 @@ function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_t
 end
 
 """If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
-function compute_dominance_tables(graph::RnToRmGraph{T}, compute_dominators::Bool) where {T<:Integer}
+function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
     if compute_dominators
         start_vertices = root_index_to_postorder_number(graph)
         next_vertices_relation = (curr_node::Integer) -> children(graph, curr_node)

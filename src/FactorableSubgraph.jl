@@ -3,7 +3,7 @@ abstract type DominatorSubgraph <: AbstractFactorableSubgraph end
 abstract type PostDominatorSubgraph <: AbstractFactorableSubgraph end
 
 struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
-    graph::RnToRmGraph{T}
+    graph::DerivativeGraph{T}
     subgraph::Tuple{T,T}
     times_used::T
     reachable_roots::BitVector
@@ -14,7 +14,7 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
     num_dominator_edges::T #number of edges from the dominator node that satisfy the subgraph relation.
     num_dominated_edges::T #number of edges from the dominated node that satisfy the subgraph relation
 
-    function FactorableSubgraph{T,DominatorSubgraph}(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
+    function FactorableSubgraph{T,DominatorSubgraph}(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node > dominated_node
         dominator_relation_edges = length(child_edges(graph, dominating_node)) #when graph is created all children of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
         constraint = PathConstraint(dominating_node, graph, true, dom_mask, variables_reachable)
@@ -26,7 +26,7 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
         return new{T,DominatorSubgraph}(graph, (dominating_node, dominated_node), sum(dom_mask) * sum(variables_reachable), roots_reachable, variables_reachable, dom_mask, nothing, dominator_relation_edges, dominated_relation_edges)
     end
 
-    function FactorableSubgraph{T,PostDominatorSubgraph}(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
+    function FactorableSubgraph{T,PostDominatorSubgraph}(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node < dominated_node
         dominator_relation_edges = length(parent_edges(graph, dominating_node)) #when graph is created all parents of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
         constraint = PathConstraint(dominating_node, graph, false, roots_reachable, pdom_mask)
@@ -42,13 +42,13 @@ export FactorableSubgraph
 FactorableSubgraph(args::Tuple) = FactorableSubgraph(args...)
 
 dominator_subgraph(args) = dominator_subgraph(args...)
-dominator_subgraph(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,DominatorSubgraph}(graph, dominating_node, dominated_node, dom_mask, roots_reachable, variables_reachable)
-dominator_subgraph(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, dom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = dominator_subgraph(graph, dominating_node, dominated_node, BitVector(dom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
+dominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,DominatorSubgraph}(graph, dominating_node, dominated_node, dom_mask, roots_reachable, variables_reachable)
+dominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = dominator_subgraph(graph, dominating_node, dominated_node, BitVector(dom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
 export dominator_subgraph
 
 postdominator_subgraph(args) = postdominator_subgraph(args...)
-postdominator_subgraph(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,PostDominatorSubgraph}(graph, dominating_node, dominated_node, pdom_mask, roots_reachable, variables_reachable)
-postdominator_subgraph(graph::RnToRmGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = postdominator_subgraph(graph, dominating_node, dominated_node, BitVector(pdom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
+postdominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,PostDominatorSubgraph}(graph, dominating_node, dominated_node, pdom_mask, roots_reachable, variables_reachable)
+postdominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = postdominator_subgraph(graph, dominating_node, dominated_node, BitVector(pdom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
 export postdominator_subgraph
 
 graph(a::FactorableSubgraph) = a.graph

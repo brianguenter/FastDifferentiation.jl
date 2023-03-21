@@ -544,28 +544,6 @@ function _all_nodes!(node::Node, visited::Dict{Node,T}, nodes::Vector{Node}) whe
     return nothing
 end
 
-function new_variables(node::Node, visited)
-    nodes = Vector{Node}(undef, 0)
-
-    _new_variables!(node, visited, nodes)
-    return nodes
-end
-export all_nodes
-
-function _new_variables!(node::Node, visited::Dict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
-    tmp = get(visited, node, nothing)
-    if tmp === nothing
-        if node.children !== nothing
-            _new_variables!.(node.children, Ref(visited), Ref(nodes))
-        elseif is_variable(node)
-            push!(nodes, node)
-        end
-        visited[node] = true
-    end
-
-    return nothing
-end
-
 """computes leaves of the graph `node`. This is inefficient since it allocates space to store all nodes and then searches through that vector to find the leaves."""
 function graph_leaves(node::Node)
     result = Vector{Node}(undef, 0)
@@ -581,6 +559,19 @@ function graph_leaves(node::Node)
 end
 export graph_leaves
 
+# macro declare_variables(a...)
+#     vars = filter(x->x isa Symbol,a)
+#     tmp = setdiff(a,vars)
+#     funcs = filter(x->x isa Expr, a)
+#     tmp = setdiff(tmp,funcs)
+#     if tmp !== () 
+#         throw(ErrorException("Arguments to declare_variables can only be symbol names, such as `a`, or unspecified functions, such as `q(t)`."))
+#     end
+
+#    eval(:(@variables $vars))
+#    for onevar in vars
+#     eval(:())
+# end
 
 # """inefficient exponential time algorithm to compute derivative. Only used for testing small examples"""
 # function all_paths_derivative(graph::DerivativeGraph)

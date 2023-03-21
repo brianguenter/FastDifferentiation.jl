@@ -85,7 +85,7 @@ export parents
 children(a::EdgeRelations) = a.children
 export children
 
-struct RnToRmGraph{T<:Integer}
+struct DerivativeGraph{T<:Integer}
     postorder_number::Dict{Node,T}
     nodes::Vector{Node}
     roots::Vector{Node}
@@ -98,7 +98,7 @@ struct RnToRmGraph{T<:Integer}
     expression_cache::IdDict
 
     """postorder numbers the nodes in the roots vector using a global numbering, i.e., the first root gets the numbers 1:length(roots[1]), the second root gets the numbers length(roots[1])+1:length(roots[2])+1, etc. This makes it possible to compute dominance relations, factorization subgraphs, etc., for each ℝ¹→ℝ¹ derivative subgraph using the global postorder numbers, without having to renumber each subgraph with a local set of postorder numbers."""
-    function RnToRmGraph(roots::AbstractVector, index_type::Type=Int64)
+    function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64)
         postorder_number = IdDict{Node,index_type}()
         vars = Set{Node}()
 
@@ -147,17 +147,17 @@ struct RnToRmGraph{T<:Integer}
         )
     end
 end
-export RnToRmGraph
+export DerivativeGraph
 
-RnToRmGraph(root::Node) = RnToRmGraph([root]) #convenience constructor for single root functions
+DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
 
-nodes(a::RnToRmGraph) = a.nodes
+nodes(a::DerivativeGraph) = a.nodes
 export nodes
 
-node(a::RnToRmGraph, node_index) = nodes(a)[node_index]
+node(a::DerivativeGraph, node_index) = nodes(a)[node_index]
 export node
 
-num_vertices(a::RnToRmGraph) = length(nodes(a))
+num_vertices(a::DerivativeGraph) = length(nodes(a))
 export num_vertices
 
 function parents(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
@@ -174,57 +174,57 @@ export children
 # parents(constraint_function, a::RnToRmGraph, node_index::T)
 
 """returns iterator of indices of parents of node"""
-parents(a::RnToRmGraph, node_index::T) where {T<:Integer} = parents(edges(a), node_index)
+parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a), node_index)
 
 
 """returns iterator of indices of children of node"""
-children(a::RnToRmGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
+children(a::DerivativeGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
 export children
 
-root_path_masks(a::RnToRmGraph) = a.root_path_masks
-variable_path_masks(a::RnToRmGraph) = a.variable_path_masks
+root_path_masks(a::DerivativeGraph) = a.root_path_masks
+variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
 
-each_vertex(a::RnToRmGraph) = 1:length(nodes(a))
+each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
 export each_vertex
-roots(a::RnToRmGraph) = a.roots
+roots(a::DerivativeGraph) = a.roots
 export roots
-root(a::RnToRmGraph, root_index::Integer) = roots(a)[root_index]
+root(a::DerivativeGraph, root_index::Integer) = roots(a)[root_index]
 export root
-root_index_to_postorder_number(a::RnToRmGraph) = a.root_index_to_postorder_number
+root_index_to_postorder_number(a::DerivativeGraph) = a.root_index_to_postorder_number
 export root_index_to_postorder_number
-root_index_to_postorder_number(a::RnToRmGraph, index::Integer) = root_index_to_postorder_number(a)[index]
+root_index_to_postorder_number(a::DerivativeGraph, index::Integer) = root_index_to_postorder_number(a)[index]
 
-root_postorder_to_index(a::RnToRmGraph, index::Integer) = a.root_postorder_to_index[index]
+root_postorder_to_index(a::DerivativeGraph, index::Integer) = a.root_postorder_to_index[index]
 export root_postorder_to_index
 
 
 
 #These two functions are not efficient, primarily intended for visualization
-is_root(graph::RnToRmGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
+is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
 export is_root
-is_variable(graph::RnToRmGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
+is_variable(graph::DerivativeGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
 export is_root
 
 
-variables(a::RnToRmGraph) = a.variables
+variables(a::DerivativeGraph) = a.variables
 export variables
-variable(a::RnToRmGraph, variable_index::Integer) = variables(a)[variable_index]
+variable(a::DerivativeGraph, variable_index::Integer) = variables(a)[variable_index]
 export variable
-variable_index_to_postorder_number(a::RnToRmGraph) = a.variable_index_to_postorder_number
+variable_index_to_postorder_number(a::DerivativeGraph) = a.variable_index_to_postorder_number
 export variable_index_to_postorder_number
-variable_index_to_postorder_number(a::RnToRmGraph, index::Integer) = variable_index_to_postorder_number(a)[index]
+variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = variable_index_to_postorder_number(a)[index]
 
-variable_postorder_to_index(a::RnToRmGraph, index) = a.variable_postorder_to_index[index]
+variable_postorder_to_index(a::DerivativeGraph, index) = a.variable_postorder_to_index[index]
 export variable_postorder_to_index
 
-variable_node_to_index(a::RnToRmGraph, vnode::Node) = variable_postorder_to_index(a, postorder_number(a, vnode))
+variable_node_to_index(a::DerivativeGraph, vnode::Node) = variable_postorder_to_index(a, postorder_number(a, vnode))
 export variable_node_to_index
 
-edges(a::RnToRmGraph) = a.edges
+edges(a::DerivativeGraph) = a.edges
 export edges
 
 """returns edges that directly connect top_vert and bott_vert"""
-function edges(a::RnToRmGraph, vert1::Integer, vert2::Integer)
+function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
     @assert 0 < vert1 ≤ length(nodes(a))
     @assert 0 < vert2 ≤ length(nodes(a))
 
@@ -233,7 +233,7 @@ function edges(a::RnToRmGraph, vert1::Integer, vert2::Integer)
 end
 
 """This is not an especially fast function. Currently only used for testing and diagnostics so this isn't a problem."""
-function unique_edges(a::RnToRmGraph)
+function unique_edges(a::DerivativeGraph)
     edges_unique = Set{PathEdge}()
     for edge_vector in values(edges(a))
         for edge in parents(edge_vector)
@@ -247,18 +247,18 @@ function unique_edges(a::RnToRmGraph)
 end
 export unique_edges
 
-postorder_number(a::RnToRmGraph, node::Node) = a.postorder_number[node]
+postorder_number(a::DerivativeGraph, node::Node) = a.postorder_number[node]
 export postorder_number
 
 _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer} = get(edge_map, node_index, nothing)
 
-node_edges(a::RnToRmGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
-node_edges(a::RnToRmGraph, node_index::Integer) = _node_edges(edges(a), node_index)
+node_edges(a::DerivativeGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
+node_edges(a::DerivativeGraph, node_index::Integer) = _node_edges(edges(a), node_index)
 export node_edges
 # node_edges(a::RnToRmGraph, node_index::Integer) = get(a.edges, node_index, nothing) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 # #version that doesn't require having the entire graph constructed
 
-function reachable_variables(a::RnToRmGraph, node_index::Integer)
+function reachable_variables(a::DerivativeGraph, node_index::Integer)
     node_edges = children(edges(a)[node_index])
     path_mask = falses(domain_dimension(a))
     for edge in node_edges
@@ -274,7 +274,7 @@ function reachable_variables(a::RnToRmGraph, node_index::Integer)
     return path_mask
 end
 
-function reachable_roots(a::RnToRmGraph, node_index::Integer)
+function reachable_roots(a::DerivativeGraph, node_index::Integer)
     node_edges = parents(edges(a)[node_index])
     path_mask = falses(codomain_dimension(a))
     for edge in node_edges
@@ -292,14 +292,14 @@ end
 
 
 
-codomain_dimension(a::RnToRmGraph) = length(roots(a))
+codomain_dimension(a::DerivativeGraph) = length(roots(a))
 export codomain_dimension
-domain_dimension(a::RnToRmGraph) = length(variables(a))
+domain_dimension(a::DerivativeGraph) = length(variables(a))
 export domain_dimension
-dimensions(a::RnToRmGraph) = (domain_dimension(a), codomain_dimension(a))
+dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
 export dimensions
 
-function mean_reachable_variables(a::RnToRmGraph)
+function mean_reachable_variables(a::DerivativeGraph)
     total = 0
     num_edges = 0
 
@@ -311,14 +311,14 @@ function mean_reachable_variables(a::RnToRmGraph)
 end
 export mean_reachable_variables
 
-function fraction_reachable_variables(a::RnToRmGraph)
+function fraction_reachable_variables(a::DerivativeGraph)
     return mean_reachable_variables(a) / domain_dimension(a)
 end
 export fraction_reachable_variables
 
 #these functions implicitly assume the nodes are postorder numbered. Parent nodes will have higher numbers than children nodes. Vertices in PathEdge are sorted with highest number first. These are inefficient since the filtering happens at every access. Change to fixed parent, child fields if this is too slow.
 """Returns a vector of edges which satisfy `edge.top_vertex == node_index`. These edges lead to the children of `node_index`."""
-function child_edges(dgraph::RnToRmGraph, node_index::T) where {T<:Integer}
+function child_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
     nedges = node_edges(dgraph, node_index)
     if nedges !== nothing
         return children(nedges)
@@ -328,12 +328,12 @@ function child_edges(dgraph::RnToRmGraph, node_index::T) where {T<:Integer}
 end
 export child_edges
 
-child_edges(dgraph::RnToRmGraph, node::Node) = child_edges(dgraph, postorder_number(dgraph, node))
+child_edges(dgraph::DerivativeGraph, node::Node) = child_edges(dgraph, postorder_number(dgraph, node))
 
-child_edges(graph::RnToRmGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
+child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
 
 """The way `parent_edges` works is somewhat subtle. Assume we have a root node `nᵢ` with no parents but some children. No edge in `node_edges(nᵢ)` will pass the test `edge.bott_vertex == node` so `parent_edges` will return T[]. But this empty vector is not explicitly stored in the edge list."""
-function parent_edges(dgraph::RnToRmGraph, node::T) where {T<:Integer}
+function parent_edges(dgraph::DerivativeGraph, node::T) where {T<:Integer}
     nedges = _node_edges(edges(dgraph), node)
     if nedges !== nothing
         return parents(nedges)
@@ -343,12 +343,12 @@ function parent_edges(dgraph::RnToRmGraph, node::T) where {T<:Integer}
 end
 export parent_edges
 
-parent_edges(dgraph::RnToRmGraph, node::Node) = parent_edges(dgraph, postorder_number(dgraph, node))
+parent_edges(dgraph::DerivativeGraph, node::Node) = parent_edges(dgraph, postorder_number(dgraph, node))
 
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
-is_constant(graph::RnToRmGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
+is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
 export is_constant
-partial_value(dgraph::RnToRmGraph, parent::Node, child_index::T) where {T<:Integer} = edge_value(child_edges(dgraph, parent)[child_index])
+partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = edge_value(child_edges(dgraph, parent)[child_index])
 export partial_value
 
 """Computes partial values for all edges in the graph"""
@@ -394,7 +394,7 @@ function partial_edges(roots::AbstractVector{T}, postorder_number::IdDict{Node,I
     return edges
 end
 
-function edge_exists(graph::RnToRmGraph, edge::PathEdge)
+function edge_exists(graph::DerivativeGraph, edge::PathEdge)
     edges = node_edges(graph, bott_vertex(edge))
     if edges === nothing
         val1 = false
@@ -419,7 +419,7 @@ export edge_exists
 
 
 """Adds an edge to the graph"""
-function add_edge!(graph::RnToRmGraph, edge::PathEdge)
+function add_edge!(graph::DerivativeGraph, edge::PathEdge)
     if edge_exists(graph, edge) #if the edge is already in the graph something is seriously wrong.
         throw(ErrorException("Attempt to add edge to graph but the edge is already in the graph. This should never happen."))
     end
@@ -453,7 +453,7 @@ end
 
 
 """Deletes an edge from the graph"""
-function delete_edge!(graph::RnToRmGraph, edge::PathEdge, force::Bool=false)
+function delete_edge!(graph::DerivativeGraph, edge::PathEdge, force::Bool=false)
     if !edge_exists(graph, edge)
         throw(ErrorException("Attempt to delete non-existant edge. This should never happen."))
     end
@@ -488,10 +488,10 @@ function delete_edge!(graph::RnToRmGraph, edge::PathEdge, force::Bool=false)
 end
 export delete_edge!
 
-make_function(graph::RnToRmGraph) = make_function(graph, variables(graph))
+make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
 
 """Returns an n vector of Julia functions"""
-function make_function(graph::RnToRmGraph, variable_order::AbstractVector{S}) where {S<:Node}
+function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}) where {S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     body = Expr(:block)
     push!(body.args, :(result = fill(0.0, $(length(roots(graph))))))

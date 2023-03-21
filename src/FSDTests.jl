@@ -26,14 +26,12 @@ function number_of_operations(symbolic_expr)
 end
 export number_of_operations
 
-"""This DAG is not compatible with R1ToR1Graph which requires one leaf variable, one root"""
 function simple_dag(cache::Union{IdDict,Nothing}=IdDict())
     Symbolics.@variables zz y
     return expr_to_dag(zz^2 + y * (zz^2), cache), zz, y
 end
 export simple_dag
 
-"""This DAG is compatible with R1ToR1Graph, has one root, one leaf variable."""
 function simple_numbered_dag()
     Symbolics.@variables zz
     return expr_to_dag(zz * cos(zz^2))
@@ -99,7 +97,7 @@ function complex_dominator_dag()
 end
 export complex_dominator_dag
 
-complex_dominator_graph() = RnToRmGraph(complex_dominator_dag())
+complex_dominator_graph() = DerivativeGraph(complex_dominator_dag())
 export complex_dominator_graph
 
 function R2_R2_function()
@@ -111,7 +109,7 @@ function R2_R2_function()
     n4 = n2 * ny
     n5 = n2 * n4
 
-    return RnToRmGraph([n5, n4])
+    return DerivativeGraph([n5, n4])
 end
 export R2_R2_function
 
@@ -124,7 +122,7 @@ function simple_dominator_graph()
     ntimes = Node(*, ncos, nplus)
     four_2_subgraph = Node(+, nplus, ncos)
     one_3_subgraph = Node(+, Node(*, Node(-1), Node(sin, nx)), Node(1))
-    return x, RnToRmGraph(ntimes), four_2_subgraph, one_3_subgraph
+    return x, DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
 end
 export simple_dominator_graph
 
@@ -257,15 +255,7 @@ end
     nv2 = Node(y)
     n3 = nv1 * nv2
     n4 = n3 * nv1
-    n5 = n3 * n4
 
-    graph = RnToRmGraph([n4, n5])
-    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    subs, _ = compute_factorable_subgraphs(graph)
-
-    _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
-    _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
-    _3_5 = postdominator_subgraph(graph, 3, 5, Bool[0, 1], Bool[0, 1], Bool[1, 1])
     _4_1 = dominator_subgraph(graph, 4, 1, Bool[1, 0], Bool[1, 1], Bool[1, 0])
     _5_1 = dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
     _1_5 = postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
@@ -283,7 +273,7 @@ end
 @testitem "compute_factorable_subgraphs" begin
     using FastSymbolicDifferentiation.FSDTests
 
-    dgraph = RnToRmGraph(complex_dominator_dag())
+    dgraph = DerivativeGraph(complex_dominator_dag())
 
     subs, subs_dict = compute_factorable_subgraphs(dgraph)
 
@@ -369,7 +359,7 @@ end
     n4 = n2 * ny
     n5 = n2 * n4
 
-    graph = RnToRmGraph([n5, n4])
+    graph = DerivativeGraph([n5, n4])
 
     function test_edge_access(graph, correct_num_edges, vert1, vert2)
         edge_group1 = edges(graph, vert1, vert2)
@@ -394,7 +384,7 @@ end
     end
 end
 
-@testitem "RnToRmGraph constructor" begin
+@testitem "DerivativeGraph constructor" begin
     using Symbolics
 
     @variables x, y
@@ -416,7 +406,7 @@ end
 
     correct_postorder_numbers = Dict((nx => 1, cosx => 2, ny => 3, siny => 4, ctimess => 5, cpluss => 6))
 
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
 
     @test all([correct_postorder_numbers[node] == postorder_number(graph, node) for node in grnodes])
 
@@ -435,7 +425,7 @@ end
     end
 end
 
-@testitem "RnToRmGraph pathmasks" begin
+@testitem "DerivativeGraph pathmasks" begin
     using Symbolics
     @variables x, y
 
@@ -447,7 +437,7 @@ end
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
 
     #nx,ny,xy shared by both roots. n5,f1 only on f1 path, n3,f2 only on f2 path
     correct_roots_pathmasks = [
@@ -488,7 +478,7 @@ end
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     root_masks = compute_paths_to_roots(num_vertices(graph), edges(graph), root_index_to_postorder_number(graph))
     variable_masks = compute_paths_to_variables(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph))
 
@@ -552,7 +542,7 @@ end
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
 
     all_edges = unique_edges(graph)
 
@@ -564,7 +554,7 @@ end
 
 end
 
-@testitem "add_edge! for RnToRmGraph" begin
+@testitem "add_edge! for DerivativeGraph" begin
     using Symbolics
     @variables x, y
 
@@ -577,7 +567,7 @@ end
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
     variables = [nx, ny]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
 
     previous_edges = unique_edges(graph)
     new_edge = PathEdge(1, 7, Node(y), length(variables), length(roots))
@@ -598,7 +588,7 @@ end
     @test edge_exists(graph, new_edge) #and that there is only one new edge
 end
 
-@testitem "delete_edge! for RnToRmGraph" begin
+@testitem "delete_edge! for DerivativeGraph" begin
 
     #TODO need to add a test that deletes all the edges incident on a vertex and ensures that vertex is deleted.
 
@@ -631,12 +621,12 @@ end
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     all_edges = unique_edges(graph)
 
     reset_test(all_edges, graph, reachable_roots)
 
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     all_edges = unique_edges(graph)
 
     reset_test(all_edges, graph, reachable_variables)
@@ -657,7 +647,7 @@ end
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
     variables = [nx, ny]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     compute_edge_paths!(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
     correct_root_masks = Dict(
@@ -687,7 +677,7 @@ end
     end
 end
 
-@testitem "dominators RnToRmGraph" begin
+@testitem "dominators DerivativeGraph" begin
     using Symbolics
 
 
@@ -701,7 +691,7 @@ end
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
@@ -726,7 +716,7 @@ end
     nexp = Node(exp, n6) # 8
 
     roots = [n7, nexp]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
@@ -767,7 +757,7 @@ end
     ntimes1 = Node(*, ncos, nx)
     ntimes2 = Node(*, ncos, ntimes1)
     roots = [ntimes2, ntimes1]
-    graph = RnToRmGraph(roots)
+    graph = DerivativeGraph(roots)
     idoms = compute_dominance_tables(graph, true)
     pidoms = compute_dominance_tables(graph, false)
 
@@ -808,7 +798,7 @@ end
     n4 = n3 * ny2
     n5 = n3 * n4
 
-    graph = RnToRmGraph([n5, n4])
+    graph = DerivativeGraph([n5, n4])
     two = BitVector([1, 1])
     one_zero = BitVector([1, 0])
     zero_one = BitVector([0, 1])
@@ -896,7 +886,7 @@ end
 
     gnodes = (nx1, ny2, nxy3, r2_4, r1_5)
 
-    graph = RnToRmGraph([r1_5, r2_4])
+    graph = DerivativeGraph([r1_5, r2_4])
     subs, subs_dict = compute_factorable_subgraphs(graph)
     subnums = ((5, 3), (4, 1), (5, 1), (1, 5), (3, 5), (1, 4))
     roots = (BitVector([1, 0]), BitVector([1, 1]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 1]))
@@ -932,7 +922,7 @@ end
 
     gnodes = (nx1, ny2, nxy3, r2_4, r1_5)
 
-    graph = RnToRmGraph([r1_5, r2_4])
+    graph = DerivativeGraph([r1_5, r2_4])
 
     #first verify all nodes have the postorder numbers we expect
     for (i, nd) in pairs(gnodes)
@@ -1018,7 +1008,7 @@ end
     n4 = n3 * nv1
     n5 = n3 * n4
 
-    graph = RnToRmGraph([n4, n5])
+    graph = DerivativeGraph([n4, n5])
 
     subs = compute_factorable_subgraphs(graph)[1]
     _5_3 = subs[findfirst(x -> x.subgraph == (5, 3), subs)]
@@ -1056,7 +1046,7 @@ end
     n5 = n3 * n4
     n6 = n5 * n4
 
-    graph = RnToRmGraph([n5, n6])
+    graph = DerivativeGraph([n5, n6])
 
     subs, sub_dict = compute_factorable_subgraphs(graph)
 
@@ -1085,7 +1075,7 @@ end
     n4 = n3 * nv1
     n5 = n3 * n4
 
-    graph = RnToRmGraph([n4, n5])
+    graph = DerivativeGraph([n4, n5])
     # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
     subs, subgraph_dict = compute_factorable_subgraphs(graph)
 
@@ -1111,7 +1101,7 @@ end
     n4 = n3 * ny2
     n5 = n3 * n4
 
-    graph = RnToRmGraph([n5, n4])
+    graph = DerivativeGraph([n5, n4])
     tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
     factor_subgraph!(tmp, evaluate_subgraph(tmp))
     @test length(edges(graph, 2, 4)) == 1
@@ -1134,7 +1124,7 @@ end
 #     n4 = n3 * ny2
 #     n5 = n3 * n4
 #     n6 = n5 * n4
-#     graph = RnToRmGraph([n5, n6])
+#     graph = DerivativeGraph([n5, n6])
 
 #     factorization_order = ((5, 3), (3, 5), (6, 4), (2, 4), (5, 2), (6, 3), (2, 5), (3, 6), (6, 2), (2, 6))
 #     #TODO can't factor (5,2), (2,5) first. Must do 2,4 or 3,5 or one of the other contained subgraphs first, in the order listed above.
@@ -1184,7 +1174,7 @@ end
     r1_4 = sin(n3)
     r2_5 = cos(n3)
 
-    graph = RnToRmGraph([r1_4, r2_5])
+    graph = DerivativeGraph([r1_4, r2_5])
     result = symbolic_jacobian!(graph, [nx1, ny2])
 
     @test result[1, 1] == cos(nx1 * ny2) * ny2
@@ -1215,7 +1205,7 @@ end
     nx = Node(x)
     zr = Node(0.0)
 
-    graph = RnToRmGraph([nx, zr])
+    graph = DerivativeGraph([nx, zr])
     factor!(graph)
 end
 
@@ -1296,7 +1286,7 @@ end
     n4 = n2 * ny
     n5 = n2 * n4
 
-    graph = RnToRmGraph([n4, n5])
+    graph = DerivativeGraph([n4, n5])
     # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
     factor!(graph)
 end
@@ -1312,7 +1302,7 @@ end
     n4 = n2 * ny
     n5 = n2 * n4
 
-    graph = RnToRmGraph([n4, n5])
+    graph = DerivativeGraph([n4, n5])
 
     df21(x, y) = 2 * x * y^3
     df22(x, y) = 3 * x^2 * y^2

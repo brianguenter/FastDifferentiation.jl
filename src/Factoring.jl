@@ -8,7 +8,7 @@ next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = P
 top_down_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint()
 
 """Evaluates the subgraph, creates a new edge with this value, and then inserts the new edge into `graph`"""
-function add_edge!(graph::RnToRmGraph, subgraph::FactorableSubgraph, subgraph_value::Node)
+function add_edge!(graph::DerivativeGraph, subgraph::FactorableSubgraph, subgraph_value::Node)
     verts = subgraph_vertices(subgraph)
     edge = PathEdge(verts[1], verts[2], subgraph_value, reachable_variables(subgraph), reachable_roots(subgraph))
     add_edge!(graph, edge)
@@ -71,7 +71,7 @@ Proof:
 
 Assume `a` has only one child. Since `a=idom(b)` all upward paths from `b` must pass through `a`. Since `a` has only one child, `nᵢ`, all paths from `b` must first pass through `nᵢ` before passing through `a`. But then `nᵢ` would be the idom of `b`, not `a`, which violates `a=idom(b)`. Hence there must be two downward paths from `a` to `b`.
 """
-function dom_subgraph(graph::RnToRmGraph, root_index::Integer, dominated_node::Integer, idom)
+function dom_subgraph(graph::DerivativeGraph, root_index::Integer, dominated_node::Integer, idom)
     tmp = _node_edges(edges(graph), dominated_node)
 
     if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable dom subgraph.
@@ -91,7 +91,7 @@ function dom_subgraph(graph::RnToRmGraph, root_index::Integer, dominated_node::I
     end
 end
 
-function pdom_subgraph(graph::RnToRmGraph, variable_index::Integer, dominated_node::Integer, pidom)
+function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
     tmp = _node_edges(edges(graph), dominated_node)
     if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable pdom subgraph.
         return nothing
@@ -151,7 +151,7 @@ subgraph `(a,b)` is in the subset of the ℝⁿ->ℝᵐ graph reachable from var
 `&& num_parents(a) > 1 for parents on the path to `b`  
 `&& num_children(b) > 1 for children on the path to variable `vᵢ` through `a`  
 """
-function compute_factorable_subgraphs(graph::RnToRmGraph{T}) where {T}
+function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     dom_subgraphs = Dict{Tuple{T,T},BitVector}()
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
     dual_subgraphs = Tuple{T,T,BitVector,BitVector}[]
@@ -562,7 +562,7 @@ function process_dual_subgraph(subgraph::FactorableSubgraph{T}, subgraph_dict, s
 end
 
 
-function factor_one_subgraph!(a::RnToRmGraph, subgraph::FactorableSubgraph, subgraph_list, subgraph_dict)
+function factor_one_subgraph!(a::DerivativeGraph, subgraph::FactorableSubgraph, subgraph_list, subgraph_dict)
     if get(subgraph_dict, subgraph_vertices(subgraph), nothing) !== nothing #subgraph may already have been processed in which case it will have been removed from subgraph_dict. This happens with dual subgraphs (a,b), (b,a). When (a,b) is processed it will also process (b,a) and (b,a) may be removed from subgraph_dict if it completely overlaps with (a,b).
         # @info("before processing subgraph $subgraph")
 
@@ -591,7 +591,7 @@ function factor_one_subgraph!(a::RnToRmGraph, subgraph::FactorableSubgraph, subg
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
 
-function factor!(a::RnToRmGraph{T}) where {T}
+function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
     for subgraph in subgraph_list
@@ -602,7 +602,7 @@ function factor!(a::RnToRmGraph{T}) where {T}
 end
 export factor!
 
-function follow_path(a::RnToRmGraph{T}, root_index::Integer, var_index::Integer) where {T}
+function follow_path(a::DerivativeGraph{T}, root_index::Integer, var_index::Integer) where {T}
     current_node_index = root_index_to_postorder_number(a, root_index)
     path_product = PathEdge{T}[]
 
@@ -628,7 +628,7 @@ function follow_path(a::RnToRmGraph{T}, root_index::Integer, var_index::Integer)
     return product
 end
 
-function evaluate_path(graph::RnToRmGraph, root_index::Integer, var_index::Integer)
+function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::Integer)
     node_value = root(graph, root_index)
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
@@ -669,7 +669,7 @@ function path_to_variable!(graph, current_edge)
     end
 end
 
-function remove_dangling_edges(graph::RnToRmGraph)
+function remove_dangling_edges(graph::DerivativeGraph)
     #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
     for root_index in 1:codomain_dimension(graph)
         edge_copy = copy(child_edges(graph, root_index_to_postorder_number(graph, root_index)))
@@ -681,7 +681,7 @@ end
 
 
 """Factors the graph then computes jacobian matrix. Destructive."""
-function symbolic_jacobian!(a::RnToRmGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+function symbolic_jacobian!(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     indim = domain_dimension(a)
     outdim = codomain_dimension(a)
 
@@ -701,12 +701,12 @@ function symbolic_jacobian!(a::RnToRmGraph, variable_ordering::AbstractVector{T}
 end
 export symbolic_jacobian!
 
-symbolic_jacobian!(a::RnToRmGraph) = symbolic_jacobian!(a, variables(a))
+symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
 
 
-jacobian_function!(graph::RnToRmGraph) = jacobian_function!(graph, variables(graph))
+jacobian_function!(graph::DerivativeGraph) = jacobian_function!(graph, variables(graph))
 
-function jacobian_Expr!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = symbolic_jacobian!(graph, variable_order)
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     all_vars = variables(graph)
@@ -739,7 +739,7 @@ function jacobian_Expr!(graph::RnToRmGraph, variable_order::AbstractVector{S}; i
 end
 export jacobian_Expr!
 
-jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
+jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
 export jacobian_function!
 
 """Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""
@@ -756,11 +756,11 @@ export num_unique_nodes
 function derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)
-    graph = RnToRmGraph(vecA)
+    graph = DerivativeGraph(vecA)
     temp = symbolic_jacobian!(graph)
-    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A.
+    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottlenect, modify symbolic_jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
-    column = temp[:, column_index]
+    column = temp[:, column_index] #these 3 lines allocate but this shouldn't be a significant source of inefficiency.
     mat_column = reshape(column, size(A))
     result = copy(mat_column)
 
