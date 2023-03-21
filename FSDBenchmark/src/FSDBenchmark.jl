@@ -13,7 +13,7 @@ using StaticArrays
 
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
-include("StructureFromMotion.jl")
+include("Transformations.jl")
 include("LagrangianDynamics.jl")
 
 @variables x, y, z
