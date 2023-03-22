@@ -299,9 +299,9 @@ export variables
 node_children(a::Node) = a.children
 export node_children
 
-# function Base.show(io::IO, a::Node)
-#     print(io, to_string(a))
-# end
+function Base.show(io::IO, a::Node)
+    print(io, to_string(a))
+end
 
 function to_string(a::Node)
     function node_id(b::Node)
