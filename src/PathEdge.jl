@@ -32,12 +32,16 @@ struct PathEdge{T<:Integer,N,M}
     reachable_roots::BitVector
     edge_id::T
 
+    PathEdge(v1::T, v2::T, expression::S, domain_dim::T, codomain_dim::T) where {T<:Integer,S<:Real} = PathEdge(v1, v2, Node(expression), domain_dim, codomain_dim)
+
     function PathEdge(v1::T, v2::T, expression::Node, domain_dim::T, codomain_dim::T) where {T<:Integer}
         v2, v2 = verify_invariants(v1, v2)
 
         #Edges need to have unique ID. Otherwise it is not possible to have two vertices connected by more than one edge.
         return new{T,domain_dim,codomain_dim}(v1, v2, expression, BitVector(undef, domain_dim), BitVector(undef, codomain_dim), Edge2.next_number())
     end
+
+    PathEdge(v1::T, v2::T, expression::S, reachable_variables::BitVector, reachable_roots::BitVector) where {T,S<:Real} = PathEdge(v1, v2, Node(expression), reachable_variables, reachable_roots) #if expression is a number rather than a Node wrap it in a Node.
 
     function PathEdge(v1::T, v2::T, expression::Node, reachable_variables::BitVector, reachable_roots::BitVector) where {T}
         N = length(reachable_variables)

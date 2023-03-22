@@ -255,14 +255,11 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
     for i ∈ 1:arity
 
         expr = if arity == 1
-            if fun != :- #special case for unary negation. DiffRules.diffrule(:Base,:-,:args[1])) => check_cache(-1,EXPRESSION_CACHE). This will bomb since expression cache doesn't store constants. Have a similar special case for +
-                DiffRules.diffrule(modu, fun, :(args[1]))
-            end
+            DiffRules.diffrule(modu, fun, :(args[1]))
         else
             DiffRules.diffrule(modu, fun, ntuple(k -> :(args[$k]), arity)...)[i]
         end
 
-        @info "$expr"
         push!(rules, expr)
         @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = $expr
     end

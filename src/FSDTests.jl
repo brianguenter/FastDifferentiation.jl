@@ -1418,10 +1418,10 @@ end
     DA = [
         -sin(nq1) sin(nq1)
         cos(nq1) cos(nq1)
-    ] 
+    ]
 
-    @test isapprox(zeros(2,2),derivative(A, nq2)) #taking derivative wrt variable not present in the graph returns all zero matrix
-    @test DA .== A
+    @test isapprox(zeros(2, 2), derivative(A, nq2)) #taking derivative wrt variable not present in the graph returns all zero matrix
+    @test DA == A
 end
 
 
