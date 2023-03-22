@@ -759,7 +759,7 @@ function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
     if rest === ()
         return mat
     else
-        return derivative(mat, rest)
+        return derivative(mat, rest...)
     end
 end
 
@@ -771,10 +771,14 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     temp = symbolic_jacobian!(graph)
     #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottlenect, modify symbolic_jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
-    column = temp[:, column_index] #these 3 lines allocate but this shouldn't be a significant source of inefficiency.
-    mat_column = reshape(column, size(A))
-    result = copy(mat_column)
+    if column_index === nothing
+        return Node.(zeros(size(A)))
+    else
+        column = temp[:, column_index] #these 3 lines allocate but this shouldn't be a significant source of inefficiency.
+        mat_column = reshape(column, size(A))
+        result = copy(mat_column)
 
-    return result
+        return result
+    end
 end
 export derivative

@@ -209,12 +209,23 @@ variable(a::DerivativeGraph, variable_index::Integer) = variables(a)[variable_in
 export variable
 variable_index_to_postorder_number(a::DerivativeGraph) = a.variable_index_to_postorder_number
 export variable_index_to_postorder_number
-variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = variable_index_to_postorder_number(a)[index]
+variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = get(variable_index_to_postorder_number(a), index, nothing)
 
-variable_postorder_to_index(a::DerivativeGraph, index) = a.variable_postorder_to_index[index]
+variable_postorder_to_index(a::DerivativeGraph, index) = get(a.variable_postorder_to_index, index, nothing)
 export variable_postorder_to_index
 
-variable_node_to_index(a::DerivativeGraph, vnode::Node) = variable_postorder_to_index(a, postorder_number(a, vnode))
+
+postorder_number(a::DerivativeGraph, node::Node) = get(a.postorder_number, node, nothing)
+export postorder_number
+
+function variable_node_to_index(a::DerivativeGraph, vnode::Node)
+    pnum = postorder_number(a, vnode)
+    if pnum === nothing
+        return nothing
+    else
+        return variable_postorder_to_index(a, pnum)
+    end
+end
 export variable_node_to_index
 
 edges(a::DerivativeGraph) = a.edges
@@ -244,8 +255,6 @@ function unique_edges(a::DerivativeGraph)
 end
 export unique_edges
 
-postorder_number(a::DerivativeGraph, node::Node) = a.postorder_number[node]
-export postorder_number
 
 _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer} = get(edge_map, node_index, nothing)
 

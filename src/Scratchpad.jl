@@ -6,7 +6,7 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    @variables q1, q2
+    @variables q1 q2
     nq1 = Node(q1)
     nq2 = Node(q2)
 
@@ -15,9 +15,19 @@ function test()
         sin(nq1) sin(nq1)
     ]
 
-    DerivativeGraph([-cos(nq1)])
-    # derivative(A, q1, q1)
-    derivative(A, nq1)
+    DA = Node[
+        -sin(nq1) sin(nq1)
+        cos(nq1) cos(nq1)
+    ]
+
+    @assert isapprox(zeros(2, 2), node_value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
+    println(derivative(A, nq1))
+    println(DA)
+    @assert DA == derivative(A, nq1)
+
+
+
+
 end
 export test
 

@@ -1403,16 +1403,25 @@ end
 
 end
 
-@testitem "derivative" begin
+@testitem "derivative of matrix" begin
     using Symbolics
-    @variables q1,q2
+
+    @variables q1 q2
+    nq1 = Node(q1)
+    nq2 = Node(q2)
 
     A = [
-        cos(q1) -cos(q1);
-        sin(q1) sin(q1)
+        cos(nq1) -cos(nq1)
+        sin(nq1) sin(nq1)
     ]
 
-    derivative(A,q1,q1)
+    DA = [
+        -sin(nq1) sin(nq1)
+        cos(nq1) cos(nq1)
+    ] 
+
+    @test isapprox(zeros(2,2),derivative(A, nq2)) #taking derivative wrt variable not present in the graph returns all zero matrix
+    @test DA .== A
 end
 
 

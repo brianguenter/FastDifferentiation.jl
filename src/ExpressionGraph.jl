@@ -147,6 +147,10 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
         return b #At this point in processing the type of b may be impossible to determine, for example if b = sin(x) and the value of x won't be known till the expression is evaluated. No easy way to promote the type of b here if a has a wider type than b will eventually be determined to have. Example: a = BigFloat(1.0), b = sin(x). If the value of x is Float32 when the function is evaluated then would expect the type of the result to be BigFloat. But it will be Float32. Need to figure out a type of Node that will eventually generate code something like this: b = promote_type(a,b)(b) where the types of a,b will be known because this will be called in the generated Julia function for the derivative.
     elseif is_one(b)
         return a
+    elseif is_constant(a) && node_value(a) == -1
+        return -b
+    elseif is_constant(b) && node_value(b) == -1
+        return -a
     elseif is_constant(a) && is_constant(b)
         return Node(node_value(a) * node_value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
     else
@@ -177,10 +181,9 @@ end
 function simplify_check_cache(::typeof(/), na, nb, cache)
     a = Node(na)
     b = Node(nb)
-    a, b = promote(a, b)
 
     if is_one(b)
-        return one(a) #returns the promoted type of a,b. Believe this is the desirable action.
+        return return a
     elseif is_constant(a) && is_constant(b)
         return Node(node_value(a) / node_value(b))
     else
@@ -199,6 +202,16 @@ function simplify_check_cache(::typeof(-), na, nb, cache)
         return Node(node_value(a) - node_value(b))
     else
         return check_cache((-, a, b), cache)
+    end
+end
+
+function simplify_check_cache(::typeof(-), na, cache)
+    println("here")
+    a = Node(na)
+    if arity(na) == 1 && typeof(node_value(na)) == typeof(-)
+        return node_children(a)[1]
+    else
+        return check_cache((-, a), cache)
     end
 end
 
@@ -248,9 +261,10 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
         else
             DiffRules.diffrule(modu, fun, ntuple(k -> :(args[$k]), arity)...)[i]
         end
+
+        @info "$expr"
         push!(rules, expr)
-        # @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = $expr 
-        @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = check_cache($expr, EXPRESSION_CACHE)
+        @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = $expr
     end
 end
 
