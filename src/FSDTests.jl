@@ -1403,5 +1403,18 @@ end
 
 end
 
+@testitem "derivative" begin
+    using Symbolics
+    @variables q1,q2
+
+    A = [
+        cos(q1) -cos(q1);
+        sin(q1) sin(q1)
+    ]
+
+    derivative(A,q1,q1)
+end
+
+
 end #module
 export Tests

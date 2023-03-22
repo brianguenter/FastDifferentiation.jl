@@ -242,7 +242,9 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
     for i ∈ 1:arity
 
         expr = if arity == 1
-            DiffRules.diffrule(modu, fun, :(args[1]))
+            if fun != :- #special case for unary negation. DiffRules.diffrule(:Base,:-,:args[1])) => check_cache(-1,EXPRESSION_CACHE). This will bomb since expression cache doesn't store constants. Have a similar special case for +
+                DiffRules.diffrule(modu, fun, :(args[1]))
+            end
         else
             DiffRules.diffrule(modu, fun, ntuple(k -> :(args[$k]), arity)...)[i]
         end
@@ -272,6 +274,8 @@ end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
+derivative(::typeof(-), args::Tuple{Any}, ::Val{1}) = Node(-1)
+
 # Special cases for leaf nodes with no children. Handles the case when the node value is a Symbolics Num value, which can be either a symbol or a number.
 function derivative(a::Node{T,0}) where {T}
     if SymbolicUtils.issym(node_value(a))
@@ -295,9 +299,9 @@ export variables
 node_children(a::Node) = a.children
 export node_children
 
-function Base.show(io::IO, a::Node)
-    print(io, to_string(a))
-end
+# function Base.show(io::IO, a::Node)
+#     print(io, to_string(a))
+# end
 
 function to_string(a::Node)
     function node_id(b::Node)

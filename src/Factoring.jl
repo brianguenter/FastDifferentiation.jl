@@ -752,8 +752,20 @@ function num_unique_nodes(jacobian::Matrix{Node})
 end
 export num_unique_nodes
 
+derivative(A::Matrix{<:Node}, variables::T...) where {T<:Num} = derivative(A, Node.(variables))
+
+function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
+    if variables === nothing
+        return A
+    else
+        var = variables[1]
+        rest = variables[2:end]
+        return derivative(_derivative(A, var), variables)
+    end
+end
+
 """Computes the derivative of the function matrix `A` with respect to  `variable`."""
-function derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
+function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)
     graph = DerivativeGraph(vecA)

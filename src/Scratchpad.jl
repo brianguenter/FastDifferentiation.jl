@@ -6,27 +6,18 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    Symbolics.@variables x y
+    @variables q1, q2
+    nq1 = Node(q1)
+    nq2 = Node(q2)
 
-    A = [x^2+y 0 2x
-        0 0 2y
-        y^2+x 0 0]
-    dag = expr_to_dag.(A)
-    symbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
-    float_answer = similar(symbolics_answer, Float64)
-    for index in eachindex(symbolics_answer)
-        float_answer[index] = symbolics_answer[index].val
-    end
-
-    FSD_func = make_function.(dag, Ref([x, y]))
-    return FSD_func
-    res = [FSD_func[1, 1](1.1, 2.3) FSD_func[1, 2](0.0, 0.0) FSD_func[1, 3](1.1, 0.0)
-        FSD_func[2, 1](0.0, 0.0) FSD_func[2, 2](0.0, 0.0) FSD_func[2, 3](0, 2.3)
-        FSD_func[3, 1](1.1, 2.3) FSD_func[3, 2](0, 0) FSD_func[3, 3](0, 0)
+    A = [
+        cos(nq1) -cos(nq1)
+        sin(nq1) sin(nq1)
     ]
-    @assert isapprox(res, float_answer)
 
-    return FSD_func
+    DerivativeGraph([-cos(nq1)])
+    # derivative(A, q1, q1)
+    derivative(A, nq1)
 end
 export test
 
