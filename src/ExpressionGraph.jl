@@ -192,6 +192,7 @@ function simplify_check_cache(::typeof(/), na, nb, cache)
 end
 
 function simplify_check_cache(::typeof(-), na, nb, cache)
+    println("here")
     a = Node(na)
     b = Node(nb)
     if is_zero(b)
@@ -205,9 +206,11 @@ function simplify_check_cache(::typeof(-), na, nb, cache)
     end
 end
 
+simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
+
+"""Special case only for unary -. No simplifications are currently applied to any other unary functions"""
 function simplify_check_cache(::typeof(-), na, cache)
-    println("here")
-    a = Node(na)
+    a = Node(na) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(node_value(na)) == typeof(-)
         return node_children(a)[1]
     else
@@ -215,7 +218,7 @@ function simplify_check_cache(::typeof(-), na, cache)
     end
 end
 
-SymbolicUtils.@number_methods(Node, check_cache((f, a), EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
+SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
 
 #TODO: probably want to add boolean operations so can sort Nodes.
 # binary ops that return Bool
@@ -284,8 +287,6 @@ function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
 end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
-
-derivative(::typeof(-), args::Tuple{Any}, ::Val{1}) = Node(-1)
 
 # Special cases for leaf nodes with no children. Handles the case when the node value is a Symbolics Num value, which can be either a symbol or a number.
 function derivative(a::Node{T,0}) where {T}

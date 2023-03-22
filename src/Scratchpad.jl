@@ -6,8 +6,23 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    fsd_graph, x, y, z = to_graph(10)
+    @variables q1 q2
+    nq1 = Node(q1)
+    nq2 = Node(q2)
 
+    A = [
+        cos(nq1) -cos(nq1)
+        sin(nq1) sin(nq1)
+    ]
+
+    DA = [
+        -sin(nq1) sin(nq1)
+        cos(nq1) cos(nq1)
+    ]
+
+    @assert isapprox(zeros(2, 2), node_value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
+    println(derivative(A, nq1))
+    @assert DA == derivative(A, nq1)
 
 
 
