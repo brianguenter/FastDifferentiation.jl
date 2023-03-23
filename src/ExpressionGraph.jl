@@ -192,7 +192,6 @@ function simplify_check_cache(::typeof(/), na, nb, cache)
 end
 
 function simplify_check_cache(::typeof(-), na, nb, cache)
-    println("here")
     a = Node(na)
     b = Node(nb)
     if is_zero(b)
