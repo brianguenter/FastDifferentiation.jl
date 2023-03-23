@@ -49,7 +49,6 @@ include("DerivativeGraph.jl")
 include("GraphProcessing.jl")
 include("FactorableSubgraph.jl")
 include("Factoring.jl")
-include("Analysis.jl")
 include("GraphVisualization.jl")
 
 include("FSDTests.jl")
