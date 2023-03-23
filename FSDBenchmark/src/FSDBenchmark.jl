@@ -137,34 +137,35 @@ function benchmark_spherical_harmonics(min_order, max_order, simplify=true)
 end
 export benchmark_spherical_harmonics
 
-function plot_data(bench1, bench2, simplify)
+function plot_data(bench1, bench2, graph_title, simplify)
     data1 = CSV.read(bench1, DataFrame)
     data2 = CSV.read(bench2, DataFrame)
 
-    graph_title = "Ratio of Symbolics to FSD time"
+    graph_title = "Ratio of times, Symbolics/FSD: $graph_title"
     # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
-    plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=8, legend=false)
+    plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false)
 end
 export plot_data
-
-
 
 plot_SH_symbolic_time(min_order, max_order, simplify) = plot_data(
     FSD_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
     Symbolics_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
+    "symbolic processing",
     simplify)
 export plot_SH_symbolic_time
 
 plot_SH_exe_time(min_order, max_order, simplify) = plot_data(
     FSD_filename(SH_NAME, EXE, min_order, max_order, simplify),
     Symbolics_filename(SH_NAME, EXE, min_order, max_order, simplify),
+    "execution",
     simplify)
 export plot_SH_exe_time
 
 plot_SH_make_function_time(min_order, max_order, simplify) = plot_data(
     FSD_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
     Symbolics_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
+    "make_function",
     simplify)
 export plot_SH_make_function_time
 end # module Benchmarks
