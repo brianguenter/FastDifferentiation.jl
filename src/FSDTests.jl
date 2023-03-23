@@ -1117,52 +1117,7 @@ end
 
 end
 
-# @testitem "TODO: next_edge_constraint" begin
-#     @test false
-# end
 
-#this test needs to be rewritten. It won't work as is since can't call factor_subgraph! on subgraphs out of order. End up with branches in the subgraph which should doesn't happen if the subgraphs are factored in the correct order.
-# @testitem "reachable factor_subgraph" begin
-#     using Symbolics
-
-#     @variables x, y
-
-#     nx1 = Node(x)
-#     ny2 = Node(y)
-#     n3 = nx1 * ny2
-#     n4 = n3 * ny2
-#     n5 = n3 * n4
-#     n6 = n5 * n4
-#     graph = DerivativeGraph([n5, n6])
-
-#     factorization_order = ((5, 3), (3, 5), (6, 4), (2, 4), (5, 2), (6, 3), (2, 5), (3, 6), (6, 2), (2, 6))
-#     #TODO can't factor (5,2), (2,5) first. Must do 2,4 or 3,5 or one of the other contained subgraphs first, in the order listed above.
-#     f1 = dominator_subgraph(graph, 5, 2, BitVector([1, 0]), BitVector([1, 1]), BitVector([0, 1]))
-#     f2 = postdominator_subgraph(graph, 2, 5, BitVector([0, 1]), BitVector([1, 1]), BitVector([0, 1]))
-
-#     factor_subgraph!(f1, evaluate_subgraph(graph, f1))
-
-#     function test_r_v(tmp, root_vals, var_vals)
-#         @test length(tmp) == 1
-#         test_edge = tmp[1]
-#         @test reachable_roots(test_edge) == root_vals
-#         @test reachable_variables(test_edge) == var_vals
-#     end
-
-#     #test for correct reachable_roots,reachable_variables
-#     test_r_v(edges(graph, 5, 3), BitVector([1, 1]), BitVector([1, 1]))
-#     test_r_v(edges(graph, 3, 2), BitVector([0, 0]), BitVector([0, 1]))
-#     test_r_v(edges(graph, 4, 2), BitVector([0, 1]), BitVector([0, 1]))
-#     test_r_v(edges(graph, 5, 4), BitVector([0, 0]), BitVector([0, 1]))
-
-
-
-#     factor_subgraph!(graph, f2)
-#     test_r_v(edges(graph, 5, 3), BitVector([1, 1]), BitVector([1, 0]))
-#     test_r_v(edges(graph, 3, 2), BitVector([0, 0]), BitVector([0, 0]))
-#     test_r_v(edges(graph, 4, 2), BitVector([0, 1]), BitVector([0, 1]))
-#     test_r_v(edges(graph, 5, 4), BitVector([0, 0]), BitVector([0, 0]))
-# end
 
 @testitem "evaluate_subgraph" begin
     using FastSymbolicDifferentiation.FSDTests
