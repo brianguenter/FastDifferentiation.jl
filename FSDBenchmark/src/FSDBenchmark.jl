@@ -141,7 +141,7 @@ function plot_data(bench1, bench2, simplify)
     data1 = CSV.read(bench1, DataFrame)
     data2 = CSV.read(bench2, DataFrame)
 
-    graph_title = "Ratio Symbolics/FSD time."
+    graph_title = "Ratio of Symbolics to FSD time"
     # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=8, legend=false)
