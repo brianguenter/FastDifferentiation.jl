@@ -24,6 +24,8 @@ const MAKE_FUNCTION = "make_function"
 
 filename(algorithm_name, function_name, benchmark_name, min_order, max_order, simplify) = "Data/$algorithm_name-$(function_name)-$(benchmark_name)-$min_order-$max_order-simplification-$simplify.csv"
 FSD_filename(function_name, benchmark_name, min_order, max_order, simplify) = filename("FSD", function_name, benchmark_name, min_order, max_order, simplify)
+export FSD_filename
+
 Symbolics_filename(function_name, benchmark_name, min_order, max_order, simplify) = filename("Symbolics", function_name, benchmark_name, min_order, max_order, simplify)
 export Symbolics_filename
 
@@ -147,6 +149,19 @@ function plot_data(bench1, bench2, graph_title, simplify)
     plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false)
 end
 export plot_data
+
+
+function plot_SH_times(min_order, max_order, simplify, graph_title, filename_function, algorithm_name)
+    msec_scale = 1e-6
+    processes = ["symbolic", "make_function", "exe"]
+    for process in processes
+        data = CSV.read(filename_function(SH_NAME, process, min_order, max_order, simplify), DataFrame)
+        plot!(data[:, :minimum] * msec_scale, label=process * algorithm_name)
+    end
+
+    plot!(xlabel="Spherical Harmonic Order", yscale=:log10, ylabel="log₁₀(time),msecs", title=graph_title, legend_position=:topleft)
+end
+export plot_SH_times
 
 plot_SH_symbolic_time(min_order, max_order, simplify) = plot_data(
     FSD_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
