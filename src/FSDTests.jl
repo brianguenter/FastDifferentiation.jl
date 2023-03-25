@@ -24,7 +24,6 @@ function number_of_operations(symbolic_expr)
         return 0
     end
 end
-export number_of_operations
 
 function simple_dag(cache::Union{IdDict,Nothing}=IdDict())
     Symbolics.@variables zz y

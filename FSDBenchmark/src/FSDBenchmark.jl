@@ -10,6 +10,7 @@ using Plots
 using Memoize
 using FastSymbolicDifferentiation
 using StaticArrays
+using LaTeXStrings
 
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
@@ -146,7 +147,9 @@ function plot_data(bench1, bench2, graph_title, simplify)
     graph_title = "Ratio of times, Symbolics/FSD: $graph_title"
     # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
-    plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false)
+    p = plot(data1[:, :SHOrder], data2[:, :minimum] ./ data1[:, :minimum], xlabel="Spherical Harmonic Order", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false)
+
+    return p
 end
 export plot_data
 
@@ -163,25 +166,43 @@ function plot_SH_times(min_order, max_order, simplify, graph_title, filename_fun
 end
 export plot_SH_times
 
-plot_SH_symbolic_time(min_order, max_order, simplify) = plot_data(
-    FSD_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
-    Symbolics_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
-    "symbolic processing",
-    simplify)
+function plot_SH_symbolic_time(min_order, max_order, simplify)
+    plot_data(
+        FSD_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
+        Symbolics_filename(SH_NAME, "symbolic", min_order, max_order, simplify),
+        "symbolic processing",
+        simplify)
+    plot!(xticks=min_order:2:max_order)
+end
 export plot_SH_symbolic_time
 
-plot_SH_exe_time(min_order, max_order, simplify) = plot_data(
-    FSD_filename(SH_NAME, EXE, min_order, max_order, simplify),
-    Symbolics_filename(SH_NAME, EXE, min_order, max_order, simplify),
-    "execution",
-    simplify)
+function plot_SH_exe_time(min_order, max_order, simplify)
+    plot_data(
+        FSD_filename(SH_NAME, EXE, min_order, max_order, simplify),
+        Symbolics_filename(SH_NAME, EXE, min_order, max_order, simplify),
+        "execution",
+        simplify)
+    plot!(xticks=min_order:2:max_order)
+end
 export plot_SH_exe_time
 
-plot_SH_make_function_time(min_order, max_order, simplify) = plot_data(
-    FSD_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
-    Symbolics_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
-    "make_function",
-    simplify)
+"""plot that shows how FSD jacobian is close to optimal for SH because number of operations of Jacobian is a fixed constant (roughly 2.5) times the number of operations in the original function"""
+function plot_SH_FSD_graph_vs_jacobian_size(min_order, max_order)
+    funcs = [to_graph(x)[1] for x in min_order:max_order]
+    derivs = [FastSymbolicDifferentiation.symbolic_jacobian!(x) for x in funcs]
+    ratio = FastSymbolicDifferentiation.number_of_operations.(derivs) ./ FastSymbolicDifferentiation.number_of_operations.(roots.(funcs))
+    plot(min_order:max_order, ratio, ylabel="Ratio of operations", title=L"\frac{operations(jacobian(f))}{operations(f)}", titlefontsizes=10, xlabel="Spherical Harmonic order", legend=false)
+end
+export plot_SH_FSD_graph_vs_jacobian_size
+
+function plot_SH_make_function_time(min_order, max_order, simplify)
+    plot_data(
+        FSD_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
+        Symbolics_filename(SH_NAME, MAKE_FUNCTION, min_order, max_order, simplify),
+        "make_function",
+        simplify)
+    plot!(xticks=min_order:2:max_order)
+end
 export plot_SH_make_function_time
 
 end # module Benchmarks

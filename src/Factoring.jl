@@ -742,15 +742,20 @@ export jacobian_Expr!
 jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
 export jacobian_function!
 
-"""Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""
-function num_unique_nodes(jacobian::Matrix{Node})
+function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
     for oned in all_nodes.(jacobian)
         union!(nodes, oned)
     end
-    return length(nodes)
+    return nodes
 end
+
+"""Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""
+num_unique_nodes(jacobian::AbstractArray{T}) where {T<:Node} = length(unique_nodes(jacobian))
 export num_unique_nodes
+
+number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
+export number_of_operations
 
 function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]
