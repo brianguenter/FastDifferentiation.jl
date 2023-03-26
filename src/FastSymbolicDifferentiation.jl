@@ -44,6 +44,7 @@ const DefaultNodeIndexType = Int64
 include("Utilities.jl")
 include("BitVectorFunctions.jl")
 include("ExpressionGraph.jl")
+include("UnspecifiedFunction.jl")
 include("PathEdge.jl")
 include("DerivativeGraph.jl")
 include("GraphProcessing.jl")

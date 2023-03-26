@@ -277,6 +277,8 @@ derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(node_value(a), (n
 derivative(a::Node, index::Val{i}) where {i} = derivative(node_value(a), (node_children(a)...,), index)
 export derivative
 
+
+
 function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
         return I == 1 ? args[2] : args[1]
