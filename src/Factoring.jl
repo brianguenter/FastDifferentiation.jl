@@ -74,7 +74,7 @@ Assume `a` has only one child. Since `a=idom(b)` all upward paths from `b` must 
 function dom_subgraph(graph::DerivativeGraph, root_index::Integer, dominated_node::Integer, idom)
     tmp = _node_edges(edges(graph), dominated_node)
 
-    if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable dom subgraph.
+    if tmp === nothing #no edges edges up or down so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
         dominated_edges = parents(tmp)
@@ -93,7 +93,7 @@ end
 
 function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
     tmp = _node_edges(edges(graph), dominated_node)
-    if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable pdom subgraph.
+    if tmp === nothing #no edges up or down. Must be a root with no children. dominated_node can't be part of a factorable pdom subgraph.
         return nothing
     else
         dominated_edges = children(tmp)
@@ -421,7 +421,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
             if roots_resettable(pedge, Rdom)
                 push!(edges_to_reset, MaskableEdge{DominatorSubgraph}(pedge, Rdom))
             end
-            if top_vertex(pedge) == dominator || length(child_edges(a, top_vertex(pedge))) > 1
+            if top_vertex(pedge) == dominator || length(child_edges(a, top_vertex(pedge))) > 1 || is_variable(a, top_vertex(pedge)) #a variable can be a child of another variable in the case of q(t) where q is an unspecified function. Can't reset root bits for edges above this one because there is a path to another variable.
                 break
             end
         end
@@ -633,7 +633,7 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
             if variable(graph, var_index) == node_value
-                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the number type right
+                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
             else
                 return 0.0 #taking a derivative with respect to a different variable, which is 0.
             end
