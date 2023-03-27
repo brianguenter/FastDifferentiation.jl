@@ -1,0 +1,3 @@
+need to add simplify_check_cache for derivative(*,arb number of args). Currently this does not check the cache for equivalent values. Nor do any of the * simplifications get applied.
+
+remove Logging from dependencies when done debugging

@@ -65,8 +65,8 @@ Node(a::Num) = Node(a.val)
 
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
-    if node_children(a) !== nothing
-        check_cache((node_value(a), node_children(a)...), cache)
+    if children(a) !== nothing
+        check_cache((node_value(a), children(a)...), cache)
     else
         check_cache((a,), cache)
     end
@@ -211,7 +211,7 @@ simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 function simplify_check_cache(::typeof(-), na, cache)
     a = Node(na) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(node_value(na)) == typeof(-)
-        return node_children(a)[1]
+        return children(a)[1]
     else
         return check_cache((-, a), cache)
     end
@@ -268,22 +268,21 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
 end
 
 #need to define because derivative functions can return inv
-Base.inv(a::Node{typeof(/),2}) = node_children(a)[2] / node_children(a)[1]
+Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
 
 #efficient explicit methods for most common cases
-derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(node_value(a), (node_children(a)[1],), index)
-derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(node_value(a), (node_children(a)[1], node_children(a)[2]), index)
-derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(node_value(a), (node_children(a)[1], node_children(a)[2]), index)
-derivative(a::Node, index::Val{i}) where {i} = derivative(node_value(a), (node_children(a)...,), index)
+derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(node_value(a), (children(a)[1],), index)
+derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(node_value(a), (children(a)[1], children(a)[2]), index)
+derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(node_value(a), (children(a)[1], children(a)[2]), index)
+derivative(a::Node, index::Val{i}) where {i} = derivative(node_value(a), (children(a)...,), index)
 export derivative
-
 
 
 function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
         return I == 1 ? args[2] : args[1]
     else
-        return Node(*, deleteat!(collect(args), I)...)
+        return Node(*, deleteat!(collect(args), I)...) #simplify_check_cache will only be called for 2 arguments or less. Need to extedn to nary *, n> 2, if this is necessary.
     end
 end
 
@@ -309,8 +308,8 @@ export variables
 # export isvariable
 # # isvariable(::Node) = false
 
-node_children(a::Node) = a.children
-export node_children
+children(a::Node) = a.children
+export children
 
 function Base.show(io::IO, a::Node)
     print(io, to_string(a))
@@ -446,7 +445,7 @@ function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sym
             node_to_var[node] = node_symbol(node)
 
             if is_tree(node)
-                args = _dag_to_function.(node_children(node))
+                args = _dag_to_function.(children(node))
                 statement = :($(node_to_var[node]) = $(Symbol(node_value(node)))($(args...)))
                 push!(body.args, statement)
             end

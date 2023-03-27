@@ -9,6 +9,7 @@ using SpecialFunctions
 using NaNMath
 using Statistics
 using RuntimeGeneratedFunctions
+using Logging
 
 module AutomaticDifferentiation
 struct NoDeriv
@@ -55,6 +56,9 @@ include("GraphVisualization.jl")
 include("FSDTests.jl")
 include("Scratchpad.jl")
 
+# logger = SimpleLogger(open("log1.txt", "w+"))
 
+# global_logger(logger)
+# @info "Testing logger"
 
 end # module

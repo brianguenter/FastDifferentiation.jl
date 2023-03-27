@@ -366,7 +366,7 @@ function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{No
 
 
         current_index = postorder_number[current_node]
-        for (i, child) in pairs(node_children(current_node))
+        for (i, child) in pairs(children(current_node))
             child_index = postorder_number[child]
 
             edge = PathEdge(current_index, child_index, derivative(current_node, Val(i)), domain_dim, codomain_dim) #Val can be very slow. TODO see if this is affecting speed.
