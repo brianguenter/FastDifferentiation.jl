@@ -1378,6 +1378,24 @@ end
     @test DA == derivative(A, nq1)
 end
 
+@testitem "derivative of Unspecified Function" begin
+    using Symbolics
+    using StaticArrays
+
+    @variables x y
+
+    uf = UnspecifiedFunction(:q, SVector(Node(x), Node(y)), SVector{0,Node{SymbolicUtils.BasicSymbolic{Real},0}}())
+    ufn = Node(uf, uf.variables...)
+    deriv = node_value(derivative(derivative(ufn, Val{1}()), Val{2}()))
+
+    @assert deriv.variables == SVector(Node(x), Node(y))
+
+    fn = DerivativeGraph(x * ufn)
+    jac = symbolic_jacobian!(fn)
+    @test jac[1, 1] == ufn + x * derivative(ufn, Val{1}())
+    @test jac[1, 2] == x * derivative(ufn, Val{2}())
+end
+
 
 end #module
 export Tests

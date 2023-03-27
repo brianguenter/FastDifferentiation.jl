@@ -325,14 +325,14 @@ function to_string(a::Node)
     if arity(a) == 0
         return "$(node_id(a))"
     else
-        if arity(a) == 1
+        if node_value(a) isa UnspecifiedFunction
+            return "$(node_value(a))"
+        elseif arity(a) == 1
             return "$(node_id(a))($(to_string(a.children[1])))"
-        else
-            if arity(a) == 2
-                return "($(to_string(a.children[1])) $(node_id(a)) $(to_string(a.children[2])))"
-            else #Symbolics has expressions like +,* that can have any number of arguments, which translates to any number of Node children.
-                return "($(a.node_value) $(foldl((x,y) -> x * " " * y,to_string.(a.children), init = "")))" #this is probably incredibly inefficient since it's O(n^2) in the length of the expression. Presumably there won't be many expresssions x+y+z+....., that are incredibly long. Best bet don't print out giant expressions.
-            end
+        elseif arity(a) == 2
+            return "($(to_string(a.children[1])) $(node_id(a)) $(to_string(a.children[2])))"
+        else #Symbolics has expressions like +,* that can have any number of arguments, which translates to any number of Node children.
+            return "($(a.node_value) $(foldl((x,y) -> x * " " * y,to_string.(a.children), init = "")))" #this is probably incredibly inefficient since it's O(n^2) in the length of the expression. Presumably there won't be many expresssions x+y+z+....., that are incredibly long. Best bet don't print out giant expressions.
         end
     end
 end
