@@ -149,7 +149,7 @@ export relation_node_indices
 # end
 
 """returns edges emanating from a vertex which satisfy the PathConstraint"""
-function relation_edges(a::PathConstraint{T}, node_index::Integer, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
+function relation_edges!(a::PathConstraint{T}, node_index::Integer, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
     if result === nothing
         result = PathEdge{T}[]
     else
@@ -180,7 +180,7 @@ function relation_edges(a::PathConstraint{T}, node_index::Integer, result::Union
 end
 
 """returns edges along a single path which satisfy the PathConstraint"""
-function relation_edges(a::PathConstraint{T}, edge::PathEdge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
+function relation_edges!(a::PathConstraint{T}, edge::PathEdge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
     if result === nothing
         result = PathEdge{T}[]
     else
@@ -217,7 +217,7 @@ function relation_edges(a::PathConstraint{T}, edge::PathEdge, result::Union{Noth
     end
     return result
 end
-export relation_edges
+export relation_edges!
 
 function _compute_paths!(path_masks, graph_edges::Dict{T,EdgeRelations{T}}, current_node_index, origin_index, relation_function) where {T}
     @assert current_node_index <= length(path_masks)

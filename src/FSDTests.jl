@@ -950,15 +950,15 @@ end
     path_edges2 = [edges(graph, 5, 3)[1]]
 
     #test for dominator subgraph (5,3)
-    up_edges = relation_edges(up_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(up_constraint, dominating, true, up_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(up_constraint, dominating, true, up_edges[2])))
+    up_edges = relation_edges!(up_constraint, dominated)
+    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(up_constraint, dominating, true, up_edges[1])))
+    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(up_constraint, dominating, true, up_edges[2])))
 
     #test for postdominator subgraph (3,5)
     down_constraint = PathConstraint(dominating_node(sub_3_5), graph, false, reachable_roots(sub_3_5), dominance_mask(sub_3_5))
-    down_edges = relation_edges(down_constraint, dominating)
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges1), edges_on_path(down_constraint, dominated, false, down_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(down_constraint, dominated, false, down_edges[2])))
+    down_edges = relation_edges!(down_constraint, dominating)
+    @test all(x -> x[1] == x[2], zip(reverse(path_edges1), edges_on_path!(down_constraint, dominated, false, down_edges[1])))
+    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(down_constraint, dominated, false, down_edges[2])))
 
 
     path_edges1 = [edges(graph, 4, 1)[1]]
@@ -970,17 +970,17 @@ end
 
     #test for dominator subgraph (4,1)
     up_constraint = PathConstraint(dominating_node(sub_4_1), graph, true, dominance_mask(sub_4_1), reachable_variables(sub_4_1))
-    up_edges = relation_edges(up_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(up_constraint, dominating, true, up_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path(up_constraint, dominating, true, up_edges[2])))
+    up_edges = relation_edges!(up_constraint, dominated)
+    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(up_constraint, dominating, true, up_edges[1])))
+    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(up_constraint, dominating, true, up_edges[2])))
 
     dominating = sub_1_4.subgraph[1]
     dominated = sub_1_4.subgraph[2]
     #test for postdominator subgraph (1,4)
     down_constraint = PathConstraint(dominating_node(sub_1_4), graph, false, reachable_roots(sub_1_4), dominance_mask(sub_1_4))
-    down_edges = relation_edges(down_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path(down_constraint, dominating, false, down_edges[1])))
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges2), edges_on_path(down_constraint, dominating, false, down_edges[2])))
+    down_edges = relation_edges!(down_constraint, dominated)
+    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(down_constraint, dominating, false, down_edges[1])))
+    @test all(x -> x[1] == x[2], zip(reverse(path_edges2), edges_on_path!(down_constraint, dominating, false, down_edges[2])))
 end
 
 @testitem "set_diff" begin
@@ -997,8 +997,8 @@ end
         result = PathEdge{T}[]
         path_constraint = FastSymbolicDifferentiation.next_edge_constraint(a)
 
-        for start_edge in relation_edges(path_constraint, dominated_node(a))
-            pedges = edges_on_path(path_constraint, dominating_node(a), is_dominator, start_edge)
+        for start_edge in relation_edges!(path_constraint, dominated_node(a))
+            pedges = edges_on_path!(path_constraint, dominating_node(a), is_dominator, start_edge)
             append!(result, pedges)
         end
         return result
@@ -1384,8 +1384,7 @@ end
 
     @variables x y
 
-    uf = UnspecifiedFunction(:q, SVector(Node(x), Node(y)), SVector{0,Node{SymbolicUtils.BasicSymbolic{Real},0}}())
-    ufn = Node(uf, uf.variables...)
+    ufn = function_of(:q, x, y)
     deriv = node_value(derivative(derivative(ufn, Val{1}()), Val{2}()))
 
     @assert deriv.variables == SVector(Node(x), Node(y))
