@@ -268,10 +268,7 @@ function reachable_variables(a::DerivativeGraph, node_index::Integer)
     node_edges = children(edges(a)[node_index])
     path_mask = falses(domain_dimension(a))
     for edge in node_edges
-        if top_vertex(edge) == node_index
-            tmp = reachable_variables(edge)
-            path_mask .= path_mask .| tmp
-        end
+        path_mask .= path_mask .| reachable_variables(edge)
     end
 
     if is_variable(a, node_index) #if node index is a variable then need to set its variable bit. No edge will have node_index as the top_vertex so the bit won't be set in the previous code.
@@ -284,9 +281,7 @@ function reachable_roots(a::DerivativeGraph, node_index::Integer)
     node_edges = parents(edges(a)[node_index])
     path_mask = falses(codomain_dimension(a))
     for edge in node_edges
-        if bott_vertex(edge) == node_index
-            path_mask .= path_mask .| reachable_roots(edge)
-        end
+        path_mask .= path_mask .| reachable_roots(edge)
     end
 
     #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
