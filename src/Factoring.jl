@@ -412,7 +412,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
         for pedge in pedges
             Vval = set_diff(reachable_variables(pedge), Vset)
-            if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Rset
+            if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Vset
                 add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), edge_value(pedge), Vval, Rdom)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
                 mask_variables!(pedge, Vset) #this edge only has the reachable roots in Rset
             end
