@@ -400,7 +400,6 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
     @assert subgraph_exists(subgraph)
     Rdom = dominance_mask(subgraph) #roots for which subgraph is factorable, i.e., dominator(subgraph) dominates every vertex in the subgraph.
     edges_to_reset = MaskableEdge{S}[]
-    Vset = trues(domain_dimension(graph(subgraph)))
 
     R_edges = next_edge_constraint(subgraph)
     dominator = dominating_node(subgraph)
