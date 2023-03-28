@@ -17,7 +17,7 @@ julia> function_of(:q,x,y)
 q(x,y)
 ```
 """
-function_of(name::Symbol, vars::T...) where {T<:Num} = UnspecifiedFunction(name, SVector{length(vars),Node{SymbolicUtils.BasicSymbolic{Real},0}}(Node.(vars)), SVector{0,Node{SymbolicUtils.BasicSymbolic{Real},0}}())
+function_of(name::Symbol, vars::T...) where {T<:Num} = function_of(name, Node.(vars)...)
 
 """Create an unspeficied function of one or more Node variables. ex:
 ```
@@ -28,7 +28,7 @@ julia> function_of(:q,nx,ny)
 q(x,y)
 ```
 """
-function_of(name::Symbol, vars::T...) where {T<:Node{SymbolicUtils.BasicSymbolic{Real},0}} = UnspecifiedFunction(name, SVector{length(vars),T}(vars), SVector{0,T}())
+function_of(name::Symbol, vars::T...) where {T<:Node{SymbolicUtils.BasicSymbolic{Real},0}} = Node(UnspecifiedFunction(name, SVector{length(vars),T}(vars), SVector{0,T}()), MVector{length(vars)}(vars))
 export function_of
 
 #special case for unspecified functions. Unfortunately this must go here rather than in ExpressionGraph.jl because this depends on Node which is defined in ExpressionGraph.jl

@@ -90,6 +90,8 @@ export is_leaf
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 export is_tree
 
+is_unspecified_function(a::Node) = node_value(a) isa UnspecifiedFunction
+export is_unspecified_function
 
 is_variable(a::Node) = SymbolicUtils.issym(node_value(a))
 export is_variable
@@ -523,6 +525,10 @@ export postorder
 function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {T,N,S<:Node}
     if get(visited, a, nothing) === nothing
         if a.children !== nothing
+            if is_unspecified_function(a)
+                push!(variables, a)
+            end
+
             for child in a.children
                 _postorder_nodes!(child, nodes, variables, visited)
             end

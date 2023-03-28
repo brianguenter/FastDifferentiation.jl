@@ -1396,6 +1396,16 @@ end
     @test jac[1, 2] == x * derivative(ufn, Val{2}())
 end
 
+@testitem "unspecified function postorder" begin
+    using Symbolics
+    @variables x y
+
+    q = function_of(:q, x, y)
+    f = x * q + y * q
+    graph = DerivativeGraph([f])
+
+end
+
 
 end #module
 export Tests
