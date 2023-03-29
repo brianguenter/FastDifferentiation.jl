@@ -187,8 +187,9 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
 
             for x in cedges
 
+                #not certain this test is correct. Only correct if subset(dominance_mask(subgraph), reachable_roots(x)) == true means there are no root values for which the subgraph is factorable. But this will only be true if overlap(dominance_mask)
                 if subset(dominance_mask(subgraph), reachable_roots(x)) && overlap(reachable_variables(subgraph), reachable_variables(x))
-                    # if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.1.5/.37
+                    # if subset(dominance_mask(subgraph), reachable_roots(x)) && any(reachable_variables(subgraph) .& reachable_variables(x)) #.& is 4x faster than .&& and allocates 1/12th as much. Making this one change in both versions of subgraph_exists reduces overall allocation for symbolic_jacobian! by 4x and computation time by 3x. any(a .& b) allocates, presumably to create a temporary bit vector to hold the result.
 
                     edge_count += 1
                 end
@@ -211,8 +212,6 @@ function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wher
     reclaim_edge_vector(sub_edges)
 
     return valid_paths(constraint, subgraph)
-
-
 end
 
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""

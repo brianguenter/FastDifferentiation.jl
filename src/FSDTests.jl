@@ -1402,6 +1402,7 @@ end
     q = function_of(:q, x, y)
     f = x * q + y * q
     graph = DerivativeGraph([f])
+    symbolic_jacobian!(graph)
 
 end
 

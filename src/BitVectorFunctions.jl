@@ -40,6 +40,7 @@ function set_diff(a::BitVector, b::BitVector)
 end
 export set_diff
 
+"""returns true if a ∩ b is not empty"""
 function overlap(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     temp = get_bitvector(length(a))

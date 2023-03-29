@@ -365,9 +365,9 @@ function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool,
         relation_edges!(next_node_constraint, current_edge, tmp)
 
         if length(tmp) == 0 || length(tmp) ≥ 2
+            reclaim_edge_vector(tmp)
             return nothing #there is either a branch in the edge path or there is no edge beyond current_edge that leads to the dominating node. This can only occur if the subgraph has been destroyed by factorization so stop processing
         end
-
 
         current_edge = tmp[1]
         reclaim_edge_vector(tmp)
@@ -376,6 +376,7 @@ function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool,
 end
 export edges_on_path!
 
+"""computes the intersection of `reachable_variables(e) e ∈ edges(subgraph)`"""
 function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
     Vset = trues(domain_dimension(graph(constraint)))
     tmp = get_edge_vector()
@@ -384,13 +385,17 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
         pedges = get_edge_vector()
         edges_on_path!(constraint, dominating_node, true, start_edge, pedges)
 
-        #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
         for pedge in pedges
             Vset .= Vset .& reachable_variables(pedge)
         end
         reclaim_edge_vector(pedges)
     end
     reclaim_edge_vector(tmp)
+
+    #test
+    @assert Vset == reachable_variables(graph(constraint), dominated_node)
+    #end test
+
     return Vset
 end
 
@@ -593,8 +598,20 @@ end
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
+    #test
+    # println("original graph")
+    # Vis.draw(a, false)
+    # readline()
+    #endtest
+
     for subgraph in subgraph_list
+
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
+        #test
+        # println("factored subgraph $subgraph")
+        # Vis.draw(a, false)
+        # readline()
+        #endtest
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
