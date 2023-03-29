@@ -1390,7 +1390,7 @@ end
     @test DA == derivative(A, nq1)
 end
 
-@testitem "derivative of Unspecified Function" begin
+@testitem "derivative of simple Unspecified Function" begin
     using Symbolics
     using StaticArrays
 
@@ -1407,7 +1407,7 @@ end
     @test jac[1, 2] == x * derivative(ufn, Val{2}())
 end
 
-@testitem "unspecified function postorder" begin
+@testitem "derivative of more complex Unspecified Function" begin
     using Symbolics
     @variables x y
 
