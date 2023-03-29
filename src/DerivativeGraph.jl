@@ -349,7 +349,7 @@ parent_edges(dgraph::DerivativeGraph, node::Node) = parent_edges(dgraph, postord
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
 is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
 export is_constant
-partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = edge_value(child_edges(dgraph, parent)[child_index])
+partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = value(child_edges(dgraph, parent)[child_index])
 export partial_value
 
 """Computes partial values for all edges in the graph"""

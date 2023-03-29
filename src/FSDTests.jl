@@ -1223,7 +1223,7 @@ end
     _, graph, _, _ = simple_dominator_graph()
     factor!(graph)
     fedge = edges(graph, 1, 4)[1]
-    dfsimp = make_function(edge_value(fedge))
+    dfsimp = make_function(value(fedge))
     _, graph, _, _ = simple_dominator_graph()
     origfsimp = make_function(root(graph, 1))
     @test isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
@@ -1231,7 +1231,7 @@ end
     graph = complex_dominator_graph()
     factor!(graph)
     fedge = edges(graph, 1, 8)[1]
-    df = make_function(edge_value(fedge))
+    df = make_function(value(fedge))
 
     graph = complex_dominator_graph()
     origf = make_function(root(graph, 1))
@@ -1374,7 +1374,7 @@ end
         cos(nq1) cos(nq1)
     ]
 
-    @test isapprox(zeros(2, 2), node_value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
+    @test isapprox(zeros(2, 2), value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
     @test DA == derivative(A, nq1)
 end
 
@@ -1385,7 +1385,7 @@ end
     @variables x y
 
     ufn = function_of(:q, x, y)
-    deriv = node_value(derivative(derivative(ufn, Val{1}()), Val{2}()))
+    deriv = value(derivative(derivative(ufn, Val{1}()), Val{2}()))
 
     @assert deriv.variables == SVector(Node(x), Node(y))
 

@@ -56,7 +56,7 @@ function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=
         end
 
         if draw_node_labels
-            node_labels[node_index] = "$(postorder_number(graph,gnode)): $(node_value(gnode))"
+            node_labels[node_index] = "$(postorder_number(graph,gnode)): $(value(gnode))"
         end
     end
 
@@ -86,7 +86,7 @@ function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=
                 if !value_labels
                     label *= "(" * edge_label(edge) * ") -- "
                 else
-                    label *= "(" * (node_value(edge_value(edge)) isa AutomaticDifferentiation.NoDeriv ? "NoDeriv" : string(edge_value(edge))) * ") -- "
+                    label *= "(" * (value(value(edge)) isa AutomaticDifferentiation.NoDeriv ? "NoDeriv" : string(value(edge))) * ") -- "
                 end
             end
             edge_labels[(bott_vertex(first_edge), top_vertex(first_edge))] = string(label)

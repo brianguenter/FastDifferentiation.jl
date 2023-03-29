@@ -54,8 +54,8 @@ end
 export PathEdge
 
 
-edge_value(e::PathEdge) = e.edge_value
-export edge_value
+value(e::PathEdge) = e.edge_value
+export value
 top_vertex(e::PathEdge) = e.top_vertex
 export top_vertex
 bott_vertex(e::PathEdge) = e.bott_vertex
@@ -85,7 +85,7 @@ export num_uses
 can_delete(e::PathEdge) = !any(reachable_roots(e)) || !any(reachable_variables(e))
 
 function Base.show(io::IO, a::PathEdge)
-    print(io, "($(top_vertex(a)) $(bott_vertex(a))  $(num_uses(a)) $(edge_value(a)) $(reachable_roots(a)) $(reachable_variables(a)))")
+    print(io, "($(top_vertex(a)) $(bott_vertex(a))  $(num_uses(a)) $(value(a)) $(reachable_roots(a)) $(reachable_variables(a)))")
 end
 
 mask_roots!(e::PathEdge, mask::BitVector) = e.reachable_roots .= e.reachable_roots .& mask

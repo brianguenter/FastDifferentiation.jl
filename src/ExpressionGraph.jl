@@ -66,7 +66,7 @@ Node(a::Num) = Node(a.val)
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
     if children(a) !== nothing
-        check_cache((node_value(a), children(a)...), cache)
+        check_cache((value(a), children(a)...), cache)
     else
         check_cache((a,), cache)
     end
@@ -79,8 +79,8 @@ Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
 Base.one(::Node) = Node(1)
 
-node_value(a::Node) = a.node_value
-export node_value
+value(a::Node) = a.node_value
+export value
 arity(::Node{T,N}) where {T,N} = N
 export arity
 
@@ -90,10 +90,10 @@ export is_leaf
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 export is_tree
 
-is_unspecified_function(a::Node) = node_value(a) isa UnspecifiedFunction
+is_unspecified_function(a::Node) = value(a) isa UnspecifiedFunction
 export is_unspecified_function
 
-is_variable(a::Node) = SymbolicUtils.issym(node_value(a))
+is_variable(a::Node) = SymbolicUtils.issym(value(a))
 export is_variable
 
 is_constant(a::Node) = !is_variable(a) && !is_tree(a) #pretty confident this is correct but there may be edges cases in Symbolics I am not aware of.
@@ -102,7 +102,7 @@ export is_constant
 function is_zero(a::Node)
     if is_tree(a) || is_variable(a)
         return false
-    elseif node_value(a) == 0 #may think could just do this test but in Symbolics x==0 x*x == 0 is a non-boolean expression.
+    elseif value(a) == 0 #may think could just do this test but in Symbolics x==0 x*x == 0 is a non-boolean expression.
         return true
     else
         return false
@@ -113,7 +113,7 @@ export is_zero
 function is_one(a::Node)
     if is_tree(a) || is_variable(a)
         return false
-    elseif node_value(a) == 1 #may think could just do this test but in Symbolics x==1 or x*x == 1 is a non-boolean expression.
+    elseif value(a) == 1 #may think could just do this test but in Symbolics x==1 or x*x == 1 is a non-boolean expression.
         return true
     else
         return false
@@ -126,10 +126,10 @@ export is_one
 simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
 
 is_nary(a::Node{T,N}) where {T,N} = N > 2
-is_times(a::Node) = node_value(a) == *
+is_times(a::Node) = value(a) == *
 export is_times
 
-is_nary_times(a::Node) = is_nary(a) && node_value(a) == typeof(*)
+is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
 export is_nary_times
 
 function simplify_check_cache(::typeof(*), na, nb, cache)
@@ -140,7 +140,7 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
     #TODO add another check that moves all constants to the left and then does constant propagation
     #c1*c2 = c3, (c1*x)*(c2*x) = c3*x
     if is_zero(a) && is_zero(b)
-        return Node(zero(promote(node_value(a), node_value(b)))) #user may have mixed types for numbers so use the widest type.
+        return Node(zero(promote(value(a), value(b)))) #user may have mixed types for numbers so use the widest type.
     elseif is_zero(a) #b is not zero
         return a #use this node rather than creating a zero since a has the type encoded in it
     elseif is_zero(b) #a is not zero
@@ -149,12 +149,12 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
         return b #At this point in processing the type of b may be impossible to determine, for example if b = sin(x) and the value of x won't be known till the expression is evaluated. No easy way to promote the type of b here if a has a wider type than b will eventually be determined to have. Example: a = BigFloat(1.0), b = sin(x). If the value of x is Float32 when the function is evaluated then would expect the type of the result to be BigFloat. But it will be Float32. Need to figure out a type of Node that will eventually generate code something like this: b = promote_type(a,b)(b) where the types of a,b will be known because this will be called in the generated Julia function for the derivative.
     elseif is_one(b)
         return a
-    elseif is_constant(a) && node_value(a) == -1
+    elseif is_constant(a) && value(a) == -1
         return -b
-    elseif is_constant(b) && node_value(b) == -1
+    elseif is_constant(b) && value(b) == -1
         return -a
     elseif is_constant(a) && is_constant(b)
-        return Node(node_value(a) * node_value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
+        return Node(value(a) * value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
     else
         return check_cache((*, a, b), cache)
     end
@@ -174,7 +174,7 @@ function simplify_check_cache(::typeof(+), na, nb, cache)
     elseif is_zero(b)
         return a
     elseif is_constant(a) && is_constant(b)
-        return Node(node_value(a) + node_value(b))
+        return Node(value(a) + value(b))
     else
         return check_cache((+, a, b), cache)
     end
@@ -187,7 +187,7 @@ function simplify_check_cache(::typeof(/), na, nb, cache)
     if is_one(b)
         return return a
     elseif is_constant(a) && is_constant(b)
-        return Node(node_value(a) / node_value(b))
+        return Node(value(a) / value(b))
     else
         return check_cache((/, a, b), cache)
     end
@@ -201,7 +201,7 @@ function simplify_check_cache(::typeof(-), na, nb, cache)
     elseif is_zero(a)
         return -b
     elseif is_constant(a) && is_constant(b)
-        return Node(node_value(a) - node_value(b))
+        return Node(value(a) - value(b))
     else
         return check_cache((-, a, b), cache)
     end
@@ -212,7 +212,7 @@ simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 """Special case only for unary -. No simplifications are currently applied to any other unary functions"""
 function simplify_check_cache(::typeof(-), na, cache)
     a = Node(na) #this is safe because Node constructor is idempotent
-    if arity(na) == 1 && typeof(node_value(na)) == typeof(-)
+    if arity(na) == 1 && typeof(value(na)) == typeof(-)
         return children(a)[1]
     else
         return check_cache((-, a), cache)
@@ -273,10 +273,10 @@ end
 Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
 
 #efficient explicit methods for most common cases
-derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(node_value(a), (children(a)[1],), index)
-derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(node_value(a), (children(a)[1], children(a)[2]), index)
-derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(node_value(a), (children(a)[1], children(a)[2]), index)
-derivative(a::Node, index::Val{i}) where {i} = derivative(node_value(a), (children(a)...,), index)
+derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1],), index)
+derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1], children(a)[2]), index)
+derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(value(a), (children(a)[1], children(a)[2]), index)
+derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
 export derivative
 
 
@@ -292,7 +292,7 @@ derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
 # Special cases for leaf nodes with no children. Handles the case when the node value is a Symbolics Num value, which can be either a symbol or a number.
 function derivative(a::Node{T,0}) where {T}
-    if SymbolicUtils.issym(node_value(a))
+    if SymbolicUtils.issym(value(a))
         return Node(1)
     else
         return Node(0)
@@ -326,8 +326,8 @@ function to_string(a::Node)
     if arity(a) == 0
         return "$(node_id(a))"
     else
-        if node_value(a) isa UnspecifiedFunction
-            return "$(node_value(a))"
+        if value(a) isa UnspecifiedFunction
+            return "$(value(a))"
         elseif arity(a) == 1
             return "$(node_id(a))($(to_string(a.children[1])))"
         elseif arity(a) == 2
@@ -408,9 +408,9 @@ function node_symbol(a::Node)
     if is_tree(a)
         result = gensym() #create a symbol to represent the node
     elseif is_variable(a)
-        result = nameof(node_value(a))  #use the name of the Symbolics symbol which represents the variable
+        result = nameof(value(a))  #use the name of the Symbolics symbol which represents the variable
     else
-        result = node_value(a) #not a tree not a variable so is some kind of constant. Symbolics represents constants as Num so extract value so returned function will return a conventional number, not a Num.
+        result = value(a) #not a tree not a variable so is some kind of constant. Symbolics represents constants as Num so extract value so returned function will return a conventional number, not a Num.
     end
     return result
 end
@@ -448,7 +448,7 @@ function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sym
 
             if is_tree(node)
                 args = _dag_to_function.(children(node))
-                statement = :($(node_to_var[node]) = $(Symbol(node_value(node)))($(args...)))
+                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
                 push!(body.args, statement)
             end
         end
@@ -496,7 +496,7 @@ make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:Abstra
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)
     if arity(a) === 0
-        return Num(node_value(a)) #convert everything to Num type. This will wrap types like Int64,Float64, etc., but will not double wrap nodes that are Num types already.
+        return Num(value(a)) #convert everything to Num type. This will wrap types like Int64,Float64, etc., but will not double wrap nodes that are Num types already.
     else
         if arity(a) === 1
             return a.node_value(dag_to_Symbolics_expression(a.children[1]))

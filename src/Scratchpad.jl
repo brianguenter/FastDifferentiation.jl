@@ -11,7 +11,11 @@ function test()
     q = function_of(:q, x, y)
     f = x * q + y * q
     graph = DerivativeGraph([f])
-    symbolic_jacobian!(graph)
+    factor!(graph)
+    remove_dangling_edges!(graph)
+    Vis.draw(graph)
+    value()
+    # symbolic_jacobian!(graph)
 end
 export test
 

@@ -227,14 +227,14 @@ export compute_factorable_subgraphs
 
 function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
     if length(path) == 1
-        return edge_value(path[1])
+        return value(path[1])
     end
 
     run = Node[]
     count = 2
     prod = Node(1.0)
     run_start = times_used(path[1])
-    push!(run, edge_value(path[1]))
+    push!(run, value(path[1]))
 
     for val in @view path[2:end]
         if times_used(val) != run_start
@@ -247,7 +247,7 @@ function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
             run_start = times_used(val)
         end
 
-        push!(run, edge_value(val))
+        push!(run, value(val))
 
         if count == length(path)
             runprod = Node(1.0)
@@ -418,7 +418,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
         for pedge in pedges
             Vval = set_diff(reachable_variables(pedge), Vset)
             if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Vset
-                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), edge_value(pedge), Vval, Rdom)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
+                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), Vval, Rdom)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
                 mask_variables!(pedge, Vset) #this edge only has the reachable roots in Rset
             end
 
@@ -477,7 +477,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph},
         for pedge in pedges
             Rval = set_diff(reachable_roots(pedge), Rset)
             if !is_zero(Rval) #need to create an edge to accomodate the part of the reachable set that is not in Rset
-                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), edge_value(pedge), Vdom, Rval)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
+                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), Vdom, Rval)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
                 mask_roots!(pedge, Rset) #this edge only has the reachable roots in Rset
             end
 
@@ -638,7 +638,7 @@ function follow_path(a::DerivativeGraph{T}, root_index::Integer, var_index::Inte
         sort!(path_product, lt=((x, y) -> num_uses(x) > num_uses(y))) #sort larger num uses edges first
         product = Node(1.0)
         for term in path_product
-            product *= edge_value(term)
+            product *= value(term)
         end
     end
     return product
@@ -685,7 +685,7 @@ function path_to_variable!(graph, current_edge)
     end
 end
 
-function remove_dangling_edges(graph::DerivativeGraph)
+function remove_dangling_edges!(graph::DerivativeGraph)
     #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
     for root_index in 1:codomain_dimension(graph)
         edge_copy = copy(child_edges(graph, root_index_to_postorder_number(graph, root_index)))
@@ -704,7 +704,7 @@ function symbolic_jacobian!(a::DerivativeGraph, variable_ordering::AbstractVecto
     result = Matrix{Node}(undef, outdim, indim)
     factor!(a)
 
-    remove_dangling_edges(a)
+    remove_dangling_edges!(a)
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(a, var)
