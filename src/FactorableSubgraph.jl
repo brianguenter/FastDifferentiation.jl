@@ -145,13 +145,14 @@ function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:
         count = 0
         for pedge in start_edges
             path_edges = get_edge_vector()
-            res = edges_on_path!(constraint, dominating_node(subgraph), S == DominatorSubgraph, pedge, path_edges)
-            if res === nothing #there is a branch in the edge path which can only happen if the subgraph has been destroyed
+            flag = edges_on_path!(constraint, dominating_node(subgraph), S == DominatorSubgraph, pedge, path_edges)
+            if flag == 1
+                count += 1
+            elseif flag == 2 #there is a branch in the edge path which can only happen if the subgraph has been destroyed
                 reclaim_edge_vector(path_edges)
                 reclaim_edge_vector(start_edges)
                 return false
             end
-            count += 1
         end
 
         if count < 2

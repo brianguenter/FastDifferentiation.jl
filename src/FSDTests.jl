@@ -934,7 +934,7 @@ end
 
     #first verify all nodes have the postorder numbers we expect
     for (i, nd) in pairs(gnodes)
-        @test node(graph, i) == nd
+        @assert node(graph, i) == nd
     end
 
     subs, subs_dict = compute_factorable_subgraphs(graph)
@@ -951,14 +951,21 @@ end
 
     #test for dominator subgraph (5,3)
     up_edges = relation_edges!(up_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(up_constraint, dominating, true, up_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(up_constraint, dominating, true, up_edges[2])))
+
+    temp_edges = PathEdge{Int64}[]
+
+    edges_on_path!(up_constraint, dominating, true, up_edges[1], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    edges_on_path!(up_constraint, dominating, true, up_edges[2], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
     #test for postdominator subgraph (3,5)
     down_constraint = PathConstraint(dominating_node(sub_3_5), graph, false, reachable_roots(sub_3_5), dominance_mask(sub_3_5))
     down_edges = relation_edges!(down_constraint, dominating)
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges1), edges_on_path!(down_constraint, dominated, false, down_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(down_constraint, dominated, false, down_edges[2])))
+    edges_on_path!(down_constraint, dominated, false, down_edges[1], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(reverse(path_edges1), temp_edges))
+    edges_on_path!(down_constraint, dominated, false, down_edges[2], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
 
     path_edges1 = [edges(graph, 4, 1)[1]]
@@ -971,16 +978,20 @@ end
     #test for dominator subgraph (4,1)
     up_constraint = PathConstraint(dominating_node(sub_4_1), graph, true, dominance_mask(sub_4_1), reachable_variables(sub_4_1))
     up_edges = relation_edges!(up_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(up_constraint, dominating, true, up_edges[1])))
-    @test all(x -> x[1] == x[2], zip(path_edges2, edges_on_path!(up_constraint, dominating, true, up_edges[2])))
+    edges_on_path!(up_constraint, dominating, true, up_edges[1], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    edges_on_path!(up_constraint, dominating, true, up_edges[2], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
     dominating = sub_1_4.subgraph[1]
     dominated = sub_1_4.subgraph[2]
     #test for postdominator subgraph (1,4)
     down_constraint = PathConstraint(dominating_node(sub_1_4), graph, false, reachable_roots(sub_1_4), dominance_mask(sub_1_4))
     down_edges = relation_edges!(down_constraint, dominated)
-    @test all(x -> x[1] == x[2], zip(path_edges1, edges_on_path!(down_constraint, dominating, false, down_edges[1])))
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges2), edges_on_path!(down_constraint, dominating, false, down_edges[2])))
+    edges_on_path!(down_constraint, dominating, false, down_edges[1], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    edges_on_path!(down_constraint, dominating, false, down_edges[2], temp_edges)
+    @assert all(x -> x[1] == x[2], zip(reverse(path_edges2), temp_edges))
 end
 
 @testitem "set_diff" begin
@@ -998,7 +1009,8 @@ end
         path_constraint = FastSymbolicDifferentiation.next_edge_constraint(a)
 
         for start_edge in relation_edges!(path_constraint, dominated_node(a))
-            pedges = edges_on_path!(path_constraint, dominating_node(a), is_dominator, start_edge)
+            pedges = PathEdge{Int64}[]
+            flag = edges_on_path!(path_constraint, dominating_node(a), is_dominator, start_edge, pedges)
             append!(result, pedges)
         end
         return result
