@@ -99,6 +99,17 @@ export is_variable
 is_constant(a::Node) = !is_variable(a) && !is_tree(a) #pretty confident this is correct but there may be edges cases in Symbolics I am not aware of.
 export is_constant
 
+function constant_value(a::Node)
+    if is_constant(a)
+        return value(a)
+    elseif arity(a) == 1 && typeof(value(a)) == typeof(-) && is_constant(children(a)[1])
+        return -value(children(a)[1])
+    else
+        return nothing
+    end
+end
+export constant_value
+
 function is_zero(a::Node)
     if is_tree(a) || is_variable(a)
         return false
@@ -132,6 +143,16 @@ export is_times
 is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
 export is_nary_times
 
+function simplify_check_cache(::typeof(^), a, b, cache)
+    na = Node(a)
+    nb = Node(b)
+    if constant_value(na) !== nothing && constant_value(nb) !== nothing
+        return Node(constant_value(na)^constant_value(nb))
+    else
+        return check_cache((^, na, nb), cache)
+    end
+end
+
 function simplify_check_cache(::typeof(*), na, nb, cache)
     a = Node(na)
     b = Node(nb)
@@ -153,8 +174,8 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
         return -b
     elseif is_constant(b) && value(b) == -1
         return -a
-    elseif is_constant(a) && is_constant(b)
-        return Node(value(a) * value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
+    elseif constant_value(a) !== nothing && constant_value(b) !== nothing
+        return Node(constant_value(a) * constant_value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
     else
         return check_cache((*, a, b), cache)
     end

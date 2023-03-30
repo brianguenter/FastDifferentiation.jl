@@ -19,6 +19,7 @@
 import Base
 
 cross(a::AbstractVector{T}) where {T} = SMatrix{3,3,T}(0, a[4], -a[3], -a[4], 0, a[2], a[3], -a[2], 0)
+export cross
 
 function normalize(a::AbstractVector)
     tmp = mapreduce(x -> x^2, +, a)
@@ -28,9 +29,11 @@ end
 angle_axis(a::AbstractVector{T}) where {T} = SVector{4,T}(a[1], normalize(a[2:4])...)
 export angle_axis
 
+random_rotation(a::Node{<:FastSymbolicDifferentiation.UnspecifiedFunction}) = angle_axis([a, rand(3)...])
+export random_rotation
 """convert angle axis to matrix form"""
 function matrix(a::AbstractVector)
     @assert length(a) == 4
-    return [1 0 0; 0 1 0; 0 0 1] + sin(a[1]) .* cross(a) .+ (1 - cos(a[1])) .* (cross(a) * cross(a))
+    return [1 0 0; 0 1 0; 0 0 1] + map(x -> x * sin(a[1]), cross(a)) + map(x -> (1 - cos(a[1])) * x, (cross(a) * cross(a)))
 end
 export matrix
