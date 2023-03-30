@@ -31,6 +31,7 @@ export angle_axis
 
 random_rotation(a::Node{<:FastSymbolicDifferentiation.UnspecifiedFunction}) = angle_axis([a, rand(3)...])
 export random_rotation
+
 """convert angle axis to matrix form"""
 function matrix(a::AbstractVector)
     @assert length(a) == 4
@@ -38,7 +39,7 @@ function matrix(a::AbstractVector)
 end
 export matrix
 
-function transform(rotation::SVector{4,<:Node}, translation::SVector{3,<:Node})
+function transformation(rotation::SVector{4,<:Node}, translation::SVector{3,<:Node})
     result = Matrix{Node}(undef, 4, 4)
     copyto!(result, CartesianIndices((1:3, 1:3)), matrix(angle_axis(rotation)), CartesianIndices((1:3, 1:3)))
 
@@ -52,4 +53,12 @@ function transform(rotation::SVector{4,<:Node}, translation::SVector{3,<:Node})
 
     return SMatrix{4,4}(result)
 end
-export transform
+export transformation
+
+I() = SMatrix{4,4}(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0
+)
+
