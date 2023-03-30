@@ -37,3 +37,19 @@ function matrix(a::AbstractVector)
     return [1 0 0; 0 1 0; 0 0 1] + map(x -> x * sin(a[1]), cross(a)) + map(x -> (1 - cos(a[1])) * x, (cross(a) * cross(a)))
 end
 export matrix
+
+function transform(rotation::SVector{4,<:Node}, translation::SVector{3,<:Node})
+    result = Matrix{Node}(undef, 4, 4)
+    copyto!(result, CartesianIndices((1:3, 1:3)), matrix(angle_axis(rotation)), CartesianIndices((1:3, 1:3)))
+
+    result[1, 4] = translation[1]
+    result[2, 4] = translation[2]
+    result[3, 4] = translation[3]
+    result[4, 1] = 0.0
+    result[4, 2] = 0.0
+    result[4, 3] = 0.0
+    result[4, 4] = 1
+
+    return SMatrix{4,4}(result)
+end
+export transform

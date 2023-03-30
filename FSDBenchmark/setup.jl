@@ -1,6 +1,7 @@
 using FSDBenchmark
 using FastSymbolicDifferentiation
 using Symbolics
+using StaticArrays
 
 @variables x y z t
 nx = Node(x)
