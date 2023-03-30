@@ -140,7 +140,7 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
     #TODO add another check that moves all constants to the left and then does constant propagation
     #c1*c2 = c3, (c1*x)*(c2*x) = c3*x
     if is_zero(a) && is_zero(b)
-        return Node(zero(promote(value(a), value(b)))) #user may have mixed types for numbers so use the widest type.
+        return Node(value(a) + value(b)) #user may have mixed types for numbers so use automatic promotion to widen the type.
     elseif is_zero(a) #b is not zero
         return a #use this node rather than creating a zero since a has the type encoded in it
     elseif is_zero(b) #a is not zero
