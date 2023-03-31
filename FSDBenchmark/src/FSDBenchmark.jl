@@ -8,9 +8,11 @@ using CSV
 using CurveFit
 using Plots
 using Memoize
-using FastSymbolicDifferentiation
+import FastSymbolicDifferentiation
+using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, UnspecifiedFunction, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
 using StaticArrays
 using LaTeXStrings
+import LinearAlgebra
 
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
@@ -70,7 +72,7 @@ function FSD_spherical_harmonics(min_order, max_order, simplify=true)
     output = DataFrame()
 
     for n in min_order:1:max_order
-        trial = @benchmark FastSymbolicDifferentiation.symbolic_jacobian!(gr) setup = gr = to_graph($n)[1] evals = 1
+        trial = @benchmark symbolic_jacobian!(gr) setup = gr = to_graph($n)[1] evals = 1
         push!(output, preprocess_trial(trial, "$n"))
     end
     CSV.write(FSD_filename(SH_NAME, "symbolic", min_order, max_order, simplify), output)
@@ -91,9 +93,9 @@ function SH_make_function_time(min_order, max_order, simplify=true)
 
     for n in min_order:1:max_order
         graph = to_graph(n)[1]
-        tmp = Matrix{Float64}(undef, FastSymbolicDifferentiation.codomain_dimension(graph), FastSymbolicDifferentiation.domain_dimension(graph))
+        tmp = Matrix{Float64}(undef, codomain_dimension(graph), domain_dimension(graph))
 
-        trial = @benchmark jacobian_function!(gr, variables(gr); in_place=true) setup = gr = to_graph($n)[1] evals = 1
+        trial = @benchmark jacobian_function!(gr, FastSymbolicDifferentiation.variables(gr); in_place=true) setup = gr = to_graph($n)[1] evals = 1
         push!(FSD_times, preprocess_trial(trial, "$n"))
 
 
@@ -113,9 +115,9 @@ function SH_exe_time(min_order, max_order, simplify=true)
 
     for n in min_order:1:max_order
         graph = to_graph(n)[1]
-        tmp = Matrix{Float64}(undef, FastSymbolicDifferentiation.codomain_dimension(graph), FastSymbolicDifferentiation.domain_dimension(graph))
+        tmp = Matrix{Float64}(undef, codomain_dimension(graph), domain_dimension(graph))
 
-        FSD_exe = jacobian_function!(graph, variables(graph); in_place=true)
+        FSD_exe = jacobian_function!(graph, FastSymbolicDifferentiation.variables(graph); in_place=true)
         trial = @benchmark $FSD_exe(1.1, 2.3, 4.2, $tmp)
         push!(FSD_times, preprocess_trial(trial, "$n"))
 
@@ -189,8 +191,8 @@ export plot_SH_exe_time
 """plot that shows how FSD jacobian is close to optimal for SH because number of operations of Jacobian is a fixed constant (roughly 2.5) times the number of operations in the original function"""
 function plot_SH_FSD_graph_vs_jacobian_size(min_order, max_order)
     funcs = [to_graph(x)[1] for x in min_order:max_order]
-    derivs = [FastSymbolicDifferentiation.symbolic_jacobian!(x) for x in funcs]
-    ratio = FastSymbolicDifferentiation.number_of_operations.(derivs) ./ FastSymbolicDifferentiation.number_of_operations.(roots.(funcs))
+    derivs = [symbolic_jacobian!(x) for x in funcs]
+    ratio = number_of_operations.(derivs) ./ number_of_operations.(roots.(funcs))
     plot(min_order:max_order, ratio, ylabel="Ratio of operations", title=L"\frac{operations(jacobian(f))}{operations(f)}", titlefontsizes=10, xlabel="Spherical Harmonic order", legend=false)
 end
 export plot_SH_FSD_graph_vs_jacobian_size

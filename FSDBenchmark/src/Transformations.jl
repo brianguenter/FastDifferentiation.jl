@@ -29,7 +29,7 @@ end
 angle_axis(a::AbstractVector{T}) where {T} = SVector{4,T}(a[1], normalize(a[2:4])...)
 export angle_axis
 
-random_rotation(a::Node{<:FastSymbolicDifferentiation.UnspecifiedFunction}) = angle_axis([a, rand(3)...])
+random_rotation(a::Node{<:UnspecifiedFunction}) = angle_axis([a, rand(3)...])
 export random_rotation
 
 """convert angle axis to matrix form"""
@@ -39,9 +39,12 @@ function matrix(a::AbstractVector)
 end
 export matrix
 
-function transformation(rotation::SVector{4,<:Node}, translation::SVector{3,<:Node})
+function transformation(rotation::AbstractMatrix, translation::AbstractVector)
+    @assert (3, 3) == size(rotation)
+    @assert (3,) == size(translation)
+
     result = Matrix{Node}(undef, 4, 4)
-    copyto!(result, CartesianIndices((1:3, 1:3)), matrix(angle_axis(rotation)), CartesianIndices((1:3, 1:3)))
+    copyto!(result, CartesianIndices((1:3, 1:3)), Node.(rotation), CartesianIndices((1:3, 1:3)))
 
     result[1, 4] = translation[1]
     result[2, 4] = translation[2]
@@ -55,10 +58,17 @@ function transformation(rotation::SVector{4,<:Node}, translation::SVector{3,<:No
 end
 export transformation
 
-I() = SMatrix{4,4}(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, 0.0, 1.0
-)
+function transformation(three_by_three::AbstractMatrix{T}) where {T}
+    @assert (3, 3) == size(three_by_three)
+    result = Node.(I())
+    copyto!(result, CartesianIndices((1:3, 1:3)), three_by_three, CartesianIndices((1:3, 1:3)))
+    return SMatrix{4,4}(result)
+end
+
+I() = [
+    1.0 0.0 0.0 0.0
+    0.0 1.0 0.0 0.0
+    0.0 0.0 1.0 0.0
+    0.0 0.0 0.0 1.0
+]
 

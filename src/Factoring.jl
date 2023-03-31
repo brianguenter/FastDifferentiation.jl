@@ -410,7 +410,7 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
     reclaim_edge_vector(tmp)
 
     #test
-    @assert Vset == reachable_variables(graph(constraint), dominated_node)
+    @assert Vset == reachable_variables(graph(constraint), dominated_node) "Vset: $Vset reachable_variables of dominated_node:$(reachable_variables(graph(constraint), dominated_node))"
     #end test
 
     return Vset
@@ -624,20 +624,8 @@ end
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
-    #test
-    # println("original graph")
-    # Vis.draw(a, false)
-    # readline()
-    #endtest
-
     for subgraph in subgraph_list
-
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
-        #test
-        # println("factored subgraph $subgraph")
-        # Vis.draw(a, false)
-        # readline()
-        #endtest
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
@@ -825,7 +813,7 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
         mat_column = reshape(column, size(A))
         result = copy(mat_column)
 
-        return result
+        return Node.(result)
     end
 end
 export derivative
