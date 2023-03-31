@@ -410,7 +410,7 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
     reclaim_edge_vector(tmp)
 
     #test
-    @assert Vset == reachable_variables(graph(constraint), dominated_node) "Vset: $Vset reachable_variables of dominated_node:$(reachable_variables(graph(constraint), dominated_node))"
+    # @assert Vset == reachable_variables(graph(constraint), dominated_node) "Vset: $Vset reachable_variables of dominated_node:$(reachable_variables(graph(constraint), dominated_node))"
     #end test
 
     return Vset

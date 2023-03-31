@@ -2,9 +2,10 @@ function_array(a::Symbol, n::Int, var::T) where {T<:Node} = [function_of(Symbol(
 export function_array
 
 random_transform(joint_function::Node) = transformation(matrix(random_rotation(joint_function)), SVector{3}(Node.(rand(3))))
-export random_transforms
+export random_transform
 
 random_inertia() = transformation(Node.(collect(LinearAlgebra.Symmetric(rand(3, 3)))))
+export random_inertia
 struct Linkage
     Aᵢ::Vector{Matrix{Node}}
     joint_angles::Vector{Node}
@@ -43,11 +44,32 @@ function τᵢ(linkage::Linkage, index::Int)
 
 
     for j in index:num_links(linkage)
-        # DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
-        DWⱼ_qᵢ = Node.(I())
-        sum += LinearAlgebra.tr(Node.(DWⱼ_qᵢ * Jⱼ(linkage, index) * derivative(W(linkage, j), t, t))) - mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
+        DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+        DWⱼ_qᵢ[4, 4] = 1.0 #hack to make sure still homogeneous transformation
+        Dtt = derivative(W(linkage, j), t, t)
+        J = Jⱼ(linkage, index)
+        grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
+        trace = LinearAlgebra.tr(Node.(DWⱼ_qᵢ * J * Dtt)) #for some reason matrix multiplication can't determine the type of the output. Maybe I have to define an interface function.
+        sum += trace - grav
     end
+
+    return sum
 end
 export τᵢ
+
+function lagrangian_dynamics()
+    result = Node[]
+    links = Linkage(2)
+    for i in eachindex(links.Aᵢ)
+        torque = τᵢ(links, i)
+        graph = DerivativeGraph(torque)
+        println(FastSymbolicDifferentiation.variables(graph))
+        FastSymbolicDifferentiation.Vis.draw(graph, false)
+        println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
+        push!(result, torque)
+    end
+    return result
+end
+export lagrangian_dynamics
 
 

@@ -90,7 +90,23 @@ export is_leaf
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 export is_tree
 
-is_unspecified_function(a::Node) = value(a) isa UnspecifiedFunction
+function is_unspecified_function(a::Node)
+    node_val = value(a)
+    if node_val isa UnspecifiedFunction
+        return true
+    else
+        return false
+    end
+    # if node_val isa UnspecifiedFunction
+    #     if length(node_val.derivatives) > 0 #this is an UnspecifiedFunction node which has been differentiated. It is no longer a variable node.
+    #         return false
+    #     else
+    #         return true
+    #     end
+    # else
+    #     return false
+    # end
+end
 export is_unspecified_function
 
 is_variable(a::Node) = SymbolicUtils.issym(value(a))
@@ -102,8 +118,6 @@ export is_constant
 function constant_value(a::Node)
     if is_constant(a)
         return value(a)
-    elseif arity(a) == 1 && typeof(value(a)) == typeof(-) && is_constant(children(a)[1])
-        return -value(children(a)[1])
     else
         return nothing
     end
@@ -176,6 +190,10 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
         return -a
     elseif constant_value(a) !== nothing && constant_value(b) !== nothing
         return Node(constant_value(a) * constant_value(b)) #this relies on the fact that objectid(Node(c)) == objectid(Node(c)) where c is a constant so don't have to check cache.
+    elseif is_constant(b) #Move constant on right branch to left branch to simplify other simplification rules. Know that only one of a,b can be constant at this point so won't recurse. 
+        return b * a
+    elseif is_constant(a) && typeof(*) == typeof(value(b)) && is_constant(children(b)[1])
+        return Node(value(children(b)[1]) * value(a)) * children(b)[2]
     else
         return check_cache((*, a, b), cache)
     end
@@ -231,12 +249,14 @@ end
 simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 
 """Special case only for unary -. No simplifications are currently applied to any other unary functions"""
-function simplify_check_cache(::typeof(-), na, cache)
-    a = Node(na) #this is safe because Node constructor is idempotent
+function simplify_check_cache(::typeof(-), a, cache)
+    na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
-        return children(a)[1]
+        return children(na)[1]
+    elseif constant_value(na) !== nothing
+        return Node(-value(na))
     else
-        return check_cache((-, a), cache)
+        return check_cache((-, na), cache)
     end
 end
 
