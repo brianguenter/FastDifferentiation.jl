@@ -252,6 +252,7 @@ export compute_paths_to_variables
 compute_paths_to_roots(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, indices_of_roots) where {T} = compute_paths(num_nodes, graph_edges, indices_of_roots, children)
 export compute_paths_to_roots
 
+"""This function computes reachable roots and reachable variable masks for each edge in the graph. It is called before the DerivativeGraph has been constructed. If you have a DerivativeGraph you can use compute_edge_paths!(a::DerivativeGraph) instead"""
 function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{S}}, var_indices, indices_of_roots) where {T,S<:Integer}
     variable_paths = compute_paths_to_variables(num_nodes, graph_edges, var_indices)
     root_paths = compute_paths_to_roots(num_nodes, graph_edges, indices_of_roots)
@@ -268,6 +269,8 @@ function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelatio
 end
 export compute_edge_paths!
 
+"""convenience function to avoid calling messier low level function"""
+compute_edge_paths!(graph::DerivativeGraph) = compute_edge_paths!(length(nodes(graph)), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
 function intersection(order_test, node1::Integer, node2::Integer, idoms::Dict{T,T}) where {T<:Integer}
     count = 0
