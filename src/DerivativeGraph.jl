@@ -168,8 +168,6 @@ function children(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
 end
 export children
 
-# parents(constraint_function, a::RnToRmGraph, node_index::T)
-
 """returns iterator of indices of parents of node"""
 parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a), node_index)
 

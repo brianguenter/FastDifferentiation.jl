@@ -709,6 +709,39 @@ function remove_dangling_edges!(graph::DerivativeGraph)
     end
 end
 
+function verify_paths(graph::DerivativeGraph)
+    #for each node verify that the intersection of the reachable variables of the child edges is {}.
+    flag = true
+
+    for (i, root) in pairs(roots(graph))
+        if !(_verify_paths(graph, postorder_number(graph, root)))
+            @info "error in path from root $i"
+            flag = false
+        end
+    end
+    return flag
+end
+export verify_paths
+
+function _verify_paths(graph::DerivativeGraph, a::Int)
+    branches = child_edges(graph, a)
+
+    if length(branches) > 1
+        intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
+        if !is_zero(intersection)
+            @info "non-zero intersection $intersection"
+            return false
+        end
+        for child in children(graph, a)
+            if !(_verify_paths(graph, child))
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 
 """Factors the graph then computes jacobian matrix. Destructive."""
 function symbolic_jacobian!(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
@@ -719,6 +752,7 @@ function symbolic_jacobian!(a::DerivativeGraph, variable_ordering::AbstractVecto
     factor!(a)
 
     remove_dangling_edges!(a)
+    verify_paths(a)
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(a, var)
@@ -817,3 +851,5 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     end
 end
 export derivative
+
+
