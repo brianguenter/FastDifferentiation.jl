@@ -723,6 +723,24 @@ function verify_paths(graph::DerivativeGraph)
 end
 export verify_paths
 
+
+function reset_path_masks!(graph::DerivativeGraph)
+    for edge_relation in values(edges(graph))
+        for parent in parents(edge_relation)
+            reachable_variables(parent) .= 0
+            reachable_roots(parent) .= 0
+        end
+        for child in children(edge_relation)
+            reachable_variables(child) .= 0
+            reachable_roots(child) .= 0
+        end
+        #this is redundant, since will be setting each reachable twice because edge data structure stores each edge twice. Optimize later if necessary. When this function is called on the fully factored there should be few edges left in the graph so computation should be negligible.
+    end
+
+    compute_edge_paths!(graph)
+    return nothing
+end
+
 function _verify_paths(graph::DerivativeGraph, a::Int)
     branches = child_edges(graph, a)
 
@@ -744,20 +762,21 @@ end
 
 
 """Factors the graph then computes jacobian matrix. Destructive."""
-function symbolic_jacobian!(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    indim = domain_dimension(a)
-    outdim = codomain_dimension(a)
+function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+    indim = domain_dimension(graph)
+    outdim = codomain_dimension(graph)
 
     result = Matrix{Node}(undef, outdim, indim)
-    factor!(a)
+    factor!(graph)
 
-    remove_dangling_edges!(a)
-    verify_paths(a)
+    remove_dangling_edges!(graph)
+    reset_path_masks!(graph)
+    verify_paths(graph)
 
     for (i, var) in pairs(variable_ordering)
-        var_index = variable_node_to_index(a, var)
-        for root_index in 1:codomain_dimension(a)
-            result[root_index, i] = evaluate_path(a, root_index, var_index)
+        var_index = variable_node_to_index(graph, var)
+        for root_index in 1:codomain_dimension(graph)
+            result[root_index, i] = evaluate_path(graph, root_index, var_index)
         end
     end
 
