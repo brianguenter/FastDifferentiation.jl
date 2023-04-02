@@ -624,7 +624,14 @@ end
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
+
+
     for subgraph in subgraph_list
+        #test
+        # println("factoring $subgraph")
+        # Vis.draw(a, false)
+        # readline()
+        #test
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
     end
 
@@ -709,6 +716,28 @@ function remove_dangling_edges!(graph::DerivativeGraph)
     end
 end
 
+function _verify_paths(graph::DerivativeGraph, a::Int)
+    branches = child_edges(graph, a)
+
+    if length(branches) > 1
+        intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
+        if !is_zero(intersection)
+            @info "non-zero intersection $intersection"
+            for branch in branches
+                @info "reachable variables $(reachable_variables(branch))"
+            end
+            return false
+        end
+        for child in children(graph, a)
+            if !(_verify_paths(graph, child))
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 function verify_paths(graph::DerivativeGraph)
     #for each node verify that the intersection of the reachable variables of the child edges is {}.
     flag = true
@@ -723,7 +752,7 @@ function verify_paths(graph::DerivativeGraph)
 end
 export verify_paths
 
-
+#WARNING: this does not seem to set the path masks correctly.
 function reset_path_masks!(graph::DerivativeGraph)
     for edge_relation in values(edges(graph))
         for parent in parents(edge_relation)
@@ -741,27 +770,7 @@ function reset_path_masks!(graph::DerivativeGraph)
     return nothing
 end
 
-function _verify_paths(graph::DerivativeGraph, a::Int)
-    branches = child_edges(graph, a)
-
-    if length(branches) > 1
-        intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
-        if !is_zero(intersection)
-            @info "non-zero intersection $intersection"
-            return false
-        end
-        for child in children(graph, a)
-            if !(_verify_paths(graph, child))
-                return false
-            end
-        end
-    end
-
-    return true
-end
-
-
-"""Factors the graph then computes jacobian matrix. Destructive."""
+"""Factors the graph then computes jacobian matrix."""
 function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     indim = domain_dimension(graph)
     outdim = codomain_dimension(graph)
@@ -769,9 +778,14 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
     result = Matrix{Node}(undef, outdim, indim)
     factor!(graph)
 
+    println("here")
     remove_dangling_edges!(graph)
-    reset_path_masks!(graph)
     verify_paths(graph)
+    #test
+    println("final graph")
+    Vis.draw(graph, false)
+    readline()
+    #end test
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(graph, var)
