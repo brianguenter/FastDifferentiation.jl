@@ -59,7 +59,7 @@ export τᵢ
 
 function lagrangian_dynamics()
     result = Node[]
-    links = Linkage(2)
+    links = Linkage(1)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)

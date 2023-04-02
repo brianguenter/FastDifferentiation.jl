@@ -742,35 +742,7 @@ function verify_paths(graph::DerivativeGraph)
     #for each node verify that the intersection of the reachable variables of the child edges is {}.
     flag = true
 
-    for (i, root) in pairs(roots(graph))
-        if !(_verify_paths(graph, postorder_number(graph, root)))
-            @info "error in path from root $i"
-            flag = false
-        end
-    end
-    return flag
-end
-export verify_paths
-
-#WARNING: this does not seem to set the path masks correctly.
-function reset_path_masks!(graph::DerivativeGraph)
-    for edge_relation in values(edges(graph))
-        for parent in parents(edge_relation)
-            reachable_variables(parent) .= 0
-            reachable_roots(parent) .= 0
-        end
-        for child in children(edge_relation)
-            reachable_variables(child) .= 0
-            reachable_roots(child) .= 0
-        end
-        #this is redundant, since will be setting each reachable twice because edge data structure stores each edge twice. Optimize later if necessary. When this function is called on the fully factored there should be few edges left in the graph so computation should be negligible.
-    end
-
-    compute_edge_paths!(graph)
-    return nothing
-end
-
-"""Factors the graph then computes jacobian matrix."""
+"""Factors the graph then computes jacobian matrix. Destructive."""
 function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     indim = domain_dimension(graph)
     outdim = codomain_dimension(graph)
@@ -778,14 +750,9 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
     result = Matrix{Node}(undef, outdim, indim)
     factor!(graph)
 
-    println("here")
     remove_dangling_edges!(graph)
+    reset_path_masks!(graph)
     verify_paths(graph)
-    #test
-    println("final graph")
-    Vis.draw(graph, false)
-    readline()
-    #end test
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(graph, var)
