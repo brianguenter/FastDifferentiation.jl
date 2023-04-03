@@ -25,8 +25,36 @@ function edge_label(a::PathEdge)
 end
 export edge_label
 
-function draw(unique_edges::AbstractVector{PathEdge{T}}, unique_nodes::AbstractVector{Node{T,N}}, post_order_numbers::AbstractVector{T}, root_test::Function) where {T,N}
+# function draw(unique_edges::AbstractVector{PathEdge{T}}, unique_nodes::AbstractVector{Node{T,N}}, post_order_numbers::AbstractVector{T}, root_test::Function) where {T,N}
+# end
+
+function draw_dot(graph, filename)
+    gr = "strict digraph{\nnode [style = filled]\n"
+    for e in FastSymbolicDifferentiation.unique_edges(graph)
+        gr *= "$(top_vertex(e)) -> $(bott_vertex(e))\n"
+    end
+
+    for node in nodes(graph)
+        num = postorder_number(graph, node)
+        if is_variable(graph, num)
+            gr *= "$num [color = green] [label = \"$num $(value(node))\"] [fillcolor = green]\n"
+        elseif is_root(graph, num)
+            gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num\"] [fillcolor = red]\n"
+        else
+            gr *= "$num [label = \"$num $(value(node))\"] "
+        end
+    end
+
+    gr *= "\n}"
+    name, ext = splitext(filename)
+    io = open(name * ".dot", "w")
+    write(io, gr)
+    close(io)
+
+    Base.run(`dot -Tsvg $name.dot -o $filename`)
 end
+export draw_dot
+
 
 """draws nodes and labled edges of a DerivativeGraph"""
 function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=true)

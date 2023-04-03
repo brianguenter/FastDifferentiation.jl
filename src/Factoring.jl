@@ -640,8 +640,7 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
     for subgraph in subgraph_list
         #test
-        println("factoring $subgraph")
-        Vis.draw(a, false)
+        # println("factoring $subgraph")
         # readline()
         #test
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)

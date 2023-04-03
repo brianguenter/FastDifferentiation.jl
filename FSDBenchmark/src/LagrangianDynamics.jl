@@ -64,6 +64,7 @@ function lagrangian_dynamics()
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
         println(FastSymbolicDifferentiation.variables(graph))
+        FastSymbolicDifferentiation.Vis.draw_dot(graph, "test.svg")
         # FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
         println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
         push!(result, torque)
@@ -90,8 +91,8 @@ function lagtest()
     r2 = Node(2.0) * q
     tmp = DerivativeGraph([r1, r2])
     # tmp = DerivativeGraph(vec(C))
-    FastSymbolicDifferentiation.Vis.draw(tmp, false)
-
+    # FastSymbolicDifferentiation.Vis.draw(tmp, false)
+    FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
     # println(C)
     # C = (2 * q) + nt
     symbolic_jacobian!(tmp)
