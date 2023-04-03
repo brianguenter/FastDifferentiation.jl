@@ -109,7 +109,7 @@ function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=
         edgestrokec=edge_colors,
         linecolor=:red,
         method=:tree,
-        fontsize=10,
+        fontsize=4,
         nodesize=0.05,
         markerstrokewidth=0,
         edgelabelbox=true,

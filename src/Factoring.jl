@@ -445,8 +445,14 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
                 if roots_resettable(pedge, Rdom)
                     push!(edges_to_reset, MaskableEdge{DominatorSubgraph}(pedge, Rdom))
                 end
-                if top_vertex(pedge) == dominator || length(child_edges(a, top_vertex(pedge))) > 1 || is_variable(a, top_vertex(pedge)) #a variable can be a child of another variable in the case of q(t) where q is an unspecified function. Can't reset root bits for edges above this one because there is a path to another variable.
+                if top_vertex(pedge) == dominator || is_variable(a, top_vertex(pedge)) #a variable can be a child of another variable in the case of q(t) where q is an unspecified function. Can't reset root bits for edges above this one because there is a path to another variable.
                     break
+                end
+                if length(child_edges(a, top_vertex(pedge))) > 1
+                    count = 0
+                    for edge in child_edges(a,top_vertex(pedge))
+                        if reachable_variables(edge)
+                    #if only one edge has reachable_variables == reachable_variable(subgraph) and the rest have reachable_variables == {} then can continue
                 end
             end
         end
@@ -628,11 +634,16 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
     for subgraph in subgraph_list
         #test
-        # println("factoring $subgraph")
-        # Vis.draw(a, false)
-        # readline()
+        println("factoring $subgraph")
+        Vis.draw(a, false)
+        readline()
         #test
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
+        #test
+        println("finished factoring $subgraph")
+        Vis.draw(a, false)
+        readline()
+        #test
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph

@@ -59,12 +59,12 @@ export τᵢ
 
 function lagrangian_dynamics()
     result = Node[]
-    links = Linkage(1)
+    links = Linkage(2)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
         println(FastSymbolicDifferentiation.variables(graph))
-        FastSymbolicDifferentiation.Vis.draw(graph, false, edge_labels=false)
+        FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
         println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
         push!(result, torque)
     end
@@ -83,16 +83,19 @@ function lagtest()
 
     C = [(q2+(q*q)) ((q2*q2)+(2.0*q)); (q+(q*q)) ((q*q2)+(2.0*q))]
     # C = [Node(1.0) ((q2*q2)+(2.0*q)); (q+(q*q)) Node(1.0)]
-    gr = DerivativeGraph([(q * q2) + (2.0 * q)])
-    symbolic_jacobian!(gr)
-    println("passed")
-    tmp = DerivativeGraph(vec(C))
-    println(FastSymbolicDifferentiation.roots(tmp)[4])
-    println(FastSymbolicDifferentiation.parents(tmp, 6))
+    # gr = DerivativeGraph([(q * q2) + (2.0 * q)])
+    # symbolic_jacobian!(gr)
+    # println("passed")
+    r1 = (q2 * q) + (Node(2.0) * q)
+    r2 = Node(2.0) * q
+    tmp = DerivativeGraph([r1, r2])
+    # tmp = DerivativeGraph(vec(C))
+    FastSymbolicDifferentiation.Vis.draw(tmp, false)
+
     # println(C)
     # C = (2 * q) + nt
-    # symbolic_jacobian!(DerivativeGraph([C]))
-    derivative(C, nt)
+    symbolic_jacobian!(tmp)
+    # derivative(tmp, nt)
 end
 export lagtest
 
