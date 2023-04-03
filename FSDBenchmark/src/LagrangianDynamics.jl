@@ -59,12 +59,12 @@ export τᵢ
 
 function lagrangian_dynamics()
     result = Node[]
-    links = Linkage(2)
+    links = Linkage(1)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
         println(FastSymbolicDifferentiation.variables(graph))
-        FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
+        # FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
         println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
         push!(result, torque)
     end

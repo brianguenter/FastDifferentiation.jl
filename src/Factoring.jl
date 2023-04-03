@@ -450,8 +450,14 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
                 end
                 if length(child_edges(a, top_vertex(pedge))) > 1
                     count = 0
-                    for edge in child_edges(a,top_vertex(pedge))
-                        if reachable_variables(edge)
+                    for edge in child_edges(a, top_vertex(pedge))
+                        if !is_zero(reachable_variables(edge))
+                            count += 1
+                        end
+                    end
+                    if count > 1
+                        break #there is more than one child edge with reachable_variables != {}. This edge bypasses the subgraph so all edges further up the tree must not be reset. Otherwise continue resetting reachable root bits up the graph.
+                    end
                     #if only one edge has reachable_variables == reachable_variable(subgraph) and the rest have reachable_variables == {} then can continue
                 end
             end
@@ -636,13 +642,13 @@ function factor!(a::DerivativeGraph{T}) where {T}
         #test
         println("factoring $subgraph")
         Vis.draw(a, false)
-        readline()
+        # readline()
         #test
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
         #test
-        println("finished factoring $subgraph")
-        Vis.draw(a, false)
-        readline()
+        # println("finished factoring $subgraph")
+        # Vis.draw(a, false)
+        # readline()
         #test
     end
 

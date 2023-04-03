@@ -95,6 +95,8 @@ function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=
         end
     end
 
+    println(sum(length.(g.fadjlist)))
+
     edge_colors = [RGBA(0.0, 0.0, 0.0, 0.0) for i in 1:10]
     # edge_colors = [RGBA(1.0, 0.5, 0.0, 0.7) for i in 1:10]
     tmp = graphplot(g,
