@@ -59,7 +59,7 @@ export τᵢ
 
 function lagrangian_dynamics()
     result = Node[]
-    links = Linkage(1)
+    links = Linkage(2)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
@@ -87,10 +87,10 @@ function lagtest()
     # gr = DerivativeGraph([(q * q2) + (2.0 * q)])
     # symbolic_jacobian!(gr)
     # println("passed")
-    r1 = (q2 * q) + (Node(2.0) * q)
-    r2 = Node(2.0) * q
-    tmp = DerivativeGraph([r1, r2])
-    # tmp = DerivativeGraph(vec(C))
+    # r1 = (q2 * q) + (Node(2.0) * q)
+    # r2 = Node(2.0) * q
+    # tmp = DerivativeGraph([r1, r2])
+    tmp = DerivativeGraph(vec(C))
     # FastSymbolicDifferentiation.Vis.draw(tmp, false)
     # FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
     # println(C)
