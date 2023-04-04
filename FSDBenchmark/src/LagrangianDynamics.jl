@@ -92,10 +92,11 @@ function lagtest()
     tmp = DerivativeGraph([r1, r2])
     # tmp = DerivativeGraph(vec(C))
     # FastSymbolicDifferentiation.Vis.draw(tmp, false)
-    FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
+    # FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
     # println(C)
     # C = (2 * q) + nt
     symbolic_jacobian!(tmp)
+    FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
     # derivative(tmp, nt)
 end
 export lagtest

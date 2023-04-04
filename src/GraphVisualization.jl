@@ -31,17 +31,21 @@ export edge_label
 function draw_dot(graph, filename)
     gr = "strict digraph{\nnode [style = filled]\n"
     for e in FastSymbolicDifferentiation.unique_edges(graph)
-        gr *= "$(top_vertex(e)) -> $(bott_vertex(e))\n"
+        roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
+        variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
+        gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
     end
 
     for node in nodes(graph)
         num = postorder_number(graph, node)
         if is_variable(graph, num)
-            gr *= "$num [color = green] [label = \"$num $(value(node))\"] [fillcolor = green]\n"
+            gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(graph,num)) $(value(node))\"] [fillcolor = \"#96ff96\"]\n"
         elseif is_root(graph, num)
-            gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num\"] [fillcolor = red]\n"
+            gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num $(value(node))\"] [fillcolor = \"#ff9696\"]\n"
+        elseif is_constant(graph, num)
+            gr *= "$num [color = \"#969600\"] [label = \"$(value(node))\"] [fillcolor = \"#ffff00\"]\n"
         else
-            gr *= "$num [label = \"$num $(value(node))\"] "
+            gr *= "$num [label = \"$num $(value(node))\"]\n"
         end
     end
 
