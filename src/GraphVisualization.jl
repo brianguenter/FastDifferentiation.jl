@@ -33,6 +33,7 @@ function draw_dot(graph, filename)
     for e in FastSymbolicDifferentiation.unique_edges(graph)
         roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
         variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
+
         gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
     end
 
@@ -43,7 +44,7 @@ function draw_dot(graph, filename)
         elseif is_root(graph, num)
             gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num $(value(node))\"] [fillcolor = \"#ff9696\"]\n"
         elseif is_constant(graph, num)
-            gr *= "$num [color = \"#969600\"] [label = \"$(value(node))\"] [fillcolor = \"#ffff00\"]\n"
+            gr *= "$num [color = \"#969600\"] [label = \"$num  $(value(node))\"] [fillcolor = \"#ffff00\"]\n"
         else
             gr *= "$num [label = \"$num $(value(node))\"]\n"
         end

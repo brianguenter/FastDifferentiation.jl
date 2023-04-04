@@ -700,7 +700,10 @@ end
 
 """deletes edges which do not have a path to a variable"""
 function path_to_variable!(graph, current_edge)
-    if is_variable(graph, bott_vertex(current_edge))
+    if is_zero(reachable_variables(current_edge))
+        delete_edge!(graph, current_edge, false)
+        return false
+    elseif is_variable(graph, bott_vertex(current_edge))
         return true
     elseif is_constant(graph, bott_vertex(current_edge))
         delete_edge!(graph, current_edge, true)
@@ -792,6 +795,7 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
 
     remove_dangling_edges!(graph)
     verify_paths(graph)
+    Vis.draw_dot(graph, "test.svg")
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(graph, var)

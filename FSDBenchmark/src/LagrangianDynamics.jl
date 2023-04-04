@@ -45,6 +45,7 @@ function τᵢ(linkage::Linkage, index::Int)
 
     for j in index:num_links(linkage)
         DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+
         DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
         Dtt = derivative(W(linkage, j), t, t)
         J = Jⱼ(linkage, index)
@@ -64,7 +65,7 @@ function lagrangian_dynamics()
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
         println(FastSymbolicDifferentiation.variables(graph))
-        FastSymbolicDifferentiation.Vis.draw_dot(graph, "test.svg")
+        # FastSymbolicDifferentiation.Vis.draw_dot(graph, "test.svg")
         # FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
         println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
         push!(result, torque)
