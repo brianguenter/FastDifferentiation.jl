@@ -30,14 +30,26 @@ export edge_label
 
 function draw_dot(graph, filename)
     gr = "strict digraph{\nnode [style = filled]\n"
-    for e in FastSymbolicDifferentiation.unique_edges(graph)
-        roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
-        variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
+    all_nodes = nodes(graph)
+    bad_nodes = filter(x -> FastSymbolicDifferentiation.is_tree(graph, x) && !is_root(graph, x) && !is_variable(graph, x) && length(parent_edges(graph, x)) == 0, all_nodes)
+    relevant_nodes = setdiff(all_nodes, bad_nodes)
 
-        gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
+    #test
+    bad_nodes = Node[]
+    relevant_nodes = all_nodes
+    #end test
+    bad_node_indices = postorder_number.(Ref(graph), bad_nodes)
+
+    for e in FastSymbolicDifferentiation.unique_edges(graph)
+        if !in(top_vertex(e), bad_node_indices)
+            roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
+            variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
+            gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
+        end
     end
 
-    for node in nodes(graph)
+
+    for node in relevant_nodes
         num = postorder_number(graph, node)
         if is_variable(graph, num)
             gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(graph,num)) $(value(node))\"] [fillcolor = \"#96ff96\"]\n"

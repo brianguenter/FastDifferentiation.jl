@@ -864,6 +864,7 @@ export num_unique_nodes
 number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
 export number_of_operations
 
+"""computes ∂A/∂variables[1],...variables[n]. If you want to compute just a few columns of the Jacobian of A then you should call `derivative` multiple times each time with a single variable argument"""
 function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]
     mat = _derivative(A, var)

@@ -197,9 +197,15 @@ export root_postorder_to_index
 #These two functions are not efficient, primarily intended for visualization
 is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
 export is_root
+is_root(graph::DerivativeGraph, node::Node) = is_root(graph, postorder_number(graph, node))
+
 is_variable(graph::DerivativeGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
 export is_root
+is_variable(graph::DerivativeGraph, node::Node) = is_variable(graph, postorder_number(graph, node))
 
+is_tree(graph::DerivativeGraph, postorder_index::Integer) = length(child_edges(graph, postorder_index)) != 0
+is_tree(graph::DerivativeGraph, node::Node) = is_tree(graph, postorder_number(graph, node))
+export is_tree
 
 variables(a::DerivativeGraph) = a.variables
 export variables
