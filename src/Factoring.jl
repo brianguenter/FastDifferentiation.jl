@@ -726,13 +726,45 @@ function path_to_variable!(graph, current_edge)
 end
 
 function remove_dangling_edges!(graph::DerivativeGraph)
-    #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
-    for root_index in 1:codomain_dimension(graph)
-        edge_copy = copy(child_edges(graph, root_index_to_postorder_number(graph, root_index)))
-        for cedge in edge_copy #need to copy edge data structure because the child edge array in the graph is being edited by path_to_variable!. This causes premature termination of the loop.
-            path_to_variable!(graph, cedge)
+    # #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
+    # for root_index in 1:codomain_dimension(graph)
+    #     edge_copy = copy(child_edges(graph, root_index_to_postorder_number(graph, root_index)))
+    #     for cedge in edge_copy #need to copy edge data structure because the child edge array in the graph is being edited by path_to_variable!. This causes premature termination of the loop.
+    #         path_to_variable!(graph, cedge)
+    #     end
+    # end
+    for edge_relation in values(edges(graph))
+        for edge in vcat(parents(edge_relation), children(edge_relation))
+            if is_zero(reachable_variables(edge)) || is_zero(reachable_roots(edge))
+                delete_edge!(graph, edge, false)
+            end
         end
     end
+
+    #remove all edges not variables or roots that have no parents. These nodes can't be on a path from a root to a variable. Because the nodes are sorted by postorder number this has the effect of propagating parent edge deletion down the graph.
+    sorted_nodes = sort(nodes(graph), by=x -> postorder_number(graph, x), rev=true)
+    for node in sorted_nodes
+        if !is_variable(graph, node) && !is_root(graph, node) #an operator node. roots and variables can both have parents and children but constants cannot so constants will never satisfy is_tree.
+            if length(parent_edges(graph, node)) == 0
+                for edge in child_edges(graph, node)
+                    delete_edge!(graph, edge, true)
+                end
+            end
+        end
+    end
+
+    #remove all edges not variables or roots that have no children. These nodes can't be on a path from a root to a variable. Because the nodes are sorted in reverse postorder number this has the effect of propagating child edge deletion up the graph.
+    reverse!(sorted_nodes)
+    for node in sorted_nodes
+        if !is_variable(graph, node) && !is_root(graph, node)
+            if length(child_edges(graph, node)) == 0
+                for edge in parent_edges(graph, node)
+                    delete_edge!(graph, edge, true)
+                end
+            end
+        end
+    end
+
 end
 
 function _verify_paths(graph::DerivativeGraph, a::Int)
@@ -741,7 +773,7 @@ function _verify_paths(graph::DerivativeGraph, a::Int)
     if length(branches) > 1
         intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
         if !is_zero(intersection)
-            @info "non-zero intersection $intersection"
+            @info "More than one path to variable for node $a. Non-zero intersection of reachable variables $intersection"
             for branch in branches
                 @info "reachable variables $(reachable_variables(branch))"
             end
@@ -795,7 +827,6 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
 
     remove_dangling_edges!(graph)
     verify_paths(graph)
-    Vis.draw_dot(graph, "test.svg")
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(graph, var)

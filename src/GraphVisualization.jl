@@ -28,37 +28,51 @@ export edge_label
 # function draw(unique_edges::AbstractVector{PathEdge{T}}, unique_nodes::AbstractVector{Node{T,N}}, post_order_numbers::AbstractVector{T}, root_test::Function) where {T,N}
 # end
 
-function draw_dot(graph, filename)
-    gr = "strict digraph{\nnode [style = filled]\n"
-    all_nodes = nodes(graph)
-    bad_nodes = filter(x -> FastSymbolicDifferentiation.is_tree(graph, x) && !is_root(graph, x) && !is_variable(graph, x) && length(parent_edges(graph, x)) == 0, all_nodes)
-    relevant_nodes = setdiff(all_nodes, bad_nodes)
-
-    #test
-    bad_nodes = Node[]
-    relevant_nodes = all_nodes
-    #end test
-    bad_node_indices = postorder_number.(Ref(graph), bad_nodes)
-
-    for e in FastSymbolicDifferentiation.unique_edges(graph)
-        if !in(top_vertex(e), bad_node_indices)
-            roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
-            variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
-            gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
+function edges_from_node(graph, start_node_number::AbstractVector{Int})
+    result = PathEdge[]
+    work_queue = Int[]
+    append!(work_queue, start_node_number)
+    while length(work_queue) != 0
+        curr_node = pop!(work_queue)
+        new_edges = child_edges(graph, curr_node)
+        append!(result, new_edges)
+        for edge in new_edges
+            if !in(bott_vertex(edge), work_queue)
+                push!(work_queue, bott_vertex(edge))
+            end
         end
+    end
+    return result
+end
+
+function draw_dot(graph, filename; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing)
+    gr = "strict digraph{\nnode [style = filled]\n"
+
+    if start_nodes !== nothing
+        edges_to_draw = edges_from_node(graph, start_nodes)
+    else
+        edges_to_draw = FastSymbolicDifferentiation.unique_edges(graph)
+    end
+
+    for e in edges_to_draw
+        roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
+        variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
+        gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
     end
 
 
-    for node in relevant_nodes
-        num = postorder_number(graph, node)
-        if is_variable(graph, num)
-            gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(graph,num)) $(value(node))\"] [fillcolor = \"#96ff96\"]\n"
-        elseif is_root(graph, num)
-            gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num $(value(node))\"] [fillcolor = \"#ff9696\"]\n"
-        elseif is_constant(graph, num)
-            gr *= "$num [color = \"#969600\"] [label = \"$num  $(value(node))\"] [fillcolor = \"#ffff00\"]\n"
-        else
-            gr *= "$num [label = \"$num $(value(node))\"]\n"
+    for node in nodes(graph)
+        if !(!is_root(graph, node) && length(parent_edges(graph, node)) == 0 && length(child_edges(graph, node)) == 0)
+            num = postorder_number(graph, node)
+            if is_variable(graph, num)
+                gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(graph,num)) $(value(node))\"] [fillcolor = \"#96ff96\"]\n"
+            elseif is_root(graph, num)
+                gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(graph,num)) $num $(value(node))\"] [fillcolor = \"#ff9696\"]\n"
+            elseif is_constant(graph, num)
+                gr *= "$num [color = \"#969600\"] [label = \"$num  $(value(node))\"] [fillcolor = \"#ffff00\"]\n"
+            else
+                gr *= "$num [label = \"$num $(value(node))\"]\n"
+            end
         end
     end
 
