@@ -48,8 +48,6 @@ function τᵢ(linkage::Linkage, index::Int)
         root_node = FastSymbolicDifferentiation.root(gr, 6)
         println("root postorder number $(FastSymbolicDifferentiation.postorder_number(gr,root_node)) $root_node")
         FastSymbolicDifferentiation.factor!(gr)
-        FastSymbolicDifferentiation.Vis.draw_dot(gr, "test.svg", start_nodes=[93])
-
 
         readline()
         DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
@@ -73,8 +71,6 @@ function lagrangian_dynamics()
         torque = τᵢ(links, i)
         graph = DerivativeGraph(torque)
 
-        # FastSymbolicDifferentiation.Vis.draw_dot(graph, "test.svg")
-        # FastSymbolicDifferentiation.Vis.draw(graph, false, draw_edge_labels=false)
         println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
         push!(result, torque)
     end

@@ -46,7 +46,7 @@ function edges_from_node(graph, start_node_number::AbstractVector{Int})
     return result
 end
 
-function draw_dot(graph, filename; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, label::String="")
+function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, label::String="")
     gr = "strict digraph{\nnode [style = filled]\n"
     if label != ""
         gr *= "label = \"$label\"\n"
@@ -60,14 +60,18 @@ function draw_dot(graph, filename; start_nodes::Union{Nothing,AbstractVector{Int
         edges_to_draw = FastSymbolicDifferentiation.unique_edges(gr_copy)
     end
 
+    nodes_to_draw = Set{Node}()
     for e in edges_to_draw
         roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
         variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
         gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
+        push!(nodes_to_draw, node(graph, top_vertex(e)))
+        push!(nodes_to_draw, node(graph, bott_vertex(e)))
     end
 
-
-    for node in nodes(gr_copy)
+    for node in nodes_to_draw
+        println(node === nothing)
+        println(is_root(gr_copy, node))
         if !(!is_root(gr_copy, node) && length(parent_edges(gr_copy, node)) == 0 && length(child_edges(gr_copy, node)) == 0)
             num = postorder_number(gr_copy, node)
             if is_variable(gr_copy, num)
@@ -83,12 +87,14 @@ function draw_dot(graph, filename; start_nodes::Union{Nothing,AbstractVector{Int
     end
 
     gr *= "\n}"
-    name, ext = splitext(filename)
-    io = open(name * ".dot", "w")
+    path, io = mktemp(cleanup=true)
+    name, ext = splitext(path)
     write(io, gr)
     close(io)
-
-    Base.run(`dot -Tsvg $name.dot -o $filename`)
+    println(name)
+    Base.run(`dot -Tsvg $path -o $name.svg`)
+    svg = read(name * ".svg", String)
+    display("image/svg+xml", svg)
 end
 export draw_dot
 
