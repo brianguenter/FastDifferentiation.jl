@@ -101,7 +101,7 @@ function lagtest()
     # println(C)
     # C = (2 * q) + nt
     symbolic_jacobian!(tmp)
-    FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
+    FastSymbolicDifferentiation.Vis.draw_dot(tmp)
     # derivative(tmp, nt)
 end
 export lagtest
