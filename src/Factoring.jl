@@ -637,18 +637,10 @@ function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
 
-
     for subgraph in subgraph_list
-        #test
-        # println("factoring $subgraph")
-        # readline()
-        #test
+
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
-        #test
-        # println("finished factoring $subgraph")
-        # Vis.draw(a, false)
-        # readline()
-        #test
+
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
