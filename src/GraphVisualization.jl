@@ -7,6 +7,7 @@ using ..FastSymbolicDifferentiation
 using GraphRecipes
 using Plots
 using Graphs
+using ElectronDisplay
 
 
 function label_func(mask::BitVector, label_string::String)

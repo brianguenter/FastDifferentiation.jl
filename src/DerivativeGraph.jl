@@ -197,10 +197,18 @@ export root_postorder_to_index
 #These two functions are not efficient, primarily intended for visualization
 is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
 export is_root
-is_root(graph::DerivativeGraph, node::Node) = is_root(graph, postorder_number(graph, node))
+
+function is_root(graph::DerivativeGraph, node::Node)
+    num = postorder_number(graph, node)
+    if num === nothing
+        return false
+    else
+        return is_root(graph, num)
+    end
+end
 
 is_variable(graph::DerivativeGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
-export is_root
+export is_variable
 is_variable(graph::DerivativeGraph, node::Node) = is_variable(graph, postorder_number(graph, node))
 
 is_tree(graph::DerivativeGraph, postorder_index::Integer) = length(child_edges(graph, postorder_index)) != 0
@@ -333,7 +341,15 @@ function child_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
 end
 export child_edges
 
-child_edges(dgraph::DerivativeGraph, node::Node) = child_edges(dgraph, postorder_number(dgraph, node))
+function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
+    num = postorder_number(dgraph, node)
+
+    if num === nothing
+        return PathEdge{T}[]
+    else
+        return child_edges(dgraph, num)
+    end
+end
 
 child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
 
@@ -348,7 +364,15 @@ function parent_edges(dgraph::DerivativeGraph, node::T) where {T<:Integer}
 end
 export parent_edges
 
-parent_edges(dgraph::DerivativeGraph, node::Node) = parent_edges(dgraph, postorder_number(dgraph, node))
+function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
+    num = postorder_number(dgraph, node)
+
+    if num === nothing
+        return PathEdge{T}[]
+    else
+        return parent_edges(dgraph, num)
+    end
+end
 
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
 is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
