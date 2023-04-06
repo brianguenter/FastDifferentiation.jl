@@ -887,7 +887,25 @@ export num_unique_nodes
 number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
 export number_of_operations
 
-"""computes ∂A/∂variables[1],...variables[n]. If you want to compute just a few columns of the Jacobian of A then you should call `derivative` multiple times each time with a single variable argument"""
+"""computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
+
+```
+julia> A = [t t^2;3t^2 5]
+2×2 Matrix{Node}:
+ t              (t ^ 2)
+ (3 * (t ^ 2))  5
+
+julia> derivative(A,t)
+2×2 Matrix{Node}:
+ 1.0            (2 * (t ^ 1))
+ (6 * (t ^ 1))  0.0
+
+ julia> derivative(A,t,t)
+2×2 Matrix{Node}:
+ 0.0            (2 * (t ^ 0))
+ (6 * (t ^ 0))  0.0
+ ```
+ """
 function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]
     mat = _derivative(A, var)
@@ -905,7 +923,7 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     vecA = vec(A)
     graph = DerivativeGraph(vecA)
     temp = symbolic_jacobian!(graph)
-    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottlenect, modify symbolic_jacobian! to only compute the single column of derivatives.
+    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify symbolic_jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
     if column_index === nothing
         return Node.(zeros(size(A)))
