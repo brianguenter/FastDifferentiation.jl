@@ -44,8 +44,13 @@ function τᵢ(linkage::Linkage, index::Int)
 
 
     for j in index:num_links(linkage)
-        gr = DerivativeGraph(vec(W(linkage, j)))
-        FastSymbolicDifferentiation.factor!(gr)
+
+        # temp = DerivativeGraph(vec(W(linkage, j)))
+        # FastSymbolicDifferentiation.Vis.draw_dot(temp, start_nodes=[93], label="node 93")
+        # factor!(temp)
+        # FastSymbolicDifferentiation.Vis.draw_dot(temp, start_nodes=[93], label="node 93 after factoring")
+        # println(FastSymbolicDifferentiation.node(temp, 93))
+        #end test
 
         DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
 
@@ -66,9 +71,8 @@ function lagrangian_dynamics()
     links = Linkage(2)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
-        graph = DerivativeGraph(torque)
-        FastSymbolicDifferentiation.Vis.draw_dot(graph)
-        println("num ops $(number_of_operations(FastSymbolicDifferentiation.roots(graph)))")
+
+        println("num ops $(number_of_operations([torque]))")
         push!(result, torque)
     end
     return result
@@ -111,6 +115,7 @@ function lagtest2()
     gr = DerivativeGraph([
         (((((0.7370290715192362 * sin(q1)) + (0.08361937579475959 * (1 - cos(q1)))) * ((-0.35299201724062423 * sin(q2)) + (0.15105469815271821 * (1 - cos(q2))))) + ((1 + (-0.5730701547704345 * (1 - cos(q1)))) * (1 + (-0.7941936553560082 * (1 - cos(q2)))))) + (((-0.17279555117515932 * sin(q1)) + (0.35666375947698314 * (1 - cos(q1)))) * ((0.8182849693843844 * sin(q2)) + (0.06516202131235083 * (1 - cos(q2))))))])
 
+    FastSymbolicDifferentiation.Vis.draw_dot(gr)
     FastSymbolicDifferentiation.factor!(gr)
     FastSymbolicDifferentiation.Vis.draw_dot(gr)
 end

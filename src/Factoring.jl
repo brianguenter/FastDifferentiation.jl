@@ -922,6 +922,7 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)
     graph = DerivativeGraph(vecA)
+
     temp = symbolic_jacobian!(graph)
     #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify symbolic_jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
