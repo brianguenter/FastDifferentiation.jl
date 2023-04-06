@@ -6,22 +6,28 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    _, graph, _, _ = simple_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 4)[1]
-    dfsimp = make_function(value(fedge))
-    _, graph, _, _ = simple_dominator_graph()
-    origfsimp = make_function(root(graph, 1))
-    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
+    fsd_graph, x, y, z = to_graph(4)
+    Vis.draw_dot(fsd_graph)
+    fsd_func = make_function(fsd_graph, Node.([x, y, z]))
 
-    graph = complex_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 8)[1]
-    df = make_function(value(fedge))
+    #hand computed derivative for order = 3
+    # correct_derivatives(x, y, z) = [
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     0.0 0.0 1.422074017360395
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     (-0.3642161365141257*3*z) 0.0 (-0.3642161365141257*3*x)
+    #     0.0 0.0 (2.0197963935867267*3*z)
+    #     0.0 (-0.3642161365141257*3*z) (-0.3642161365141257*3*y)
+    #     0.0 0.0 0.0
+    # ]
 
-    graph = complex_dominator_graph()
-    origf = make_function(root(graph, 1))
-    @assert isapprox(central_fdm(5, 1)(origf, 3), df(3))
+    # graph_copy = deepcopy(fsd_graph)
+    # factor!(graph_copy)
+    # Vis.draw_dot(graph_copy)
+    sym_func = jacobian_function!(fsd_graph, [Node(x), Node(y), Node(z)])
+
 end
 export test
 
