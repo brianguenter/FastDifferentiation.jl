@@ -45,11 +45,9 @@ function τᵢ(linkage::Linkage, index::Int)
 
     for j in index:num_links(linkage)
         gr = DerivativeGraph(vec(W(linkage, j)))
-        root_node = FastSymbolicDifferentiation.root(gr, 6)
-        println("root postorder number $(FastSymbolicDifferentiation.postorder_number(gr,root_node)) $root_node")
         FastSymbolicDifferentiation.factor!(gr)
 
-        readline()
+        FastSymbolicDifferentiation.Vis.draw_dot(gr)
         DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
 
         DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
@@ -115,6 +113,7 @@ function lagtest2()
         (((((0.7370290715192362 * sin(q1)) + (0.08361937579475959 * (1 - cos(q1)))) * ((-0.35299201724062423 * sin(q2)) + (0.15105469815271821 * (1 - cos(q2))))) + ((1 + (-0.5730701547704345 * (1 - cos(q1)))) * (1 + (-0.7941936553560082 * (1 - cos(q2)))))) + (((-0.17279555117515932 * sin(q1)) + (0.35666375947698314 * (1 - cos(q1)))) * ((0.8182849693843844 * sin(q2)) + (0.06516202131235083 * (1 - cos(q2))))))])
 
     FastSymbolicDifferentiation.factor!(gr)
+    FastSymbolicDifferentiation.Vis.draw_dot(gr)
 end
 export lagtest2
 

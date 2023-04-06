@@ -52,6 +52,8 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
     if label != ""
         gr *= "label = \"$label\"\n"
     end
+    gr *= "ratio=\"fill\"\n"
+    gr *= "size = 13 13\n"
     gr_copy = deepcopy(graph)
     FastSymbolicDifferentiation.remove_dangling_edges!(gr_copy)
 
@@ -66,13 +68,11 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
         roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
         variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
         gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) [label = \"r:[$roots]  v:[$variables]\"] [color = purple]\n"
-        push!(nodes_to_draw, node(graph, top_vertex(e)))
-        push!(nodes_to_draw, node(graph, bott_vertex(e)))
+        push!(nodes_to_draw, node(gr_copy, top_vertex(e)))
+        push!(nodes_to_draw, node(gr_copy, bott_vertex(e)))
     end
 
     for node in nodes_to_draw
-        println(node === nothing)
-        println(is_root(gr_copy, node))
         if !(!is_root(gr_copy, node) && length(parent_edges(gr_copy, node)) == 0 && length(child_edges(gr_copy, node)) == 0)
             num = postorder_number(gr_copy, node)
             if is_variable(gr_copy, num)
