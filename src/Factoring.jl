@@ -897,8 +897,8 @@ julia> A = [t t^2;3t^2 5]
 
 julia> derivative(A,t)
 2×2 Matrix{Node}:
- 1.0            (2 * (t ^ 1))
- (6 * (t ^ 1))  0.0
+ 1.0      (2 * t)
+ (6 * t)  0.0
 
  julia> derivative(A,t,t)
  2×2 Matrix{Node{T, 0} where T}:
