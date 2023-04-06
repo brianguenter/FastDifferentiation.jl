@@ -901,9 +901,9 @@ julia> derivative(A,t)
  (6 * (t ^ 1))  0.0
 
  julia> derivative(A,t,t)
-2×2 Matrix{Node}:
- 0.0            (2 * (t ^ 0))
- (6 * (t ^ 0))  0.0
+ 2×2 Matrix{Node{T, 0} where T}:
+ 0.0  2
+ 6    0.0
  ```
  """
 function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}

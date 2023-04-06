@@ -164,6 +164,8 @@ function simplify_check_cache(::typeof(^), a, b, cache)
         return Node(constant_value(na)^constant_value(nb))
     elseif value(b) == 0 #IEEE-754 standard says any number, including Inf, NaN, etc., to the zero power is 1
         return Node(one(value(b))) #try to preserve number type
+    elseif value(b) == 1
+        return a
     else
         return check_cache((^, na, nb), cache)
     end
