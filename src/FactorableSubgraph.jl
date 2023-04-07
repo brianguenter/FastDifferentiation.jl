@@ -164,40 +164,75 @@ function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:
     return true
 end
 
-next_vertex(subgraph::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = top_vertex(edge)
-next_vertex(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = bott_vertex(edge)
-
-"""Roots for which the subgraph is factorable"""
-reachable(subgraph::FactorableSubgraph{T,DominatorSubgraph}) = reachable_roots(subgraph)
-"""Variables for which the subgraph is factorable"""
-reachable(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) = reachable_variables(subgraph)
-
-"""Child edges of a node on an edge path in a `DominatorSubgraph`"""
-dangling_edges(::FactorableSubgraph{T,DominatorSubgraph}, graph::DerivativeGraph, node_index::Integer) = child_edges(graph, node_index)
-"""Parent edges of a node on an edge path in a `PostDominatorSubgraph`"""
-dangling_edges(::FactorableSubgraph{T,PostDominatorSubgraph}, graph::DerivativeGraph, node_index::Integer) = parent_edges(graph, node_index)
-
-"""Breaks the graph into two orthogonal pieces: IN edges, which have only reachable roots/variables of the subgraph dominating node and OUT edges, which do not have reachable roots/variables of the subgraph dominating node. Creates new edges,  if necessary, for the OUT edges.
-
-This simplifies processing of resetting root and variable masks of the subgraph."""
-function add_non_Rdom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S}
-    #functions to get the correct reachable values depending on subgraph type
-
-    edge_constraint = next_edge_constraint(subgraph)
+"""Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
+function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
+    gr = graph(subgraph)
     dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
+    edge_constraint = next_edge_constraint(subgraph)
 
-    for start_edge in relation_edges!(edge_constraint, dominated)
-        current_node = next_vertex(subgraph, start_edge)
 
-        if current_node != dominator #edge e which connects to dominator node must have reachable_roots(top_vertex(e)) == reachable_roots(subgraph) for dominator subgraphs. Similarly for postdominator subgraphs. Don't need to change edge or add edge to account for reachable roots not in Rdom.
-            for pedge in relation_edges!(edge_constraint, current_node)
+    for start_edge in relation_edges!(edge_constraint, dominator)
+        current_edge = start_edge
+        bypass_mask = trues(codomain_dimension(gr)) .& !reachable_variables(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
 
+        while true
+            current_node = top_vertex(current_edge)
+            rdiff = set_diff(reachable_roots(current_edge), reachable_roots(subgraph))
+            if is_zero(rdiff)
+                reachable_variables(current_edge) = reachable_variables(current_edge) .& bypass_mask
+            end
+
+            if is_zero(bypass_mask .& reachable_variables(subgraph)) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
+                reachable_roots(current_edge) = reachable_roots(current_edge) .& !dominance_mask(subgraph)
+            end
+
+            if current_node == dominator
+                break
+            end
+
+            for child in child_edges(gr, current_node)
+                if child !== current_edge
+                    bypass_mask |= reachable_variables(child)
+                end
             end
         end
     end
 end
 
+"""Sets the reachable root and variable masks for every edge in `PostDominatorSubgraph` `subgraph`. """
+function reset_edge_masks(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
+    gr = graph(subgraph)
+    dominator = dominating_node(subgraph)
+    edge_constraint = next_edge_constraint(subgraph)
+
+
+    for start_edge in relation_edges!(edge_constraint, dominator)
+        current_edge = start_edge
+        bypass_mask = trues(domain_dimension(gr)) .& !reachable_roots(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
+
+        while true
+            current_node = bott_vertex(current_edge)
+            vdiff = set_diff(reachable_variables(current_edge), reachable_variables(subgraph))
+            if is_zero(vdiff)
+                reachable_roots(current_edge) = reachable_roots(current_edge) .& bypass_mask
+            end
+
+            if is_zero(bypass_mask .& reachable_roots(subgraph)) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
+                reachable_variables(current_edge) = reachable_variables(current_edge) .& !dominance_mask(subgraph)
+            end
+
+            if current_node == dominator
+                break
+            end
+
+            for child in parent_edges(gr, current_node)
+                if child !== current_edge
+                    bypass_mask |= reachable_roots(child)
+                end
+            end
+        end
+    end
+end
 
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}

@@ -322,30 +322,6 @@ export make_factored_edge
 make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathEdge(dominating_node(subgraph), dominated_node(subgraph), evaluate_subgraph(subgraph), dominance_mask(subgraph), reachable_roots(subgraph))
 export make_factored_edge
 
-struct MaskableEdge{S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
-    edge::PathEdge
-    mask::BitVector
-end
-
-function reset_reachable(me::MaskableEdge{DominatorSubgraph})
-    zero_roots!(me.edge, me.mask)
-    if is_zero(reachable_roots(me.edge))
-        return me.edge
-    else
-        return nothing
-    end
-end
-
-function reset_reachable(me::MaskableEdge{PostDominatorSubgraph})
-    zero_variables!(me.edge, me.mask)
-    if is_zero(reachable_variables(me.edge))
-        return me.edge
-    else
-        return nothing
-    end
-end
-
-
 """Returns 1 if there is a good single path from dominated to dominating node. This is the only case in which a valid edge path exists.
 
 Returns 0 if there is no path from dominated to dominating node.
@@ -390,57 +366,6 @@ function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool,
 end
 export edges_on_path!
 
-"""computes the intersection of `reachable_variables(e) e ∈ edges(subgraph)`"""
-function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
-    Vset = trues(domain_dimension(graph(constraint)))
-    tmp = get_edge_vector()
-    relation_edges!(constraint, dominated_node, tmp)
-    for start_edge in tmp
-        pedges = get_edge_vector()
-        flag = edges_on_path!(constraint, dominating_node, true, start_edge, pedges)
-
-
-        if flag == 1 #non-branching unbroken path to dominating node
-            for pedge in pedges
-                Vset .= Vset .& reachable_variables(pedge)
-            end
-        end
-        reclaim_edge_vector(pedges)
-    end
-    reclaim_edge_vector(tmp)
-
-    #test
-    # @assert Vset == reachable_variables(graph(constraint), dominated_node) "Vset: $Vset reachable_variables of dominated_node:$(reachable_variables(graph(constraint), dominated_node))"
-    #end test
-
-    return Vset
-end
-
-function non_resettable_variables(graph::DerivativeGraph,current_edge::PathEdge, index::Integer)
-    VSet = falses(codomain_dimension(graph))
-
-    for edge in child_edges(graph,index)
-        if edge !== current_edge
-            VSet .= VSet .| reachable_variables(edge)
-        end
-    end
-
-    return Vset
-end
-
-function duplicate_non_Rdom_edges(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
-    gr = graph(subgraph)
-    dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
-    Rdom = reachable_roots(gr,dominator)
-    R_edges = next_edge_constraint(subgraph)
-
-    for start_edge in relation_edges!(R_edges,dom)
-        current_vertex = top_vertex(gr,start_edge)
-        for path_edge in relation_edges!(Redges,)
-
-end
-
 """caller has to pass in graph and edges_to_delete vector"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Nothing,Node}) where {T,S<:DominatorSubgraph}
     a = graph(subgraph)
@@ -462,7 +387,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
         if flag == 1 #non-branching path through subgraph
             #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
             for pedge in pedges
-                resettable_variables .= resettable_variables .& !non_resettable_variables(a,pedge,top_vertex(pedge))
+                resettable_variables .= resettable_variables .& !non_resettable_variables(a, pedge, top_vertex(pedge))
 
                 Vval = set_diff(reachable_variables(pedge), Vset)
                 if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Vset
