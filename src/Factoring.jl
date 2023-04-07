@@ -639,6 +639,10 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
     for subgraph in subgraph_list
 
+        #test
+        Vis.draw_dot(a, graph_label="$subgraph")
+        readline()
+        #end test
         factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
 
     end

@@ -53,7 +53,7 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
         gr *= "label = \"$label\"\n"
     end
     gr *= "ratio=\"fill\"\n"
-    gr *= "size = 13 13\n"
+    gr *= "size = 12 12\n"
     gr_copy = deepcopy(graph)
     FastSymbolicDifferentiation.remove_dangling_edges!(gr_copy)
 
@@ -82,7 +82,7 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
         if !(!is_root(gr_copy, node) && length(parent_edges(gr_copy, node)) == 0 && length(child_edges(gr_copy, node)) == 0)
             num = postorder_number(gr_copy, node)
             if is_variable(gr_copy, num)
-                gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(gr_copy,num)) $(value(node))\"] [fillcolor = \"#96ff96\"]\n"
+                gr *= "$num [color = green] [label = \"v$(variable_postorder_to_index(gr_copy,num)) $num $(value(node))\"] [fillcolor = \"#96ff96\"]\n"
             elseif is_root(gr_copy, num)
                 gr *= "$num [color = red] [label = \"r$(root_postorder_to_index(gr_copy,num)) $num $(value(node))\"] [fillcolor = \"#ff9696\"]\n"
             elseif is_constant(gr_copy, num)

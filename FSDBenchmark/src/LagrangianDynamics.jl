@@ -102,23 +102,30 @@ function lagtest()
     # println(C)
     # C = (2 * q) + nt
     symbolic_jacobian!(tmp)
-    FastSymbolicDifferentiation.Vis.draw_dot(tmp)
+    # FastSymbolicDifferentiation.Vis.draw_dot(tmp)
     # derivative(tmp, nt)
 end
 export lagtest
 
 function lagtest2()
-    Symbolics.@variables t
-    q1 = function_of(:q1, Node(t))
-    q2 = function_of(:q2, Node(t))
+    Symbolics.@variables nt1, nt2
+    t1 = Node(nt1)
+    t2 = Node(nt2)
+    q1 = function_of(:q1, t1)
+    q2 = function_of(:q2, t1)
+
+
+    # gr = DerivativeGraph([
+    #     (((((0.7370290715192362 * sin(q1)) + (0.08361937579475959 * (1 - cos(q1)))) * ((-0.35299201724062423 * sin(q2)) + (0.15105469815271821 * (1 - cos(q2))))) + ((1 + (-0.5730701547704345 * (1 - cos(q1)))) * (1 + (-0.7941936553560082 * (1 - cos(q2)))))) + (((-0.17279555117515932 * sin(q1)) + (0.35666375947698314 * (1 - cos(q1)))) * ((0.8182849693843844 * sin(q2)) + (0.06516202131235083 * (1 - cos(q2))))))])
 
     gr = DerivativeGraph([
         (((((0.7370290715192362 * sin(q1)) + (0.08361937579475959 * (1 - cos(q1)))) * ((-0.35299201724062423 * sin(q2)) + (0.15105469815271821 * (1 - cos(q2))))) + ((1 + (-0.5730701547704345 * (1 - cos(q1)))) * (1 + (-0.7941936553560082 * (1 - cos(q2)))))) + (((-0.17279555117515932 * sin(q1)) + (0.35666375947698314 * (1 - cos(q1)))) * ((0.8182849693843844 * sin(q2)) + (0.06516202131235083 * (1 - cos(q2))))))])
 
-    println(FastSymbolicDifferentiation.Vis.make_dot_file(gr, nothing, "", false))
-    FastSymbolicDifferentiation.Vis.draw_dot(gr)
+
+    # println(FastSymbolicDifferentiation.Vis.make_dot_file(gr, nothing, "", false))
+    # FastSymbolicDifferentiation.Vis.draw_dot(gr)
     FastSymbolicDifferentiation.factor!(gr)
-    FastSymbolicDifferentiation.Vis.draw_dot(gr)
+    # FastSymbolicDifferentiation.Vis.draw_dot(gr)
 end
 export lagtest2
 
