@@ -330,7 +330,7 @@ Returns 2 if there is a branch anywhere along the path. This cannot occur in a v
 """
 function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Vector{PathEdge{Int64}}) where {T}
     empty!(result)
-    flag_value = -1
+    flag_value = 1
 
     while true
         push!(result, current_edge)
@@ -358,11 +358,7 @@ function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool,
         reclaim_edge_vector(tmp)
     end
 
-    if flag_value == -1
-        return 1
-    else
-        return flag_value
-    end
+    return flag_value
 end
 export edges_on_path!
 
