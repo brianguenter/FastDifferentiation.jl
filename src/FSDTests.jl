@@ -1107,7 +1107,7 @@ end
     _1_5 = postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
 
     sub_eval = evaluate_subgraph(_5_3)
-    edges_to_delete, edge_to_add = factor_subgraph!(_5_3, sub_eval)
+    factor_subgraph!(_5_3)
 end
 
 
@@ -1123,7 +1123,7 @@ end
 
     graph = DerivativeGraph([n5, n4])
     tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
-    factor_subgraph!(tmp, evaluate_subgraph(tmp))
+    factor_subgraph!(tmp)
     @test length(edges(graph, 2, 4)) == 1
 
 end

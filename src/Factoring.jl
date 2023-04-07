@@ -362,126 +362,28 @@ function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool,
 end
 export edges_on_path!
 
-"""caller has to pass in graph and edges_to_delete vector"""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Nothing,Node}) where {T,S<:DominatorSubgraph}
-    a = graph(subgraph)
+"""reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
+function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
     @assert subgraph_exists(subgraph)
-    Rdom = dominance_mask(subgraph) #roots for which subgraph is factorable, i.e., dominator(subgraph) dominates every vertex in the subgraph.
-    edges_to_reset = MaskableEdge{S}[]
 
-    R_edges = next_edge_constraint(subgraph)
-    dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
-    resettable_variables = reachable_variables(subgraph)
-
-    for start_edge in relation_edges!(R_edges, dominated)
-        pedges = get_edge_vector()
-        flag = edges_on_path!(R_edges, dominator, true, start_edge, pedges)
-
-        @assert flag != 2
-
-        if flag == 1 #non-branching path through subgraph
-            #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-            for pedge in pedges
-                resettable_variables .= resettable_variables .& !non_resettable_variables(a, pedge, top_vertex(pedge))
-
-                Vval = set_diff(reachable_variables(pedge), Vset)
-                if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Vset
-                    add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), Vval, Rdom)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
-                    mask_variables!(pedge, Vset) #this edge only has the reachable roots in Rset
-                end
-
-                if roots_resettable(pedge, Rdom)
-                    push!(edges_to_reset, MaskableEdge{DominatorSubgraph}(pedge, Rdom))
-                end
-                if top_vertex(pedge) == dominator || is_variable(a, top_vertex(pedge)) #a variable can be a child of another variable in the case of q(t) where q is an unspecified function. Can't reset root bits for edges above this one because there is a path to another variable.
-                    break
-                end
-                if length(child_edges(a, top_vertex(pedge))) > 1
-                    count = 0
-                    for edge in child_edges(a, top_vertex(pedge))
-                        if !is_zero(reachable_variables(edge))
-                            count += 1
-                        end
-                    end
-                    if count > 1
-                        break #there is more than one child edge with reachable_variables != {}. This edge bypasses the subgraph so all edges further up the tree must not be reset. Otherwise continue resetting reachable root bits up the graph.
-                    end
-                    #if only one edge has reachable_variables == reachable_variable(subgraph) and the rest have reachable_variables == {} then can continue
-                end
-            end
-        end
-    end
-
-    if sub_eval === nothing #sub_eval will be nothing when this subgraph is a dual of a subgraph that has already been factored. In this case the new edge has already been added; just need to update edge reachability.
-        return edges_to_reset, nothing
-    else
-        return edges_to_reset, PathEdge(dominator, dominated, sub_eval, Vset, Rdom)  #return edges marked for resetting and new added edge that must be added to the graphend
+    if subgraph_exists(subgraph)
+        new_edge = make_factored_edge(subgraph)
+        #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
+        reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        add_edge!(graph(subgraph), new_edge)
     end
 end
 export factor_subgraph!
 
-function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
-    Rset = trues(codomain_dimension(graph(constraint)))
-    tmp = get_edge_vector()
-    relation_edges!(constraint, dominated_node, tmp)
-    for start_edge in tmp
-        pedges = get_edge_vector()
-        flag = edges_on_path!(constraint, dominating_node, false, start_edge, pedges)
-
-        if flag == 1
-            #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-            for pedge in pedges
-                Rset .= Rset .& reachable_roots(pedge)
-            end
-        end
-        reclaim_edge_vector(pedges)
-    end
-    reclaim_edge_vector(tmp)
-    return Rset
-end
-
-"""caller has to pass in graph and edges_to_delete vector. There is much redundancy with the DominatorSubgraph version of this code. But the differences are numerous (13 different locations) and the code is easier to read if split into two functions."""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, sub_eval::Union{Nothing,Node}) where {T}
-    a = graph(subgraph)
-    @assert subgraph_exists(subgraph)
-    Vdom = dominance_mask(subgraph) #roots for which subgraph is factorable, i.e., dominator(subgraph) dominates every vertex in the subgraph.
-    edges_to_reset = MaskableEdge{PostDominatorSubgraph}[]
-
-    V_edges_up = next_edge_constraint(subgraph)
-    dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
-
-    Rset = compute_Rset(V_edges_up, dominator, dominated) #these are the roots for which this subgraph is factorable, i.e., only paths that include these roots will get the factored value of the subgraph.
-
-    for start_edge in relation_edges!(V_edges_up, dominated)
-        pedges = get_edge_vector()
-        flag = edges_on_path!(V_edges_up, dominator, false, start_edge, pedges)
-
-        if flag == 1 #non-branching path through subgraph
-            #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-            for pedge in pedges
-                Rval = set_diff(reachable_roots(pedge), Rset)
-                if !is_zero(Rval) #need to create an edge to accomodate the part of the reachable set that is not in Rset
-                    add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), Vdom, Rval)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
-                    mask_roots!(pedge, Rset) #this edge only has the reachable roots in Rset
-                end
-
-                if variables_resettable(pedge, Vdom)
-                    push!(edges_to_reset, MaskableEdge{PostDominatorSubgraph}(pedge, Vdom))
-                end
-                if bott_vertex(pedge) == dominator || length(parent_edges(a, bott_vertex(pedge))) > 1 || is_root(a, bott_vertex(pedge)) #is_root special case for post dominator subgraphs since a root can be a child of another root. Variables cannot have this relationship. If the bottom vertex of the edge is a root that means there is a path to a root that does not go through dominated. All edges below this point in the graph cannot have their variable bits reset.
-                    break
-                end
-            end
-        end
-    end
-    if sub_eval === nothing
-        return edges_to_reset, nothing
-    else
-        return edges_to_reset, PathEdge(dominator, dominated, sub_eval, Vdom, Rset)  #return edges marked for resetting and new added edge that must be added to the graph
+"""reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
+function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
+    if subgraph_exists(subgraph)
+        new_edge = make_factored_edge(subgraph)
+        reset_edge_masks!(subgraph)
+        add_edge!(graph(subgraph), new_edge)
     end
 end
+export factor_subgraph!
 
 
 function print_edges(a, msg)
@@ -491,85 +393,6 @@ function print_edges(a, msg)
     end
 end
 
-"""call this function when the first subgraph processed in a dual pair is a DominatorSubgraph"""
-function dual_subgraph(first_graph::FactorableSubgraph{T,DominatorSubgraph}, second_graph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-    @assert first_graph.graph === second_graph.graph
-
-    graph = first_graph.graph
-    Vdom = dominance_mask(second_graph)
-    R = reachable_roots(first_graph)
-    Rdom = dominance_mask(first_graph)
-    R̄ = set_diff(R, Rdom)
-    overlap_graph = postdominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Vdom, Rdom, Vdom)
-    if is_zero(R̄)
-        return overlap_graph, nothing
-    else
-        return overlap_graph, postdominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Vdom, R̄, Vdom) #could let the second Vdom be reachable_variables(second_graph) because this term is not used in computing reachable set for new factored subgraph edge. But safer to do this in case factor_subgraph! code is changed. Then guaranteed not to accidentally get too wide reachability.
-    end
-end
-
-"""call this function when the first subgraph processed in a dual pair is a PostDominatorSubgraph"""
-function dual_subgraph(first_graph::FactorableSubgraph{T,PostDominatorSubgraph}, second_graph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    @assert first_graph.graph === second_graph.graph
-
-    graph = first_graph.graph
-    Rdom = dominance_mask(second_graph)
-    R = reachable_roots(first_graph)
-    V = reachable_variables(first_graph)
-    Vdom = dominance_mask(first_graph)
-    V̄ = set_diff(V, Vdom)
-    R̄ = set_diff(R, Rdom)
-    overlap_graph = dominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Rdom, Rdom, Vdom)
-    if is_zero(V̄)
-        return overlap_graph, nothing #complete overlap between dual graphs so no extra edges to be processed in the V̄ graph.
-    else
-        return overlap_graph, dominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Rdom, Rdom, V̄) #have a dual residual graph that must be processed later
-    end
-end
-
-function process_dual_subgraph(subgraph::FactorableSubgraph{T}, subgraph_dict, subgraph_list) where {T}
-    dual_vertices = reverse(subgraph_vertices(subgraph))
-    dual_info = get(subgraph_dict, dual_vertices, nothing)
-
-    dual_edges_to_reset = nothing
-    if dual_info !== nothing # there is a dual subgraph so have more processing to do
-        dual_graph, list_index = dual_info
-        delete!(subgraph_dict, dual_vertices) #delete original dual subgraph so don't attempt to process it when it is encountered later in the subgraph_list
-
-        if subgraph_exists(dual_graph) #subgraph may have been destroyed so make sure it still exists before processing
-            overlap_dual, residual_dual = dual_subgraph(subgraph, dual_graph) #find the part of the dual graph that must be processed now with subgraph and the residual part that will be processed later.
-
-            if residual_dual !== nothing
-                subgraph_dict[dual_vertices] = (residual_dual, list_index) #substitute new residual dual graph in place of the old one
-                subgraph_list[list_index] = residual_dual
-            end
-
-            dual_edges_to_reset, _ = factor_subgraph!(overlap_dual, nothing)
-            return dual_edges_to_reset
-        else
-            return PathEdge{T}[]
-        end
-    end
-end
-
-
-function factor_one_subgraph!(a::DerivativeGraph, subgraph::FactorableSubgraph, subgraph_list, subgraph_dict)
-    if get(subgraph_dict, subgraph_vertices(subgraph), nothing) !== nothing #subgraph may already have been processed in which case it will have been removed from subgraph_dict. This happens with dual subgraphs (a,b), (b,a). When (a,b) is processed it will also process (b,a) and (b,a) may be removed from subgraph_dict if it completely overlaps with (a,b).
-        # @info("before processing subgraph $subgraph")
-
-        if subgraph_exists(subgraph)
-            sub_eval = evaluate_subgraph(subgraph)
-            factored_edge_to_add = factor_subgraph!(subgraph, sub_eval)
-
-            add_edge!(a, factored_edge_to_add)
-        end
-
-        delete!(subgraph_dict, subgraph) #not strictly necessary because should never encounter the same subgraph twice so could leave the subgraph in the dictionary. But makes debugging easier when looking at small test cases.
-    end
-
-    return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
-end
-
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
@@ -577,11 +400,11 @@ function factor!(a::DerivativeGraph{T}) where {T}
     for subgraph in subgraph_list
 
         #test
-        Vis.draw_dot(a, graph_label="$subgraph")
-        readline()
+        # Vis.draw_dot(a, graph_label="$subgraph")
+        # readline()
         #end test
-        factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
-
+        factor_subgraph!(subgraph)
+        delete!(subgraph_dict, subgraph_vertices(subgraph))
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph

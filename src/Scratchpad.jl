@@ -6,28 +6,27 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    fsd_graph, x, y, z = to_graph(4)
-    Vis.draw_dot(fsd_graph)
-    fsd_func = make_function(fsd_graph, Node.([x, y, z]))
+    @variables x y
 
-    #hand computed derivative for order = 3
-    # correct_derivatives(x, y, z) = [
-    #     0.0 0.0 0.0
-    #     0.0 0.0 0.0
-    #     0.0 0.0 1.422074017360395
-    #     0.0 0.0 0.0
-    #     0.0 0.0 0.0
-    #     (-0.3642161365141257*3*z) 0.0 (-0.3642161365141257*3*x)
-    #     0.0 0.0 (2.0197963935867267*3*z)
-    #     0.0 (-0.3642161365141257*3*z) (-0.3642161365141257*3*y)
-    #     0.0 0.0 0.0
-    # ]
+    nv1 = Node(x)
+    nv2 = Node(y)
+    n3 = nv1 * nv2
+    n4 = n3 * nv1
+    n5 = n3 * n4
 
-    # graph_copy = deepcopy(fsd_graph)
-    # factor!(graph_copy)
-    # Vis.draw_dot(graph_copy)
-    sym_func = jacobian_function!(fsd_graph, [Node(x), Node(y), Node(z)])
+    graph = DerivativeGraph([n4, n5])
+    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
+    subs, subgraph_dict = compute_factorable_subgraphs(graph)
 
+    _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
+    _3_5 = postdominator_subgraph(graph, 3, 5, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _4_1 = dominator_subgraph(graph, 4, 1, Bool[1, 0], Bool[1, 1], Bool[1, 0])
+    _5_1 = dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
+    _1_5 = postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
+
+    sub_eval = evaluate_subgraph(_5_3)
+    factor_subgraph!(_5_3)
 end
 export test
 

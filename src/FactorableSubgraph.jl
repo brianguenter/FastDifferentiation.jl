@@ -200,7 +200,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wh
 end
 
 """Sets the reachable root and variable masks for every edge in `PostDominatorSubgraph` `subgraph`. """
-function reset_edge_masks(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
+function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     gr = graph(subgraph)
     dominator = dominating_node(subgraph)
     edge_constraint = next_edge_constraint(subgraph)
