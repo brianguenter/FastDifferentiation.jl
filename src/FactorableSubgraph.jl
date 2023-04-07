@@ -164,6 +164,40 @@ function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:
     return true
 end
 
+next_vertex(subgraph::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = top_vertex(edge)
+next_vertex(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = bott_vertex(edge)
+
+"""Roots for which the subgraph is factorable"""
+reachable(subgraph::FactorableSubgraph{T,DominatorSubgraph}) = reachable_roots(subgraph)
+"""Variables for which the subgraph is factorable"""
+reachable(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) = reachable_variables(subgraph)
+
+"""Child edges of a node on an edge path in a `DominatorSubgraph`"""
+dangling_edges(::FactorableSubgraph{T,DominatorSubgraph}, graph::DerivativeGraph, node_index::Integer) = child_edges(graph, node_index)
+"""Parent edges of a node on an edge path in a `PostDominatorSubgraph`"""
+dangling_edges(::FactorableSubgraph{T,PostDominatorSubgraph}, graph::DerivativeGraph, node_index::Integer) = parent_edges(graph, node_index)
+
+"""Breaks the graph into two orthogonal pieces: IN edges, which have only reachable roots/variables of the subgraph dominating node and OUT edges, which do not have reachable roots/variables of the subgraph dominating node. Creates new edges,  if necessary, for the OUT edges.
+
+This simplifies processing of resetting root and variable masks of the subgraph."""
+function add_non_Rdom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S}
+    #functions to get the correct reachable values depending on subgraph type
+
+    edge_constraint = next_edge_constraint(subgraph)
+    dominator = dominating_node(subgraph)
+    dominated = dominated_node(subgraph)
+
+    for start_edge in relation_edges!(edge_constraint, dominated)
+        current_node = next_vertex(subgraph, start_edge)
+
+        if current_node != dominator #edge e which connects to dominator node must have reachable_roots(top_vertex(e)) == reachable_roots(subgraph) for dominator subgraphs. Similarly for postdominator subgraphs. Don't need to change edge or add edge to account for reachable roots not in Rdom.
+            for pedge in relation_edges!(edge_constraint, current_node)
+
+            end
+        end
+    end
+end
+
 
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}

@@ -416,6 +416,31 @@ function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominat
     return Vset
 end
 
+function non_resettable_variables(graph::DerivativeGraph,current_edge::PathEdge, index::Integer)
+    VSet = falses(codomain_dimension(graph))
+
+    for edge in child_edges(graph,index)
+        if edge !== current_edge
+            VSet .= VSet .| reachable_variables(edge)
+        end
+    end
+
+    return Vset
+end
+
+function duplicate_non_Rdom_edges(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
+    gr = graph(subgraph)
+    dominator = dominating_node(subgraph)
+    dominated = dominated_node(subgraph)
+    Rdom = reachable_roots(gr,dominator)
+    R_edges = next_edge_constraint(subgraph)
+
+    for start_edge in relation_edges!(R_edges,dom)
+        current_vertex = top_vertex(gr,start_edge)
+        for path_edge in relation_edges!(Redges,)
+
+end
+
 """caller has to pass in graph and edges_to_delete vector"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Nothing,Node}) where {T,S<:DominatorSubgraph}
     a = graph(subgraph)
@@ -426,16 +451,19 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Not
     R_edges = next_edge_constraint(subgraph)
     dominator = dominating_node(subgraph)
     dominated = dominated_node(subgraph)
-    Vset = compute_Vset(R_edges, dominator, dominated)
+    resettable_variables = reachable_variables(subgraph)
 
     for start_edge in relation_edges!(R_edges, dominated)
         pedges = get_edge_vector()
         flag = edges_on_path!(R_edges, dominator, true, start_edge, pedges)
 
+        @assert flag != 2
 
         if flag == 1 #non-branching path through subgraph
             #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
             for pedge in pedges
+                resettable_variables .= resettable_variables .& !non_resettable_variables(a,pedge,top_vertex(pedge))
+
                 Vval = set_diff(reachable_variables(pedge), Vset)
                 if !is_zero(Vval) #need to create an edge to accomodate the part of the reachable set that is not in Vset
                     add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), Vval, Rdom)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
@@ -610,21 +638,9 @@ function factor_one_subgraph!(a::DerivativeGraph, subgraph::FactorableSubgraph, 
 
         if subgraph_exists(subgraph)
             sub_eval = evaluate_subgraph(subgraph)
-            edges_to_delete = PathEdge[]
-            edges_to_reset, factored_edge_to_add = factor_subgraph!(subgraph, sub_eval)
-            dual_edges_to_reset = process_dual_subgraph(subgraph, subgraph_dict, subgraph_list)
-            combined = dual_edges_to_reset !== nothing ? vcat(edges_to_reset, dual_edges_to_reset) : edges_to_reset
-
-            for edge in combined
-                tmp = reset_reachable(edge)
-                if tmp !== nothing
-                    push!(edges_to_delete, tmp)
-                end
-            end
+            factored_edge_to_add = factor_subgraph!(subgraph, sub_eval)
 
             add_edge!(a, factored_edge_to_add)
-
-            delete_edge!.(Ref(a), unique(edges_to_delete)) #dom,pdom may both add an edge to edges_to_delete. This will cause an assertion failure so make sure only delete edges once.
         end
 
         delete!(subgraph_dict, subgraph) #not strictly necessary because should never encounter the same subgraph twice so could leave the subgraph in the dictionary. But makes debugging easier when looking at small test cases.
