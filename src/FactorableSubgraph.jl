@@ -106,6 +106,7 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
 end
 export summarize
 
+#TODO delete this if still not used
 function subgraph_nodes(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
     result = T[]
 
@@ -180,11 +181,13 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wh
             current_node = top_vertex(current_edge)
             rdiff = set_diff(reachable_roots(current_edge), reachable_roots(subgraph))
             if is_zero(rdiff)
-                reachable_variables(current_edge) = reachable_variables(current_edge) .& bypass_mask
+                rvars = reachable_variables(current_edge)
+                rvars .= reachable_variables(current_edge) .& bypass_mask
             end
 
             if is_zero(bypass_mask .& reachable_variables(subgraph)) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
-                reachable_roots(current_edge) = reachable_roots(current_edge) .& !dominance_mask(subgraph)
+                rroots = reachable_roots(current_edge)
+                rroots .= reachable_roots(current_edge) .& .!dominance_mask(subgraph)
             end
 
             if is_zero(reachable_variables(current_edge)) || is_zero(reachable_roots(current_edge)) #paths to roots or variables so cannot participate in any future path products. Remove edge to simplify graph.
@@ -204,6 +207,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wh
     end
 end
 
+
 """Sets the reachable root and variable masks for every edge in `PostDominatorSubgraph` `subgraph`. """
 function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     gr = graph(subgraph)
@@ -218,14 +222,15 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}
 
         while true
             current_node = bott_vertex(current_edge)
-            println(reachable_variables(subgraph))
             vdiff = set_diff(reachable_variables(current_edge), reachable_variables(subgraph))
             if is_zero(vdiff)
-                reachable_roots(current_edge) = reachable_roots(current_edge) .& bypass_mask
+                rroots = reachable_roots(current_edge)
+                rrots .= reachable_roots(current_edge) .& bypass_mask
             end
 
             if is_zero(bypass_mask .& reachable_roots(subgraph)) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
-                reachable_variables(current_edge) = reachable_variables(current_edge) .& !dominance_mask(subgraph)
+                rvars = reachable_variables(current_edge)
+                rvars .= reachable_variables(current_edge) .& .!dominance_mask(subgraph)
             end
 
             if current_node == dominator

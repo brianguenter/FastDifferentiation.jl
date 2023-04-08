@@ -14,8 +14,10 @@ function test()
     n4 = n3 * ny2
     n5 = n3 * n4
 
+
     graph = DerivativeGraph([n5, n4])
     tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
+    println(summarize(tmp))
     factor_subgraph!(tmp)
     Vis.draw_dot(graph)
     # @test length(edges(graph, 2, 4)) == 1
