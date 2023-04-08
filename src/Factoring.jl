@@ -364,8 +364,6 @@ export edges_on_path!
 
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
-    @assert subgraph_exists(subgraph)
-
     if subgraph_exists(subgraph)
         new_edge = make_factored_edge(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.

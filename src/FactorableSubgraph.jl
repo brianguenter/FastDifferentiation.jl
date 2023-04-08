@@ -168,12 +168,13 @@ end
 function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
     gr = graph(subgraph)
     dominator = dominating_node(subgraph)
+    dominated = dominated_node(subgraph)
     edge_constraint = next_edge_constraint(subgraph)
 
 
-    for start_edge in relation_edges!(edge_constraint, dominator)
+    for start_edge in relation_edges!(edge_constraint, dominated)
         current_edge = start_edge
-        bypass_mask = trues(codomain_dimension(gr)) .& !reachable_variables(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
+        bypass_mask = trues(codomain_dimension(gr)) .& .!reachable_variables(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
 
         while true
             current_node = top_vertex(current_edge)
@@ -186,13 +187,17 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wh
                 reachable_roots(current_edge) = reachable_roots(current_edge) .& !dominance_mask(subgraph)
             end
 
+            if is_zero(reachable_variables(current_edge)) || is_zero(reachable_roots(current_edge)) #paths to roots or variables so cannot participate in any future path products. Remove edge to simplify graph.
+                delete_edge!(gr, current_edge)
+            end
+
             if current_node == dominator
                 break
             end
 
             for child in child_edges(gr, current_node)
                 if child !== current_edge
-                    bypass_mask |= reachable_variables(child)
+                    bypass_mask .|= reachable_variables(child)
                 end
             end
         end
@@ -203,15 +208,17 @@ end
 function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     gr = graph(subgraph)
     dominator = dominating_node(subgraph)
+    dominated = dominated_node(subgraph)
     edge_constraint = next_edge_constraint(subgraph)
 
 
-    for start_edge in relation_edges!(edge_constraint, dominator)
+    for start_edge in relation_edges!(edge_constraint, dominated)
         current_edge = start_edge
-        bypass_mask = trues(domain_dimension(gr)) .& !reachable_roots(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
+        bypass_mask = trues(domain_dimension(gr)) .& .!reachable_roots(subgraph) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
 
         while true
             current_node = bott_vertex(current_edge)
+            println(reachable_variables(subgraph))
             vdiff = set_diff(reachable_variables(current_edge), reachable_variables(subgraph))
             if is_zero(vdiff)
                 reachable_roots(current_edge) = reachable_roots(current_edge) .& bypass_mask
@@ -227,7 +234,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}
 
             for child in parent_edges(gr, current_node)
                 if child !== current_edge
-                    bypass_mask |= reachable_roots(child)
+                    bypass_mask .|= reachable_roots(child)
                 end
             end
         end
