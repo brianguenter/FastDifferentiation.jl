@@ -47,7 +47,7 @@ function edges_from_node(graph, start_node_number::AbstractVector{Int})
     return result
 end
 
-function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, label::String, reachability_labels=true)
+function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, label::String, reachability_labels=true, value_labels=true)
     gr = "strict digraph{\nnode [style = filled]\n"
     if label != ""
         gr *= "label = \"$label\"\n"
@@ -67,11 +67,20 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     for e in edges_to_draw
         roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
         variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
-        if reachability_labels
-            edge_label = "[label = \"r:[$roots]  v:[$variables]\"] [color = purple]"
-        else
-            edge_label = "[label = \"$(value(e))\"]"
+        edge_label = ""
+
+        if value_labels
+            edge_label *= "$(value(e)) "
         end
+        if reachability_labels
+            edge_label *= "  r:[$roots]  v:[$variables]"
+        end
+
+        if edge_label != ""
+            edge_label = "[label = " * "\"" * edge_label * "\"] [color = purple]"
+        end
+
+
         gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) $edge_label\n"
 
         push!(nodes_to_draw, node(gr_copy, top_vertex(e)))

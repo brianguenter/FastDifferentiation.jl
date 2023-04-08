@@ -295,14 +295,53 @@ function reclaim_edge_vector(edges::Vector{PathEdge{Int64}})
     return nothing
 end
 
+function edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reachable_mask::BitVector, current_edge) where {T}
+    flag_value = 1
+    result = PathEdge{Int64}[]
+
+    while true
+        push!(result, current_edge)
+        if is_dominator && top_vertex(current_edge) == dominating
+            break
+        end
+        if !is_dominator && bott_vertex(current_edge) == dominating
+            break
+        end
+        tmp = get_edge_vector()
+        relation_edges!(next_node_constraint, current_edge, tmp)
+
+        if is_dominator
+            filter!(x -> subset(reachable_mask, reachable_variables(x)), tmp) #only accept edges which have reachable roots and variables that match the subgraph
+        else
+            filter!(x -> subset(reachable_mask, reachable_roots(x)), tmp)
+        end
+
+        #These two cases can only occur if the subgraph has been destroyed by factorization
+        if length(tmp) == 0  #there is no edge beyond current_edge that leads to the dominating node. 
+            reclaim_edge_vector(tmp)
+            flag_value = 0
+            break
+        elseif length(tmp) ≥ 2 #there is a branch in the edge path  
+            reclaim_edge_vector(tmp)
+            flag_value = 2
+            break
+        end
+
+        current_edge = tmp[1]
+        reclaim_edge_vector(tmp)
+    end
+
+    return flag_value, result
+end
+export edges_on_path!
+
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
 
     rel_edges = get_edge_vector()
     for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
-        pedges = get_edge_vector()
-        flag = edges_on_path!(constraint, dominating_node(subgraph), S == DominatorSubgraph, edge, pedges)
+        flag, pedges = edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
         #sort by num_uses then from largest to smallest postorder number
 
         if flag == 1 #non-branching path through subgraph
@@ -399,13 +438,13 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
         #test
         println("before factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph", reachability_labels=false)
+        Vis.draw_dot(a, graph_label="$subgraph")
         readline()
         #end test
         factor_subgraph!(subgraph)
         #test
         println("after factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph", reachability_labels=false)
+        Vis.draw_dot(a, graph_label="$subgraph")
         readline()
         #end test
         delete!(subgraph_dict, subgraph_vertices(subgraph))

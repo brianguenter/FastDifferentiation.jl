@@ -68,6 +68,10 @@ function mask_roots!(a::FactorableSubgraph, mask::BitVector)
     a.reachable_roots .&= mask
 end
 
+reachable(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_variables(a)
+reachable(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
+export reachable
+
 dominance_mask(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
 dominance_mask(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
 export dominance_mask
