@@ -8,19 +8,22 @@ using .FSDTests
 function test()
     @variables x y
 
-    nx1 = Node(x)
-    ny2 = Node(y)
-    n3 = nx1 * ny2
-    n4 = n3 * ny2
-    n5 = n3 * n4
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
 
+    graph = DerivativeGraph([n4, n5])
 
-    graph = DerivativeGraph([n5, n4])
-    tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
-    println(summarize(tmp))
-    factor_subgraph!(tmp)
-    Vis.draw_dot(graph)
-    # @test length(edges(graph, 2, 4)) == 1
+    df21(x, y) = 2 * x * y^3
+    df22(x, y) = 3 * x^2 * y^2
+    df11(x, y) = y^2
+    df12(x, y) = 2 * x * y
+    factor!(graph)
+    display(symbolic_jacobian!(graph, [nx, ny]))
+    Vis.draw_dot(graph, reachability_labels=false)
+
 end
 export test
 
