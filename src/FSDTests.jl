@@ -147,8 +147,8 @@ export simple_dominator_dgraph
     rroots = reachable_roots(etmp[1])
     rroots .= rroots .& .!rroots
 
-    @assert !connected_path(test_sub, etmp[1])
-    @assert connected_path(test_sub, etmp[2])
+    @test !connected_path(test_sub, etmp[1])
+    @test connected_path(test_sub, etmp[2])
 end
 
 @testitem "iteration2" begin
@@ -163,7 +163,6 @@ end
 
 
     graph = DerivativeGraph([n4, n5])
-    Vis.draw_dot(graph)
     subs, _ = compute_factorable_subgraphs(graph)
     _5_3 = subs[1]
     _2_4 = subs[2]

@@ -422,6 +422,7 @@ function connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T
         return false
     end
 end
+export connected_path
 
 """Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:AbstractFactorableSubgraph}
