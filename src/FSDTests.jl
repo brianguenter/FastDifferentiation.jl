@@ -132,15 +132,71 @@ function simple_dominator_dgraph()
 end
 export simple_dominator_dgraph
 
-@testitem "iteration" begin
-    @variables x
+@testitem "iteration1" begin
+    using Symbolics
+    @variables x y
 
     nx = Node(x)
-    func = x * x
+    func = nx * nx
 
-    subs, _ = compute_factorable_subgraphs(DerivativeGraph([func]))
+    gr = DerivativeGraph([func])
+    subs, _ = compute_factorable_subgraphs(gr)
 
+    test_sub = subs[1]
+    etmp = parent_edges(gr, dominated_node(test_sub))
+    rroots = reachable_roots(etmp[1])
+    rroots .= rroots .& .!rroots
+
+    @assert !connected_path(test_sub, etmp[1])
+    @assert connected_path(test_sub, etmp[2])
 end
+
+@testitem "iteration2" begin
+    using Symbolics
+    @variables x y
+
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
+
+
+    graph = DerivativeGraph([n4, n5])
+    Vis.draw_dot(graph)
+    subs, _ = compute_factorable_subgraphs(graph)
+    _5_3 = subs[1]
+    _2_4 = subs[2]
+    _3_5 = subs[4]
+
+    etmp = edges(graph, 3, 5)[1]
+    @assert connected_path(_5_3, etmp)
+
+
+    etmp = edges(graph, 3, 4)[1]
+    @assert connected_path(_5_3, etmp)
+    rts = reachable_roots(etmp)
+    rts[2] = 0
+
+    @assert !connected_path(_5_3, etmp)
+    #reset path
+    rts[2] = 1
+
+    e2_4 = edges(graph, 2, 4)[1]
+    @assert connected_path(_2_4, e2_4)
+    e2_3 = edges(graph, 2, 3)[1]
+    @assert connected_path(_2_4, e2_3)
+    e3_4 = edges(graph, 3, 4)[1]
+    vars = reachable_variables(e3_4)
+    @. vars &= !vars
+    @assert !connected_path(_2_4, e3_4)
+end
+
+@testitem "iteration3" begin
+    using Symbolics
+    @variables x y
+end
+
 
 
 @testitem "all_nodes" begin
@@ -1015,22 +1071,6 @@ end
 @testitem "edges of subgraph" begin
     using Symbolics
 
-    function edges(a::FactorableSubgraph{T}, is_dominator::Bool) where {T}
-        result = PathEdge{T}[]
-        path_constraint = FastSymbolicDifferentiation.next_edge_constraint(a)
-
-        for start_edge in relation_edges!(path_constraint, dominated_node(a))
-            pedges = PathEdge{Int64}[]
-            flag = edges_on_path!(path_constraint, dominating_node(a), is_dominator, start_edge, pedges)
-            append!(result, pedges)
-        end
-        return result
-    end
-
-    "returns edges in the subgraph `a` satisfying the constraint `dominance_mask(a) ⊆ reachable_roots(a)`"
-    edges(a::FactorableSubgraph{T,FastSymbolicDifferentiation.DominatorSubgraph}) where {T} = edges(a, true)
-    edges(a::FactorableSubgraph{T,FastSymbolicDifferentiation.PostDominatorSubgraph}) where {T} = edges(a, false)
-
     @variables x y
 
     nv1 = Node(x)
@@ -1410,7 +1450,7 @@ end
     ufn = function_of(:q, x, y)
     deriv = value(derivative(derivative(ufn, Val{1}()), Val{2}()))
 
-    @assert deriv.variables == SVector(Node(x), Node(y))
+    @test deriv.variables == SVector(Node(x), Node(y))
 
     fn = DerivativeGraph(x * ufn)
     jac = symbolic_jacobian!(fn)

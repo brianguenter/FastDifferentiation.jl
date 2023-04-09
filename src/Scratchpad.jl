@@ -6,20 +6,20 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    @variables x
+    @variables x y
 
     nx = Node(x)
     func = nx * nx
 
-    graph = DerivativeGraph([func])
-    subs, _ = compute_factorable_subgraphs(graph)
+    gr = DerivativeGraph([func])
+    subs, _ = compute_factorable_subgraphs(gr)
 
     test_sub = subs[1]
-    edges = parent_edges(graph, dominated_node(test_sub))
-    rroots = reachable_roots(edges[1])
+    etmp = parent_edges(gr, dominated_node(test_sub))
+    rroots = reachable_roots(etmp[1])
     rroots .= rroots .& .!rroots
 
-    @assert !connected_path(test_sub, edges[1])
-    @assert connected_path(test_sub, edges[2])
+    @assert !connected_path(test_sub, etmp[1])
+    @assert connected_path(test_sub, etmp[2])
 end
 export test

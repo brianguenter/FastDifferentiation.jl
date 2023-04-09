@@ -354,8 +354,8 @@ end
 child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
 
 """The way `parent_edges` works is somewhat subtle. Assume we have a root node `nᵢ` with no parents but some children. No edge in `node_edges(nᵢ)` will pass the test `edge.bott_vertex == node` so `parent_edges` will return T[]. But this empty vector is not explicitly stored in the edge list."""
-function parent_edges(dgraph::DerivativeGraph, node::T) where {T<:Integer}
-    nedges = _node_edges(edges(dgraph), node)
+function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
+    nedges = _node_edges(edges(dgraph), node_index)
     if nedges !== nothing
         return parents(nedges)
     else
@@ -363,6 +363,8 @@ function parent_edges(dgraph::DerivativeGraph, node::T) where {T<:Integer}
     end
 end
 export parent_edges
+
+parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
 
 function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     num = postorder_number(dgraph, node)
