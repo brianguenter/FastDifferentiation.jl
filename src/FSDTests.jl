@@ -132,6 +132,17 @@ function simple_dominator_dgraph()
 end
 export simple_dominator_dgraph
 
+@testitem "iteration" begin
+    @variables x
+
+    nx = Node(x)
+    func = x * x
+
+    subs, _ = compute_factorable_subgraphs(DerivativeGraph([func]))
+
+end
+
+
 @testitem "all_nodes" begin
     using FastSymbolicDifferentiation.FSDTests
 
@@ -1071,10 +1082,10 @@ end
     subs, sub_dict = compute_factorable_subgraphs(graph)
 
     _5_3 = filter(x -> subgraph_vertices(x) == (5, 3), subs)[1]
-    e_5_3,_,_ = make_factored_edge(_5_3)
+    e_5_3, _, _ = make_factored_edge(_5_3)
 
     _3_5 = filter(x -> subgraph_vertices(x) == (3, 5), subs)[1]
-    e_3_5,_,_ = make_factored_edge(_3_5)
+    e_3_5, _, _ = make_factored_edge(_3_5)
 
     @test bit_equal(reachable_roots(e_5_3), BitVector([1, 0]))
     @test bit_equal(reachable_variables(e_5_3), BitVector([1, 1]))

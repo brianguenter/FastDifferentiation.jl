@@ -6,12 +6,20 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    _, graph, _, _ = simple_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 4)[1]
-end
-export test
+    @variables x
 
-#changed
-#change
+    nx = Node(x)
+    func = nx * nx
+
+    graph = DerivativeGraph([func])
+    subs, _ = compute_factorable_subgraphs(graph)
+
+    test_sub = subs[1]
+    edges = parent_edges(graph, dominated_node(test_sub))
+    rroots = reachable_roots(edges[1])
+    rroots .= rroots .& .!rroots
+
+    @assert !connected_path(test_sub, edges[1])
+    @assert connected_path(test_sub, edges[2])
+end
 export test
