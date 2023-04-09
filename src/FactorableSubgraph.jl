@@ -170,7 +170,7 @@ function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:
 end
 
 """Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
-function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
+function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}, roots_reach::BitVector, vars_reach::BitVector) where {T}
     gr = graph(subgraph)
     dominator = dominating_node(subgraph)
     dominated = dominated_node(subgraph)
@@ -179,18 +179,22 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}) wh
 
     for start_edge in relation_edges!(edge_constraint, dominated)
         current_edge = start_edge
-        bypass_mask = falses(codomain_dimension(gr)) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
+        bypass_mask = falses(domain_dimension(gr)) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
 
         while true
             current_node = top_vertex(current_edge)
             rdiff = set_diff(reachable_roots(current_edge), reachable_roots(subgraph))
+            rvars = reachable_variables(current_edge)
+            set_diff!(rvars, vars_reach)
+
             if is_zero(rdiff)
-                rvars = reachable_variables(current_edge)
                 rvars .= reachable_variables(current_edge) .& bypass_mask
             end
 
+            rroots = reachable_roots(current_edge)
+            set_diff!(rroots, roots_reach)
+
             if is_zero(bypass_mask) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
-                rroots = reachable_roots(current_edge)
                 rroots .= reachable_roots(current_edge) .& .!dominance_mask(subgraph)
             end
 
@@ -218,7 +222,7 @@ end
 
 
 """Sets the reachable root and variable masks for every edge in `PostDominatorSubgraph` `subgraph`. """
-function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
+function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, roots_reach::BitVector, vars_reach::BitVector) where {T}
     gr = graph(subgraph)
     dominator = dominating_node(subgraph)
     dominated = dominated_node(subgraph)
@@ -227,18 +231,22 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}
 
     for start_edge in relation_edges!(edge_constraint, dominated)
         current_edge = start_edge
-        bypass_mask = falses(domain_dimension(gr)) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
+        bypass_mask = falses(codomain_dimension(gr)) #if bypassmask is 0 at index i then variable vᵢ can be reset. Initially all reachable variables of the subgraph are resettable.
 
         while true
             current_node = bott_vertex(current_edge)
             vdiff = set_diff(reachable_variables(current_edge), reachable_variables(subgraph))
+            rroots = reachable_roots(current_edge)
+            set_diff!(rroots, roots_reach)
+
             if is_zero(vdiff)
-                rroots = reachable_roots(current_edge)
                 rroots .= reachable_roots(current_edge) .& bypass_mask
             end
 
+            rvars = reachable_variables(current_edge)
+            set_diff!(rvars, vars_reach)
+
             if is_zero(bypass_mask) #no child edge paths bypass dominated node so can reset all rᵢ ∈ Rdom.
-                rvars = reachable_variables(current_edge)
                 rvars .= reachable_variables(current_edge) .& .!dominance_mask(subgraph)
             end
 

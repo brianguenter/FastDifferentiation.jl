@@ -299,6 +299,9 @@ function edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reac
     flag_value = 1
     result = PathEdge{Int64}[]
 
+    roots_reach = copy(reachable_roots(current_edge))
+    vars_reach = copy(reachable_variables(current_edge))
+
     while true
         push!(result, current_edge)
         if is_dominator && top_vertex(current_edge) == dominating
@@ -328,37 +331,61 @@ function edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reac
         end
 
         current_edge = tmp[1]
+        roots_reach .= roots_reach .& reachable_roots(current_edge)
+        vars_reach .= vars_reach .& reachable_variables(current_edge) #update reachable roots/variables of the entire path. Sum is only good over this subset
         reclaim_edge_vector(tmp)
     end
 
-    return flag_value, result
+    return flag_value, result, roots_reach, vars_reach
 end
-export edges_on_path!
+export edge_path
 
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
+    gr = graph(subgraph)
+    roots_intersect = trues(codomain_dimension(gr))
+    vars_intersect = trues(domain_dimension(gr))
 
     rel_edges = get_edge_vector()
     for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
-        flag, pedges = edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
+        flag, pedges, roots_reach, vars_reach = edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
         #sort by num_uses then from largest to smallest postorder number
 
         if flag == 1 #non-branching path through subgraph
+            roots_intersect .= roots_intersect .& roots_reach
+            vars_intersect .= vars_intersect .& vars_reach
+
             sort!(pedges, lt=path_sort_order)
             sum += multiply_sequence(pedges)
+
             #find sequences of equal times_used and multiply them. Then multiply each of the collapsed sequences to get the final result
             reclaim_edge_vector(pedges)
         end
     end
+
+
     reclaim_edge_vector(rel_edges)
-    return sum
+    return sum, roots_intersect, vars_intersect
 end
 export evaluate_subgraph
 
-make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathEdge(dominating_node(subgraph), dominated_node(subgraph), evaluate_subgraph(subgraph), reachable_variables(subgraph), dominance_mask(subgraph))
+function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
+    sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
+
+    roots_reach .&= dominance_mask(subgraph)
+    vars_reach .&= reachable_variables(subgraph)
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
+end
+
 export make_factored_edge
-make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathEdge(dominating_node(subgraph), dominated_node(subgraph), evaluate_subgraph(subgraph), dominance_mask(subgraph), reachable_roots(subgraph))
+function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
+    sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
+
+    roots_reach .&= reachable_roots(subgraph)
+    vars_reach .&= dominance_mask(subgraph)
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
+end
 export make_factored_edge
 
 """Returns 1 if there is a good single path from dominated to dominating node. This is the only case in which a valid edge path exists.
@@ -404,9 +431,9 @@ export edges_on_path!
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
     if subgraph_exists(subgraph)
-        new_edge = make_factored_edge(subgraph)
+        new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        reset_edge_masks!(subgraph, roots_reach, vars_reach) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
         add_edge!(graph(subgraph), new_edge)
     end
 end
@@ -415,8 +442,8 @@ export factor_subgraph!
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     if subgraph_exists(subgraph)
-        new_edge = make_factored_edge(subgraph)
-        reset_edge_masks!(subgraph)
+        new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
+        reset_edge_masks!(subgraph, roots_reach, vars_reach)
         add_edge!(graph(subgraph), new_edge)
     end
 end
@@ -438,15 +465,15 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
         #test
         println("before factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph")
-        readline()
+        # Vis.draw_dot(a, graph_label="$subgraph")
+        # readline()
         #end test
         factor_subgraph!(subgraph)
         #test
         println("after factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph")
-        readline()
-        #end test
+        # Vis.draw_dot(a, graph_label="$subgraph")
+        # readline()
+        # end test
         delete!(subgraph_dict, subgraph_vertices(subgraph))
     end
 
