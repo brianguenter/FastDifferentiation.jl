@@ -112,17 +112,24 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
 end
 export summarize
 
+
 next_edges(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = parent_edges(graph(a), edge)
 next_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = child_edges(graph(a), edge)
 
+next_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T} = parent_edges(graph(a), node_index)
+next_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::T) where {T} = child_edges(graph(a), node_index)
+
 test_edge(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = subset(dominance_mask(a), reachable_roots(edge)) && overlap(reachable_variables(a), reachable_variables(edge))
 test_edge(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = subset(dominance_mask(a), reachable_variables(edge)) && overlap(reachable_roots(a), reachable_roots(edge))
+
+dominance_bits(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = reachable_roots(edge)
+dominance_bits(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = reachable_variables(edge)
 
 forward_vertex(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = top_vertex(edge)
 forward_vertex(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = bott_vertex(edge)
 
 function next_valid_edge(a::FactorableSubgraph, current_edge::PathEdge{T}) where {T}
-    if top_vertex(current_edge) == dominating_node(a) #reached the end of the subgraph
+    if forward_vertex(a, current_edge) == dominating_node(a) #reached the end of the subgraph
         return nothing
     else
         local edge_next::PathEdge{T}
@@ -201,6 +208,30 @@ function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:
     reclaim_edge_vector(start_edges)
     return true
 end
+
+"""Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
+function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
+    for s_edge in next_edges(subgraph, dominated_node(subgraph))
+        if test_edge(subgraph, s_edge)
+            for pedge in edge_path(subgraph, s_edge)
+                edge_mask = dominance_bits(subgraph, pedge)
+                diff = set_diff(edge_mask, dominance_mask(subgraph))
+                if any(diff)
+                    gr = graph(subgraph)
+
+                    if S === DominatorSubgraph
+                        add_edge!(gr, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), reachable_variables(pedge), diff)) #create a new edge that accounts for roots not in the dominance mask
+                    else
+                        add_edge!(gr, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), diff, reachable_roots(pedge))) #create a new edge that accounts for roots not in the     dominance mask    
+                    end
+
+                    @. edge_mask &= !diff #in the original edge reset the roots/variables not in dominance mask
+                end
+            end
+        end
+    end
+end
+export add_non_dom_edges!
 
 """Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
 function reset_edge_masks!(subgraph::FactorableSubgraph{T,DominatorSubgraph}, roots_reach::BitVector, vars_reach::BitVector) where {T}
@@ -419,8 +450,8 @@ struct PathIterator{T<:Integer,S<:FactorableSubgraph}
 end
 export PathIterator
 
-path(subgraph::FactorableSubgraph, start_edge) = PathIterator(subgraph, start_edge)
-export path
+edge_path(subgraph::FactorableSubgraph, start_edge) = PathIterator(subgraph, start_edge)
+export edge_path
 
 """Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}
@@ -432,7 +463,7 @@ function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}
 end
 
 function Base.iterate(a::PathIterator{T,S}, state::PathEdge{T}) where {T,S<:FactorableSubgraph}
-    if top_vertex(state) == dominating_node(a.subgraph)
+    if forward_vertex(a.subgraph, state) == dominating_node(a.subgraph)
         return nothing
     else
         edge_next = next_valid_edge(a.subgraph, state)

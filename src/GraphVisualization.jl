@@ -48,7 +48,7 @@ function edges_from_node(graph, start_node_number::AbstractVector{Int})
 end
 
 function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, label::String, reachability_labels=true, value_labels=true)
-    gr = "strict digraph{\nnode [style = filled]\n"
+    gr = "digraph{\nnode [style = filled]\n"
     if label != ""
         gr *= "label = \"$label\"\n"
     end

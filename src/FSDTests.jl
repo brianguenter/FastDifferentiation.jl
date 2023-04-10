@@ -165,11 +165,11 @@ end
     graph = DerivativeGraph([n4, n5])
     subs, _ = compute_factorable_subgraphs(graph)
     _5_3 = subs[1]
-    @assert (5,3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
+    @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
     _2_4 = subs[2]
-    @assert (2,4) == vertices(_2_4)
+    @assert (2, 4) == vertices(_2_4)
     _3_5 = subs[4]
-    @assert (3,5) == vertices(_3_5)
+    @assert (3, 5) == vertices(_3_5)
     etmp = edges(graph, 3, 5)[1]
     @test connected_path(_5_3, etmp)
 
@@ -208,22 +208,35 @@ end
     subs, _ = compute_factorable_subgraphs(graph)
 
     _5_3 = subs[1]
-    @assert (5,3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
+    @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
     _2_4 = subs[2]
-    @assert (2,4) == vertices(_2_4)
+    @assert (2, 4) == vertices(_2_4)
     _3_5 = subs[4]
-    @assert (3,5) == vertices(_3_5)
-    
-    e5_3 = edges(graph, 5,3)[1]
+    @assert (3, 5) == vertices(_3_5)
 
-    path_edges = PathEdge[]
+    e5_3 = edges(graph, 5, 3)[1]
 
-    for edge in path(_5_3,e5_3)
-        push!(path_edges,edge)
-    end
-    @test length(path_edges) == 1
-    @test path_edges[1] == e_5_3
-    
+    pedges = collect(edge_path(_5_3, e5_3))
+    @test length(pedges) == 1
+    @test e5_3 in pedges
+
+    e3_4 = edges(graph, 3, 4)[1]
+    e5_4 = edges(graph, 5, 4)[1]
+
+    pedges = collect(edge_path(_5_3, e3_4))
+    @test length(pedges) == 2
+    @test all(in.((e3_4, e5_4), Ref(pedges)))
+
+    e2_3 = edges(graph, 2, 3)[1]
+    e2_4 = edges(graph, 2, 4)[1]
+
+    pedges = collect(edge_path(_2_4, e3_4))
+    @test length(pedges) == 2
+    @test all(in.((e2_3, e3_4), Ref(pedges)))
+
+    pedges = collect(edge_path(_2_4, e2_4))
+    @test length(pedges) == 1
+    @test e2_4 in pedges
 end
 
 
