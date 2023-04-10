@@ -1245,8 +1245,6 @@ end
 
 @testitem "TODO:subgraph_exists new version" begin end
 
-@testitem "TODO:subgraph_nodes" begin end
-
 @testitem "path_sort_order" begin
     e1 = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
     e2 = PathEdge(3, 2, Node(0), BitVector([1, 0, 0]), BitVector([0, 0, 1]))

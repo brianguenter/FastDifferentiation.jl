@@ -110,33 +110,6 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
 end
 export summarize
 
-#TODO delete this if still not used
-function subgraph_nodes(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    result = T[]
-
-    start_node = dominated_node(subgraph)
-    constraint = x -> subset(dominance_mask(subgraph), reachable_roots(x)) && overlap(reachable_variables(subgraph), reachable_variables(x))
-    push!(result, start_node)
-    current_level = Set{T}(start_node)
-    next_level = Set{T}()
-    new_nodes = true
-
-    while new_nodes
-        new_nodes = false
-        for begin_node in current_level
-            for next_node in ConstrainedPathIterator(begin_node, dominating_node(subgraph), node_edges(graph(subgraph), begin_node), true, constraint)
-                if !in(next_node, next_level)
-                    push!(next_level, next_node)
-                    new_nodes = true
-                end
-            end
-        end
-        append!(result, values(next_level))
-    end
-
-    return sort!(result) #return sorted by postorder number with largest postorder number at the end of the array
-end
-
 
 """Traverse edges in `subgraph` to see if `dominating_node(subgraph)` is still the idom of `dominated_node(subgraph)` or if factorization has destroyed the subgraph. If there are two or more paths from dominated to dominating node and there are no branches on these paths then the subgraph still exists."""
 function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{PostDominatorSubgraph,DominatorSubgraph}}
