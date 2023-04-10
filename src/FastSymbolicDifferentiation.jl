@@ -10,7 +10,7 @@ using NaNMath
 using Statistics
 using RuntimeGeneratedFunctions
 using Logging
-
+import Base: iterate
 module AutomaticDifferentiation
 struct NoDeriv
 end

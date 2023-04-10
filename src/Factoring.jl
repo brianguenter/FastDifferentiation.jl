@@ -9,7 +9,7 @@ top_down_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = Pa
 
 """Evaluates the subgraph, creates a new edge with this value, and then inserts the new edge into `graph`"""
 function add_edge!(graph::DerivativeGraph, subgraph::FactorableSubgraph, subgraph_value::Node)
-    verts = subgraph_vertices(subgraph)
+    verts = vertices(subgraph)
     edge = PathEdge(verts[1], verts[2], subgraph_value, reachable_variables(subgraph), reachable_roots(subgraph))
     add_edge!(graph, edge)
 end
@@ -474,7 +474,7 @@ function factor!(a::DerivativeGraph{T}) where {T}
         # Vis.draw_dot(a, graph_label="$subgraph")
         # readline()
         # end test
-        delete!(subgraph_dict, subgraph_vertices(subgraph))
+        delete!(subgraph_dict, vertices(subgraph))
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph

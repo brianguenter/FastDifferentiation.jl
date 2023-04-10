@@ -132,7 +132,7 @@ function simple_dominator_dgraph()
 end
 export simple_dominator_dgraph
 
-@testitem "iteration1" begin
+@testitem "connected_path 1" begin #test case when path is one edge long
     using Symbolics
     @variables x y
 
@@ -151,7 +151,7 @@ export simple_dominator_dgraph
     @test connected_path(test_sub, etmp[2])
 end
 
-@testitem "iteration2" begin
+@testitem "connected_path 2" begin #test cases when path is longer than one edge and various edges have either roots or variables reset.
     using Symbolics
     @variables x y
 
@@ -165,35 +165,65 @@ end
     graph = DerivativeGraph([n4, n5])
     subs, _ = compute_factorable_subgraphs(graph)
     _5_3 = subs[1]
+    @assert (5,3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
     _2_4 = subs[2]
+    @assert (2,4) == vertices(_2_4)
     _3_5 = subs[4]
-
+    @assert (3,5) == vertices(_3_5)
     etmp = edges(graph, 3, 5)[1]
-    @assert connected_path(_5_3, etmp)
+    @test connected_path(_5_3, etmp)
 
 
     etmp = edges(graph, 3, 4)[1]
-    @assert connected_path(_5_3, etmp)
+    @test connected_path(_5_3, etmp)
     rts = reachable_roots(etmp)
     rts[2] = 0
 
-    @assert !connected_path(_5_3, etmp)
+    @test !connected_path(_5_3, etmp)
     #reset path
     rts[2] = 1
 
     e2_4 = edges(graph, 2, 4)[1]
-    @assert connected_path(_2_4, e2_4)
+    @test connected_path(_2_4, e2_4)
     e2_3 = edges(graph, 2, 3)[1]
-    @assert connected_path(_2_4, e2_3)
+    @test connected_path(_2_4, e2_3)
     e3_4 = edges(graph, 3, 4)[1]
     vars = reachable_variables(e3_4)
     @. vars &= !vars
-    @assert !connected_path(_2_4, e3_4)
+    @test !connected_path(_2_4, e3_4)
 end
 
-@testitem "iteration3" begin
+@testitem "iteration" begin
     using Symbolics
     @variables x y
+
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
+
+
+    graph = DerivativeGraph([n4, n5])
+    subs, _ = compute_factorable_subgraphs(graph)
+
+    _5_3 = subs[1]
+    @assert (5,3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
+    _2_4 = subs[2]
+    @assert (2,4) == vertices(_2_4)
+    _3_5 = subs[4]
+    @assert (3,5) == vertices(_3_5)
+    
+    e5_3 = edges(graph, 5,3)[1]
+
+    path_edges = PathEdge[]
+
+    for edge in path(_5_3,e5_3)
+        push!(path_edges,edge)
+    end
+    @test length(path_edges) == 1
+    @test path_edges[1] == e_5_3
+    
 end
 
 
@@ -352,7 +382,7 @@ end
     subs, subs_dict = compute_factorable_subgraphs(dgraph)
 
     for sub in subs
-        @test subs_dict[subgraph_vertices(sub)][1] == sub
+        @test subs_dict[vertices(sub)][1] == sub
     end
 
     for (sub, index) in values(subs_dict)
@@ -1067,42 +1097,43 @@ end
     @test set_diff(trues(1), trues(1)) == falses(1)
 end
 
-@testitem "edges of subgraph" begin
-    using Symbolics
+#TODO delete this if decide not to resurrect edges(subgraph) function
+# @testitem "edges of subgraph" begin
+#     using Symbolics
 
-    @variables x y
+#     @variables x y
 
-    nv1 = Node(x)
-    nv2 = Node(y)
-    n3 = nv1 * nv2
-    n4 = n3 * nv1
-    n5 = n3 * n4
+#     nv1 = Node(x)
+#     nv2 = Node(y)
+#     n3 = nv1 * nv2
+#     n4 = n3 * nv1
+#     n5 = n3 * n4
 
-    graph = DerivativeGraph([n4, n5])
+#     graph = DerivativeGraph([n4, n5])
 
-    subs = compute_factorable_subgraphs(graph)[1]
-    _5_3 = subs[findfirst(x -> x.subgraph == (5, 3), subs)]
-    _4_1 = subs[findfirst(x -> x.subgraph == (4, 1), subs)]
-    _1_4 = subs[findfirst(x -> x.subgraph == (1, 4), subs)]
+#     subs = compute_factorable_subgraphs(graph)[1]
+#     _5_3 = subs[findfirst(x -> x.subgraph == (5, 3), subs)]
+#     _4_1 = subs[findfirst(x -> x.subgraph == (4, 1), subs)]
+#     _1_4 = subs[findfirst(x -> x.subgraph == (1, 4), subs)]
 
-    _5_3_edges = ((5, 3), (4, 3), (5, 4))
-    _4_1_edges = ((4, 1), (4, 3), (3, 1))
-    _1_4_edges = ((4, 1), (4, 3), (3, 1))
+#     _5_3_edges = ((5, 3), (4, 3), (5, 4))
+#     _4_1_edges = ((4, 1), (4, 3), (3, 1))
+#     _1_4_edges = ((4, 1), (4, 3), (3, 1))
 
-    @test length(edges(_5_3)) == 3
-    @test length(edges(_4_1)) == 3
-    @test length(edges(_1_4)) == 3
+#     @test length(edges(_5_3)) == 3
+#     @test length(edges(_4_1)) == 3
+#     @test length(edges(_1_4)) == 3
 
-    function test_edges(subgraph, edge_list)
-        for edge in edges(subgraph)
-            @test (top_vertex(edge), bott_vertex(edge)) in edge_list
-        end
-    end
+#     function test_edges(subgraph, edge_list)
+#         for edge in edges(subgraph)
+#             @test (top_vertex(edge), bott_vertex(edge)) in edge_list
+#         end
+#     end
 
-    for (subgraph, edges_of_subgraph) in zip((_5_3, _4_1, _1_4), (_5_3_edges, _4_1_edges), (_1_4_edges))
-        test_edges(subgraph, edges_of_subgraph)
-    end
-end
+#     for (subgraph, edges_of_subgraph) in zip((_5_3, _4_1, _1_4), (_5_3_edges, _4_1_edges), (_1_4_edges))
+#         test_edges(subgraph, edges_of_subgraph)
+#     end
+# end
 
 @testitem "make_factored_edge" begin
     using Symbolics
@@ -1120,10 +1151,10 @@ end
 
     subs, sub_dict = compute_factorable_subgraphs(graph)
 
-    _5_3 = filter(x -> subgraph_vertices(x) == (5, 3), subs)[1]
+    _5_3 = filter(x -> vertices(x) == (5, 3), subs)[1]
     e_5_3, _, _ = make_factored_edge(_5_3)
 
-    _3_5 = filter(x -> subgraph_vertices(x) == (3, 5), subs)[1]
+    _3_5 = filter(x -> vertices(x) == (3, 5), subs)[1]
     e_3_5, _, _ = make_factored_edge(_3_5)
 
     @test bit_equal(reachable_roots(e_5_3), BitVector([1, 0]))
