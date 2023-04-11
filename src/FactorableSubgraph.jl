@@ -217,7 +217,7 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
         if test_edge(subgraph, s_edge)
             for pedge in edge_path(subgraph, s_edge)
                 edge_mask = dominance_bits(subgraph, pedge)
-                diff = set_diff(edge_mask, dominance_mask(subgraph))
+                diff = set_diff(edge_mask, dominance_mask(subgraph)) #important that diff is a new BitVector, not reused.
                 if any(diff)
                     gr = graph(subgraph)
 

@@ -39,7 +39,22 @@ function test()
     _5_3 = subs[1]
     @assert (5, 3) == vertices(_5_3)
 
+    equal_edges(e1, e2) = e1.top_vertex == e2.top_vertex && e1.top_vertex
     add_non_dom_edges!(_5_3)
+    edges3_4 = edges(graph, 4, 3)
+    @assert length(edges3_4) == 2
+    test_edge = PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([0, 1]))
+    println(edges3_4, value_equal(edges3_4[1], test_edge))
+    println(value_equal(edges3_4[2], test_edge))
+    tmp = value_equal.(edges3_4, Ref(test_edge))
+    println(tmp)
+    @assert count(tmp) == 1
+    tmp = value_equal.(PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([1, 0])))
+    @assert count(tmp) == 1
+
+
+
+
     Vis.draw_dot(graph)
     readline()
 
