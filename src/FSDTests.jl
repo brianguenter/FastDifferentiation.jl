@@ -193,6 +193,45 @@ end
     @test !connected_path(_2_4, e3_4)
 end
 
+@testitem "add_non_dom_edges" begin
+    using Symbolics
+    @variables x y
+
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
+
+    graph = DerivativeGraph([n4, n5])
+    subs, _ = compute_factorable_subgraphs(graph)
+    _5_3 = subs[1]
+    @assert (5, 3) == vertices(_5_3)
+
+    add_non_dom_edges!(_5_3)
+    #single edge 3,4 should be split into two: ([r1,r2],[v1,v2]) -> ([r1],[v1,v2]),([r2],[v1,v2])
+    edges3_4 = edges(graph, 4, 3)
+    @test length(edges3_4) == 2
+    test_edge = PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([0, 1]))
+    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    test_edge = (PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([1, 0])))
+    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+
+    graph = DerivativeGraph([n4, n5])
+    subs, _ = compute_factorable_subgraphs(graph)
+    _2_4 = subs[2]
+    @assert (2, 4) == vertices(_2_4)
+
+    add_non_dom_edges!(_2_4)
+    #single edge 3,4 should be split in two: ([r1,r2],[v1,v2])->([r1,r2],[v1]),([r1,r2],[v2])
+    edges3_4 = edges(graph, 4, 3)
+    @test length(edges3_4) == 2
+    test_edge = PathEdge(4, 3, ny, BitVector([1, 0]), BitVector([1, 1]))
+    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    test_edge = (PathEdge(4, 3, ny, BitVector([0, 1]), BitVector([1, 1])))
+    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+end
+
 @testitem "iteration" begin
     using Symbolics
     @variables x y
@@ -1286,8 +1325,6 @@ end
     e = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([1, 0, 1]))
     @test times_used(e) == 4
 end
-
-@testitem "TODO:subgraph_exists new version" begin end
 
 @testitem "path_sort_order" begin
     e1 = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([0, 0, 1]))

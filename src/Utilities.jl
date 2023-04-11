@@ -11,7 +11,7 @@ end
 reverse_mapping(a::AbstractVector{T}, index_type=DefaultNodeIndexType) where {T} = _reverse_mapping(a, T, index_type)
 export reverse_mapping
 
-"""Each `Edge` instance has a unique id so need special equality test if only want to test value equals. Could overload Base.== but that is risky since so many other function, hash, etc., depend on the definition of ==."""
+"""Tests for == of each of the fields of item1,item2. If a field is an array then == will return true if the elements of the two arrays match, false otherwise."""
 function value_equal(item1::T, item2::S, fields_to_ignore::Union{Nothing,Vector{Symbol}}=Symbol[]) where {T,S}
     fields = fieldnames(T)
     fields2 = fieldnames(S)
