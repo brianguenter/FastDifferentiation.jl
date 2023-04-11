@@ -367,10 +367,10 @@ end
 export evaluate_subgraph
 
 function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
+    sum, _, _ = evaluate_subgraph(subgraph)
 
-    roots_reach .&= dominance_mask(subgraph)
-    vars_reach .&= reachable_variables(subgraph)
+    roots_reach = copy(dominance_mask(subgraph))
+    vars_reach = copy(reachable_variables(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
 end
 
@@ -378,8 +378,8 @@ export make_factored_edge
 function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
 
-    roots_reach .&= reachable_roots(subgraph)
-    vars_reach .&= dominance_mask(subgraph)
+    roots_reach = copy(reachable_roots(subgraph))
+    vars_reach = copy(dominance_mask(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
 end
 export make_factored_edge
@@ -390,7 +390,11 @@ function factor_subgraph!(subgraph::FactorableSubgraph)
         new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
         add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        edges_to_delete = reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        for edge in edges_to_delete
+            delete_edge!(graph(subgraph), edge)
+        end
+
         add_edge!(graph(subgraph), new_edge)
     end
 end
@@ -411,14 +415,14 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
         #test
         println("before factoring $subgraph")
-        # Vis.draw_dot(a, graph_label="$subgraph")
-        # readline()
+        Vis.draw_dot(a, graph_label="$subgraph")
+        readline()
         #end test
         factor_subgraph!(subgraph)
         #test
         println("after factoring $subgraph")
-        # Vis.draw_dot(a, graph_label="$subgraph")
-        # readline()
+        Vis.draw_dot(a, graph_label="$subgraph")
+        readline()
         # end test
         delete!(subgraph_dict, vertices(subgraph))
     end

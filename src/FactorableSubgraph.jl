@@ -135,6 +135,9 @@ dominance_mask(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) wh
 non_dominance_mask(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = reachable_variables(edge)
 non_dominance_mask(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = reachable_roots(edge)
 
+non_dominance_mask(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_variables(a)
+non_dominance_mask(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
+
 non_dominance_dimension(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T} = domain_dimension(graph(subgraph))
 non_dominance_dimension(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = codomain_dimension(graph(subgraph))
 
@@ -254,11 +257,11 @@ end
 export add_non_dom_edges!
 
 """Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
-function reset_edge_masks!(subgraph::FactorableSubgraph)
-    bypass_mask = falses(non_dominance_dimension(subgraph))
+function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
+    edges_to_delete=PathEdge{T}[]
 
     for edge in forward_edges(subgraph, dominated_node(subgraph))
-        bypass_mask .= 0 #bypass mask tracks which variables/roots are on a backward path that bypasses the dominated_node. These variables/roots cannot be reset.
+        bypass_mask = .!copy(non_dominance_mask(subgraph)) #bypass mask tracks which variables/roots are on a backward path that bypasses the dominated_node. These variables/roots cannot be reset. 0 means can be reset 1 means can't.
 
         if test_edge(subgraph, edge)
             for pedge in edge_path(subgraph, edge)
@@ -277,10 +280,15 @@ function reset_edge_masks!(subgraph::FactorableSubgraph)
                 end
 
                 mask = non_dominance_mask(subgraph, pedge) #can reset any variable/roots bits that do not bypass the dominated node of the subgraph
-                mask .&= .!bypass_mask
+                mask .&= bypass_mask
+
+                if can_delete(pedge)
+                    push!(edges_to_delete, pedge)
+                end
             end
         end
     end
+    return edges_to_delete
 end
 export reset_edge_masks!
 

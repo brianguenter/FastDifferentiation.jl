@@ -55,7 +55,7 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     gr *= "ratio=\"fill\"\n"
     gr *= "size = 12 12\n"
     gr_copy = deepcopy(graph)
-    FastSymbolicDifferentiation.remove_dangling_edges!(gr_copy)
+    # FastSymbolicDifferentiation.remove_dangling_edges!(gr_copy)
 
     if start_nodes !== nothing
         edges_to_draw = edges_from_node(gr_copy, start_nodes)
