@@ -15,23 +15,43 @@ function test()
     n5 = n2 * n4
 
 
+    # graph = DerivativeGraph([n4, n5])
+    # subs, _ = compute_factorable_subgraphs(graph)
+    # println(subs)
+    # _4_2 = subs[3]
+    # @assert (4, 2) == vertices(_4_2)
+
+    # add_non_dom_edges!(_4_2)
+    # # Vis.draw_dot(graph)
+    # # readline()
+
+    # graph = DerivativeGraph([n4, n5])
+    # subs, _ = compute_factorable_subgraphs(graph)
+    # _3_5 = subs[4]
+    # @assert (3, 5) == vertices(_3_5)
+
+    # add_non_dom_edges!(_3_5)
+    # # Vis.draw_dot(graph)
+    # # readline()
+
     graph = DerivativeGraph([n4, n5])
     subs, _ = compute_factorable_subgraphs(graph)
-    println(subs)
-    _4_2 = subs[3]
-    @assert (4, 2) == vertices(_4_2)
+    _5_3 = subs[1]
+    @assert (5, 3) == vertices(_5_3)
 
-    add_non_dom_edges!(_4_2)
+    add_non_dom_edges!(_5_3)
     Vis.draw_dot(graph)
     readline()
 
-    graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
-    _3_5 = subs[4]
-    @assert (3, 5) == vertices(_3_5)
+    # graph = DerivativeGraph([n4, n5])
+    # subs, _ = compute_factorable_subgraphs(graph)
+    _2_4 = subs[2]
+    @assert (2, 4) == vertices(_2_4)
 
-    add_non_dom_edges!(_3_5)
+    add_non_dom_edges!(_2_4)
     Vis.draw_dot(graph)
+    readline()
+
     # _5_3 = subs[1]
     # @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
     # _2_4 = subs[2]

@@ -211,6 +211,8 @@ end
 
 """Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
+    temp_edges = PathEdge{T}[]
+
     for s_edge in next_edges(subgraph, dominated_node(subgraph))
         if test_edge(subgraph, s_edge)
             for pedge in edge_path(subgraph, s_edge)
@@ -220,15 +222,20 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
                     gr = graph(subgraph)
 
                     if S === DominatorSubgraph
-                        add_edge!(gr, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), reachable_variables(pedge), diff)) #create a new edge that accounts for roots not in the dominance mask
+                        push!(temp_edges, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), copy(reachable_variables(pedge)), diff)) #create a new edge that accounts for roots not in the dominance mask
                     else
-                        add_edge!(gr, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), diff, reachable_roots(pedge))) #create a new edge that accounts for roots not in the     dominance mask    
+
+                        push!(temp_edges, PathEdge(top_vertex(pedge), bott_vertex(pedge), value(pedge), diff, copy(reachable_roots(pedge)))) #create a new edge that accounts for roots not in the     dominance mask    
                     end
 
                     @. edge_mask &= !diff #in the original edge reset the roots/variables not in dominance mask
                 end
             end
         end
+    end
+    gr = graph(subgraph)
+    for edge in temp_edges
+        add_edge!(gr, edge)
     end
 end
 export add_non_dom_edges!
