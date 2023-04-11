@@ -388,67 +388,17 @@ function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph
 end
 export make_factored_edge
 
-"""Returns 1 if there is a good single path from dominated to dominating node. This is the only case in which a valid edge path exists.
-
-Returns 0 if there is no path from dominated to dominating node.
-    
-Returns 2 if there is a branch anywhere along the path. This cannot occur in a valid subgraph path.
-"""
-function edges_on_path!(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Vector{PathEdge{Int64}}) where {T}
-    empty!(result)
-    flag_value = 1
-
-    while true
-        push!(result, current_edge)
-        if is_dominator && top_vertex(current_edge) == dominating
-            break
-        end
-        if !is_dominator && bott_vertex(current_edge) == dominating
-            break
-        end
-        tmp = get_edge_vector()
-        relation_edges!(next_node_constraint, current_edge, tmp)
-
-        #These two cases can only occur if the subgraph has been destroyed by factorization
-        if length(tmp) == 0  #there is no edge beyond current_edge that leads to the dominating node. 
-            reclaim_edge_vector(tmp)
-            flag_value = 0
-            break
-        elseif length(tmp) ≥ 2 #there is a branch in the edge path  
-            reclaim_edge_vector(tmp)
-            flag_value = 2
-            break
-        end
-
-        current_edge = tmp[1]
-        reclaim_edge_vector(tmp)
-    end
-
-    return flag_value
-end
-export edges_on_path!
-
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:DominatorSubgraph}
+function factor_subgraph!(subgraph::FactorableSubgraph)
     if subgraph_exists(subgraph)
         new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
+        add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
         reset_edge_masks!(subgraph, roots_reach, vars_reach) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
         add_edge!(graph(subgraph), new_edge)
     end
 end
 export factor_subgraph!
-
-"""reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-    if subgraph_exists(subgraph)
-        new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
-        reset_edge_masks!(subgraph, roots_reach, vars_reach)
-        add_edge!(graph(subgraph), new_edge)
-    end
-end
-export factor_subgraph!
-
 
 function print_edges(a, msg)
     println(msg)

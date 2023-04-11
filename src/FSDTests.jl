@@ -1065,7 +1065,7 @@ end
     end
 end
 
-@testitem "edges_on_path" begin
+@testitem "Path_Iterator" begin
     using Symbolics
 
     @variables x, y
@@ -1091,28 +1091,26 @@ end
 
     rmask = dominance_mask(sub_5_3)
     V = reachable_variables(sub_5_3)
-    up_constraint = PathConstraint(dominating_node(sub_5_3), graph, true, rmask, V)
-    dominating = sub_5_3.subgraph[1]
-    dominated = sub_5_3.subgraph[2]
+
+
     path_edges1 = [edges(graph, 4, 3)[1], edges(graph, 5, 4)[1]]
     path_edges2 = [edges(graph, 5, 3)[1]]
 
-    #test for dominator subgraph (5,3)
-    up_edges = relation_edges!(up_constraint, dominated)
 
-    temp_edges = PathEdge{Int64}[]
+    start_edges = forward_edges(sub_5_3, dominated_node(sub_5_3))
+    temp_edges = collect(edge_path(sub_5_3, start_edges[1]))
 
-    edges_on_path!(up_constraint, dominating, true, up_edges[1], temp_edges)
     @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    edges_on_path!(up_constraint, dominating, true, up_edges[2], temp_edges)
+    temp_edges = collect(edge_path(sub_5_3, start_edges[2]))
     @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
     #test for postdominator subgraph (3,5)
-    down_constraint = PathConstraint(dominating_node(sub_3_5), graph, false, reachable_roots(sub_3_5), dominance_mask(sub_3_5))
-    down_edges = relation_edges!(down_constraint, dominating)
-    edges_on_path!(down_constraint, dominated, false, down_edges[1], temp_edges)
+
+    start_edges = forward_edges(sub_3_5, dominated_node(sub_3_5))
+
+    temp_edges = collect(edge_path(sub_3_5, start_edges[1]))
     @assert all(x -> x[1] == x[2], zip(reverse(path_edges1), temp_edges))
-    edges_on_path!(down_constraint, dominated, false, down_edges[2], temp_edges)
+    temp_edges = collect(edge_path(sub_3_5, start_edges[2]))
     @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
 
@@ -1120,25 +1118,23 @@ end
     path_edges2 = [edges(graph, 3, 1)[1], edges(graph, 4, 3)[1]]
     sub_4_1 = first(filter(x -> x.subgraph == (4, 1), subs))
     sub_1_4 = first(filter(x -> x.subgraph == (1, 4), subs))
-    dominating = sub_4_1.subgraph[1]
-    dominated = sub_4_1.subgraph[2]
 
+
+    start_edges = forward_edges(sub_4_1, dominated_node(sub_4_1))
     #test for dominator subgraph (4,1)
-    up_constraint = PathConstraint(dominating_node(sub_4_1), graph, true, dominance_mask(sub_4_1), reachable_variables(sub_4_1))
-    up_edges = relation_edges!(up_constraint, dominated)
-    edges_on_path!(up_constraint, dominating, true, up_edges[1], temp_edges)
+
+    temp_edges = collect(edge_path(sub_4_1, start_edges[1]))
     @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    edges_on_path!(up_constraint, dominating, true, up_edges[2], temp_edges)
+    temp_edges = collect(edge_path(sub_4_1, start_edges[2]))
     @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
-    dominating = sub_1_4.subgraph[1]
-    dominated = sub_1_4.subgraph[2]
+
     #test for postdominator subgraph (1,4)
-    down_constraint = PathConstraint(dominating_node(sub_1_4), graph, false, reachable_roots(sub_1_4), dominance_mask(sub_1_4))
-    down_edges = relation_edges!(down_constraint, dominated)
-    edges_on_path!(down_constraint, dominating, false, down_edges[1], temp_edges)
+    start_edges = forward_edges(sub_1_4, dominated_node(sub_1_4))
+    temp_edges = collect(edge_path(sub_1_4, start_edges[1]))
+
     @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    edges_on_path!(down_constraint, dominating, false, down_edges[2], temp_edges)
+    temp_edges = collect(edge_path(sub_1_4, start_edges[2]))
     @assert all(x -> x[1] == x[2], zip(reverse(path_edges2), temp_edges))
 end
 
