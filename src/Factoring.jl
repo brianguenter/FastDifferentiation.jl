@@ -1,8 +1,4 @@
 
-# next_edge_constraint(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{PostDominatorSubgraph,DominatorSubgraph}} = next_edge_constraint(subgraph, dominance_mask(subgraph))
-# next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}, roots_mask::BitVector) where {T} = PathConstraint(graph(sub), true, roots_mask)
-# next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}, variables_mask::BitVector) where {T} = PathConstraint(graph(sub), false, variables_mask)
-
 next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), false, reachable_roots(sub), dominance_mask(sub))
 next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), true, dominance_mask(sub), reachable_variables(sub))
 top_down_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint()
@@ -295,7 +291,7 @@ function reclaim_edge_vector(edges::Vector{PathEdge{Int64}})
     return nothing
 end
 
-function edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reachable_mask::BitVector, current_edge) where {T}
+function old_edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reachable_mask::BitVector, current_edge) where {T}
     flag_value = 1
     result = PathEdge{Int64}[]
 
@@ -338,7 +334,7 @@ function edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reac
 
     return flag_value, result, roots_reach, vars_reach
 end
-export edge_path
+export old_edge_path
 
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
@@ -349,7 +345,7 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
 
     rel_edges = get_edge_vector()
     for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
-        flag, pedges, roots_reach, vars_reach = edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
+        flag, pedges, roots_reach, vars_reach = old_edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
         #sort by num_uses then from largest to smallest postorder number
 
         if flag == 1 #non-branching path through subgraph
@@ -394,7 +390,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph)
         new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
         add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        reset_edge_masks!(subgraph, roots_reach, vars_reach) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
         add_edge!(graph(subgraph), new_edge)
     end
 end
