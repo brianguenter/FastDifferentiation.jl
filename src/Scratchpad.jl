@@ -7,20 +7,23 @@ using .FSDTests
 
 function test()
 
-    @variables x y
+    fsd_graph, x, y, z = to_graph(10)
+    # fsd_func = make_function(fsd_graph, Node.([x, y, z]))
 
-    nx1 = Node(x)
-    ny2 = Node(y)
-    n3 = nx1 * ny2
-    n4 = n3 * ny2
-    n5 = n3 * n4
+    #hand computed derivative for order = 3
+    # correct_derivatives(x, y, z) = [
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     0.0 0.0 1.422074017360395
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     (-0.3642161365141257*3*z) 0.0 (-0.3642161365141257*3*x)
+    #     0.0 0.0 (2.0197963935867267*3*z)
+    #     0.0 (-0.3642161365141257*3*z) (-0.3642161365141257*3*y)
+    #     0.0 0.0 0.0
+    # ]
 
-    graph = DerivativeGraph([n5, n4])
-    Vis.draw_dot(graph)
-    readline()
-    tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
-    factor_subgraph!(tmp)
-    Vis.draw_dot(graph)
+    sym = symbolic_jacobian!(fsd_graph)
 end
 export test
 

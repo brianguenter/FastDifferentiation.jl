@@ -153,7 +153,10 @@ function next_valid_edge(a::FactorableSubgraph, current_edge::PathEdge{T}) where
         for edge in forward_edges(a, current_edge) #should always be a next edge because top_vertex(current_edge) != dominance_node(a)
             if test_edge(a, edge)
                 count += 1
-                @assert count ≤ 1 #in a properly processed subgraph there should not be branches on paths from dominated to dominating node.
+                # @assert count ≤ 1 #in a properly processed subgraph there should not be branches on paths from dominated to dominating node.
+                if count > 1
+                    return nothing
+                end
                 edge_next = edge
             end
         end
@@ -258,7 +261,7 @@ export add_non_dom_edges!
 
 """Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
 function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
-    edges_to_delete=PathEdge{T}[]
+    edges_to_delete = PathEdge{T}[]
 
     for edge in forward_edges(subgraph, dominated_node(subgraph))
         bypass_mask = .!copy(non_dominance_mask(subgraph)) #bypass mask tracks which variables/roots are on a backward path that bypasses the dominated_node. These variables/roots cannot be reset. 0 means can be reset 1 means can't.
@@ -313,8 +316,6 @@ function subgraph_exists(subgraph::FactorableSubgraph)
     #Do fast tests that guarantee subgraph has been destroyed by factorization: no edges connected to dominated node, dominated_node or dominator node has < 2 subgraph edges
     #This is inefficient since many tests require just the number of edges but this code creates temp arrays containing the edges and then measures the length. Optimize later by having separate children and parents fields in edges structure of RnToRmGraph. Then num_parents and num_children become fast and allocation free.
 
-    dgraph = graph(subgraph)
-
     #need at least two parent edges from dominated_node or subgraph doesn't exist
     fedges = forward_edges(subgraph, dominated_node(subgraph))
     bedges = backward_edges(subgraph, dominating_node(subgraph))
@@ -326,7 +327,17 @@ function subgraph_exists(subgraph::FactorableSubgraph)
     elseif !check_edges(subgraph, bedges)
         return false
     else
-        return true
+        count = 0
+        for edge in fedges
+            if connected_path(subgraph, edge) !== nothing
+                count += 1
+            end
+        end
+        if count >= 2
+            return true
+        else
+            return false
+        end
     end
 end
 
@@ -352,7 +363,7 @@ export edge_path
 
 """Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}
-    if connected_path(a.subgraph, a.start_edge) === nothing
+    if !connected_path(a.subgraph, a.start_edge)
         return nothing
     else
         return (a.start_edge, a.start_edge)
@@ -364,12 +375,10 @@ function Base.iterate(a::PathIterator{T,S}, state::PathEdge{T}) where {T,S<:Fact
         return nothing
     else
         edge_next = next_valid_edge(a.subgraph, state)
+
         @assert edge_next !== nothing #tested for connected path when creating iterator so should never get nothing return because edge is not at the dominator node
-        if edge_next === nothing
-            return nothing
-        else
-            return (edge_next, edge_next)
-        end
+
+        return (edge_next, edge_next)
     end
 end
 
