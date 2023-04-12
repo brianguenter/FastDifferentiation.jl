@@ -8,6 +8,7 @@ using .FSDTests
 function test()
 
     @variables x y
+
     nx1 = Node(x)
     ny2 = Node(y)
     n3 = nx1 * ny2
@@ -15,7 +16,11 @@ function test()
     n5 = n3 * n4
 
     graph = DerivativeGraph([n5, n4])
-    factor!(graph)
+    Vis.draw_dot(graph)
+    readline()
+    tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
+    factor_subgraph!(tmp)
+    Vis.draw_dot(graph)
 end
 export test
 

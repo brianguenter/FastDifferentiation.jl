@@ -415,14 +415,14 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
         #test
         println("before factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph")
-        readline()
+        # Vis.draw_dot(a, graph_label="$subgraph")
+        # readline()
         #end test
         factor_subgraph!(subgraph)
         #test
         println("after factoring $subgraph")
-        Vis.draw_dot(a, graph_label="$subgraph")
-        readline()
+        # Vis.draw_dot(a, graph_label="$subgraph")
+        # readline()
         # end test
         delete!(subgraph_dict, vertices(subgraph))
     end
