@@ -268,9 +268,12 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
 
         if test_edge(subgraph, edge)
             for pedge in edge_path(subgraph, edge)
-                if !any(bypass_mask) #no variables/roots bypass the dominated node so can reset the dominance bits of the edge
-                    mask = dominance_mask(subgraph, pedge)
-                    mask .&= .!dominance_mask(subgraph) #reset dom bits
+                mask = non_dominance_mask(subgraph, pedge)
+                @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. Need to mask agains non_dominance_mask(subgraph) so don't touch bits outside this set.
+
+                if !any(bypass_mask .& non_dominance_mask(subgraph)) #no edges bypass dominated node so can reset all dominance bits. If any edges bypass cannot reset any dominance bits.
+                    fmask = dominance_mask(subgraph, edge)
+                    fmask = fmask .& .!dominance_mask(subgraph)
                 end
 
                 if forward_vertex(subgraph, pedge) != dominating_node(subgraph)
@@ -385,5 +388,36 @@ end
 Base.IteratorSize(::Type{<:PathIterator}) = Base.SizeUnknown()
 Base.IteratorEltype(::Type{<:PathIterator}) = Base.HasEltype()
 Base.eltype(::Type{<:PathIterator{T}}) where {T} = PathEdge{T}
+
+
+"""Returns subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
+function r1r1subgraph(graph::DerivativeGraph,
+    current_index::Integer,
+    root_index::Integer,
+    variable_index::Integer,
+    visited::Union{Set{Integer},Nothing}=nothing,
+    sub_edges::Union{Nothing,Set{PathEdge}}=nothing)
+
+    if visited === nothing
+        visited = Set{Integer}()
+    end
+    if sub_edges === nothing
+        sub_edges = Set{PathEdge}()
+    end
+
+    if !in(current_index, visited)
+        push!(visited, current_index)
+        for child in child_edges(graph, current_index)
+            if reachable_variables(child)[variable_index] && reachable_roots(child)[root_index]
+                push!(sub_edges, child)
+                r1r1subgraph(graph, bott_vertex(child), root_index, variable_index, visited, sub_edges)
+            end
+        end
+    end
+
+    return sub_edges
+end
+
+
 
 

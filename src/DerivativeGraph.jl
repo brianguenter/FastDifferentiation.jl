@@ -399,12 +399,15 @@ function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{No
             if get(edges, current_index, nothing) === nothing
                 edges[current_index] = EdgeRelations()
             end
+
+            @assert !in(edge, edges[current_index].children) #should never be possible to add an edge that is already there but make sure this won't happen.
             push!(edges[current_index].children, edge)
 
 
             if get(edges, child_index, nothing) === nothing
                 edges[child_index] = EdgeRelations()
             end
+            @assert !in(edge, edges[child_index].parents) #should never be possible to add an edge that is already there but make sure this won't happen.
             push!(edges[child_index].parents, edge)
 
 
