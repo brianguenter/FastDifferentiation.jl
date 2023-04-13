@@ -481,32 +481,7 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
     end
 end
 
-"""deletes edges which do not have a path to a variable"""
-function path_to_variable!(graph, current_edge)
-    if is_zero(reachable_variables(current_edge))
-        delete_edge!(graph, current_edge, false)
-        return false
-    elseif is_variable(graph, bott_vertex(current_edge))
-        return true
-    elseif is_constant(graph, bott_vertex(current_edge))
-        delete_edge!(graph, current_edge, true)
-        return false
-    else
-        is_path = false
 
-        edge_copy = copy(child_edges(graph, current_edge))
-        for cedge in edge_copy #have to use a copy because the graph data structure referenced by child_edges will be mutated
-            tmp = path_to_variable!(graph, cedge)
-            is_path = is_path || tmp
-        end
-
-        if is_path == false
-            delete_edge!(graph, current_edge, true)
-            return false
-        end
-        return is_path
-    end
-end
 
 function remove_dangling_edges!(graph::DerivativeGraph)
     # #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
