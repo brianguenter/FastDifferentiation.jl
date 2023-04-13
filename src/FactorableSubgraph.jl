@@ -185,48 +185,7 @@ function connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T
 end
 export connected_path
 
-"""Traverse edges in `subgraph` to see if `dominating_node(subgraph)` is still the idom of `dominated_node(subgraph)` or if factorization has destroyed the subgraph. If there are two or more paths from dominated to dominating node and there are no branches on these paths then the subgraph still exists."""
-function valid_paths(constraint, subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{PostDominatorSubgraph,DominatorSubgraph}}
-    start_edges = get_edge_vector()
-    relation_edges!(constraint, dominated_node(subgraph), start_edges)
 
-    if length(start_edges) == 0 || length(start_edges) == 1
-        reclaim_edge_vector(start_edges)
-        return false #subgraph has been destroyed
-    else
-        count = 0
-        for pedge in start_edges
-            if connected_path(subgraph, pedge) !== nothing
-                count += 1
-            end
-        end
-        if count < 2
-            return false
-        else
-            return true
-        end
-
-        # count = 0
-        # for pedge in start_edges
-        #     path_edges = get_edge_vector()
-        #     flag = edges_on_path!(constraint, dominating_node(subgraph), S == DominatorSubgraph, pedge, path_edges)
-        #     if flag == 1
-        #         count += 1
-        #     elseif flag == 2 #there is a branch in the edge path which can only happen if the subgraph has been destroyed
-        #         reclaim_edge_vector(path_edges)
-        #         reclaim_edge_vector(start_edges)
-        #         return false
-        #     end
-        # end
-
-        # if count < 2
-        #     reclaim_edge_vector(start_edges)
-        #     return false #don't have two non-branching paths from dominated to dominating node so subgraph has been destroyed
-        # end
-    end
-    reclaim_edge_vector(start_edges)
-    return true
-end
 
 """Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
