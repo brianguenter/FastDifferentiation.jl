@@ -107,19 +107,29 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
 end
 export make_dot_file
 
-function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true)
-    gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels)
+
+function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
     path, io = mktemp(cleanup=true)
     name, ext = splitext(path)
-    write(io, gr)
-    close(io)
-    println(name)
-    Base.run(`dot -Tsvg $path -o $name.svg`)
+    write_dot(path, graph;
+        start_nodes=start_nodes,
+        graph_label=graph_label,
+        reachability_labels=reachability_labels,
+        value_labels=value_labels)
     svg = read(name * ".svg", String)
     display("image/svg+xml", svg)
 end
 export draw_dot
 
+function write_dot(filename, graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
+    gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels)
+    name, ext = splitext(filename)
+    io = open(filename, "w")
+    write(io, gr)
+    close(io)
+
+    Base.run(`dot -Tsvg $filename -o $name.svg`)
+end
 
 """draws nodes and labled edges of a DerivativeGraph"""
 function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=true)

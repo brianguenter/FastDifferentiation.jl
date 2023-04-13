@@ -7,7 +7,14 @@ using .FSDTests
 
 function test()
 
-    fsd_graph, x, y, z = to_graph(10)
+    fsd_graph, x, y, z = to_graph(5)
+    fsd_copy = deepcopy(fsd_graph)
+    remove_dangling_edges!(fsd_copy)
+    factor!(fsd_graph)
+    remove_dangling_edges!(fsd_graph)
+    Vis.write_dot("temp.dot", fsd_graph; value_labels=false)
+    Vis.write_dot("original.dot", fsd_copy; value_labels=false)
+    # Vis.draw_dot(fsd_graph; value_labels=false)
     # fsd_func = make_function(fsd_graph, Node.([x, y, z]))
 
     #hand computed derivative for order = 3
