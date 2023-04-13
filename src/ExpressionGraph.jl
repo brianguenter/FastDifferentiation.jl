@@ -522,7 +522,7 @@ function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, nod
 
     body, variable = function_body(dag, node_to_var)
     push!(body.args, :(return $variable))
-    println(ordering)
+
     return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
 end
 

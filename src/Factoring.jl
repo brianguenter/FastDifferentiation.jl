@@ -412,26 +412,8 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
 
     for subgraph in subgraph_list
-
-        #test
-        # println("before factoring $subgraph")
-        # Vis.draw_dot(a, graph_label="$subgraph")
-        # readline()
-        #end test
-        if vertices(subgraph) == (4, 32)
-            println("here")
-        end
         factor_subgraph!(subgraph)
-        if vertices(subgraph) == (4, 32)
-            println("here")
-        end
-        #test
-        # println("after factoring $subgraph")
-        # Vis.draw_dot(a, graph_label="$subgraph")
-        # readline()
-        # end test
         delete!(subgraph_dict, vertices(subgraph))
-        println(vertices(subgraph))
     end
 
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
