@@ -228,7 +228,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
         if test_edge(subgraph, edge)
             for pedge in edge_path(subgraph, edge)
                 mask = non_dominance_mask(subgraph, pedge)
-                @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. Need to mask agains non_dominance_mask(subgraph) so don't touch bits outside this set.
+                @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. 
 
                 if !any(bypass_mask .& non_dominance_mask(subgraph)) #no edges bypass dominated node so can reset all dominance bits. If any edges bypass cannot reset any dominance bits.
                     fmask = dominance_mask(subgraph, edge)
@@ -243,9 +243,6 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
                         end
                     end
                 end
-
-                mask = non_dominance_mask(subgraph, pedge) #can reset any variable/roots bits that do not bypass the dominated node of the subgraph
-                mask .&= bypass_mask
 
                 if can_delete(pedge)
                     push!(edges_to_delete, pedge)

@@ -52,12 +52,12 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     if start_nodes !== nothing
         edges_to_draw = edges_from_node(graph, start_nodes)
     else
-        if no_path_edges #draw all edges even ones not on a path from a root to a variable
-            edges_to_draw = collect(FastSymbolicDifferentiation.unique_edges(graph))
-        else #only draw edges on path from root to variable
-            edges_to_draw = collect(filter(x -> any(reachable_variables(x)) && any(reachable_roots(x)), (FastSymbolicDifferentiation.unique_edges(graph))))
-        end
+        edges_to_draw = collect(FastSymbolicDifferentiation.unique_edges(graph))
     end
+    if !no_path_edges #only draw edges on path from root to variable
+        edges_to_draw = collect(filter(x -> any(reachable_variables(x)) && any(reachable_roots(x)), edges_to_draw))
+    end
+
     return _make_dot_file(graph, edges_to_draw, label, reachability_labels, value_labels)
 
 end
@@ -122,7 +122,7 @@ end
 function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
     path, io = mktemp(cleanup=true)
     name, ext = splitext(path)
-    write_dot(path, graph;
+    write_dot(name * ".svg", graph;
         start_nodes=start_nodes,
         graph_label=graph_label,
         reachability_labels=reachability_labels,
@@ -136,6 +136,7 @@ function write_dot(filename, graph; start_nodes::Union{Nothing,AbstractVector{In
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)
     write_dot(filename, gr)
 end
+export write_dot
 
 function write_dot(filename, dot_string::String)
     name, ext = splitext(filename)
@@ -147,6 +148,7 @@ function write_dot(filename, dot_string::String)
 
     Base.run(`dot -T$ext $name -o $filename`)
 end
+
 """draws nodes and labled edges of a DerivativeGraph"""
 function draw(graph, value_labels=true; draw_edge_labels=true, draw_node_labels=true)
     default(size=(1000, 1200))

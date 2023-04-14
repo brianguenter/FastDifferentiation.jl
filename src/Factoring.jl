@@ -412,7 +412,21 @@ function factor!(a::DerivativeGraph{T}) where {T}
 
 
     for subgraph in subgraph_list
+        #test
+        # println("before factoring $subgraph")
+        # Vis.draw_dot(
+        #     graph(subgraph), start_nodes=[93], reachability_labels=true,
+        #     value_labels=false)
+        # readline()
+        #end test
         factor_subgraph!(subgraph)
+        #test
+        # println("after factoring $subgraph")
+        # Vis.draw_dot(
+        #     graph(subgraph), start_nodes=[93], reachability_labels=true,
+        #     value_labels=false)
+        # readline()
+        #end test
         delete!(subgraph_dict, vertices(subgraph))
     end
 
@@ -429,7 +443,7 @@ function follow_path(a::DerivativeGraph{T}, root_index::Integer, var_index::Inte
         if length(curr_edges) == 0
             break
         else
-            @assert length(curr_edges) == 1 "Should only be one path from root $root_index to variable $var_index. Instead have $(length(curr_edges)) children from a node on the path"
+            @assert length(curr_edges) == 1 "Should only be one path from root $root_index to variable $var_index. Instead have $(length(curr_edges)) children from node $current_node_index on the path"
             push!(path_product, curr_edges[1])
             current_node_index = bott_vertex(curr_edges[1])
         end
@@ -621,6 +635,7 @@ function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
         return derivative(mat, rest...)
     end
 end
+export derivative
 
 """Computes the derivative of the function matrix `A` with respect to  `variable`."""
 function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
@@ -641,6 +656,6 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
         return Node.(result)
     end
 end
-export derivative
+
 
 
