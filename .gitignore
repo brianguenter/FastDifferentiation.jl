@@ -31,6 +31,7 @@ src/*.svg
 src/*.png
 src/*.mem
 src/*.gz
+*.pdf
 
 ## Julia.gitignore ##
 

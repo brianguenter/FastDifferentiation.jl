@@ -7,8 +7,11 @@ using .FSDTests
 
 function test()
 
-    fsd_graph, x, y, z = to_graph(50)
-    sym = symbolic_jacobian!(fsd_graph)
+    fsd_graph, x, y, z = to_graph(5)
+
+    factor!(fsd_graph)
+    Vis.write_dot("factored.pdf", fsd_graph)
+    # sym = symbolic_jacobian!(fsd_graph)
 end
 export test
 
