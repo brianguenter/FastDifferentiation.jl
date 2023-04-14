@@ -297,7 +297,7 @@ function reachable_roots(a::DerivativeGraph, node_index::Integer)
     end
 
     #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
-    if is_root(a, node_index) #if node_index is a root then need to set it's reachable bit
+    if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
         path_mask[root_postorder_to_index(a, node_index)] = 1
     end
     return path_mask
