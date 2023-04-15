@@ -58,13 +58,13 @@ graph(a::FactorableSubgraph) = a.graph
 vertices(subgraph::FactorableSubgraph) = subgraph.subgraph
 export vertices
 
-reachable_variables(a::FactorableSubgraph) = a.reachable_variables
+reachable_variables(a::FactorableSubgraph) = copy(a.reachable_variables) #TODO remove when code is reliable not strictly necessary and causes allocations. But until code is realiable make sure this bitmask won't be reset after it is created.
 function mask_variables!(a::FactorableSubgraph, mask::BitVector)
     @assert domain_dimension(graph(a)) == length(mask)
     a.reachable_variables .&= mask
 end
 
-reachable_roots(a::FactorableSubgraph) = a.reachable_roots
+reachable_roots(a::FactorableSubgraph) = copy(a.reachable_roots) #TODO remove when code is reliablenot strictly necessary and causes allocations. But until code is realiable make sure this bitmask won't be reset after it is created.
 function mask_roots!(a::FactorableSubgraph, mask::BitVector)
     @assert codomain_dimension(graph(a)) == length(mask)
     a.reachable_roots .&= mask
@@ -191,6 +191,10 @@ export connected_path
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
     temp_edges = PathEdge{T}[]
 
+    if vertices(subgraph) == (93, 1)
+        println("here")
+    end
+
     for s_edge in forward_edges(subgraph, dominated_node(subgraph))
         if test_edge(subgraph, s_edge)
             for pedge in edge_path(subgraph, s_edge)
@@ -215,6 +219,8 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
     for edge in temp_edges
         add_edge!(gr, edge)
     end
+
+    return nothing
 end
 export add_non_dom_edges!
 
@@ -250,6 +256,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
             end
         end
     end
+
     return edges_to_delete
 end
 export reset_edge_masks!

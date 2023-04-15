@@ -200,10 +200,12 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     for key in keys(dom_subgraphs)
         dominator = key[1]
         dominated = key[2]
-        subgraph = dominator_subgraph(graph, dominator, dominated, dom_subgraphs[key], reachable_roots(graph, dominator), reachable_variables(graph, dominated))
+        if !is_constant(node(graph, dominated)) #don't make subgraphs with constant dominated nodes because they are not factorable
+            subgraph = dominator_subgraph(graph, dominator, dominated, dom_subgraphs[key], reachable_roots(graph, dominator), reachable_variables(graph, dominated))
 
-        push!(result, subgraph)
-        subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
+            push!(result, subgraph)
+            subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
+        end
     end
 
     for key in keys(pdom_subgraphs)
@@ -411,6 +413,7 @@ function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
 
+
     for subgraph in subgraph_list
         #test
         # println("before factoring $subgraph")
@@ -418,7 +421,12 @@ function factor!(a::DerivativeGraph{T}) where {T}
         #     graph(subgraph), start_nodes=[93], reachability_labels=true,
         #     value_labels=false)
         # readline()
+        if vertices(subgraph) == (93, 1)
+            println("here")
+        end
+
         #end test
+
         factor_subgraph!(subgraph)
         #test
         # println("after factoring $subgraph")

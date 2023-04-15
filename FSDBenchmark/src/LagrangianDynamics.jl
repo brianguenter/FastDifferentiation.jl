@@ -45,25 +45,27 @@ function τᵢ(linkage::Linkage, index::Int)
 
     for j in index:num_links(linkage)
 
-        # temp = DerivativeGraph(vec(W(linkage, j)))
-        # FastSymbolicDifferentiation.Vis.draw_dot(temp, start_nodes=[93], label="node 93")
-        # factor!(temp)
-        # FastSymbolicDifferentiation.Vis.draw_dot(temp, start_nodes=[93], label="node 93 after factoring")
-        # println(FastSymbolicDifferentiation.node(temp, 93))
-        #end test
-
-        # DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+        #test
         dgr = FastSymbolicDifferentiation.DerivativeGraph(vec(W(linkage, j)))
+        FastSymbolicDifferentiation.Vis.write_dot(
+            "lagrangian before.pdf", dgr, start_nodes=[93], graph_label="before factoring", reachability_labels=true,
+            value_labels=false)
         FastSymbolicDifferentiation.factor!(dgr)
         FastSymbolicDifferentiation.Vis.write_dot(
-            "lagrangian.pdf", dgr, reachability_labels=true,
+            "lagrangian after factorin.pdf", dgr, start_nodes=[93], graph_label="after factoring", reachability_labels=true,
             value_labels=false)
-        # DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
-        # Dtt = derivative(W(linkage, j), t, t)
-        # J = Jⱼ(linkage, index)
-        # grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
-        # trace = LinearAlgebra.tr(Node.(DWⱼ_qᵢ * J * Dtt)) #for some reason matrix multiplication can't determine the type of the output. Maybe I have to define an interface function.
-        # sum += trace - grav
+        #end test
+
+
+        DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+
+
+        DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
+        Dtt = derivative(W(linkage, j), t, t)
+        J = Jⱼ(linkage, index)
+        grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
+        trace = LinearAlgebra.tr(Node.(DWⱼ_qᵢ * J * Dtt)) #for some reason matrix multiplication can't determine the type of the output. Maybe I have to define an interface function.
+        sum += trace - grav
     end
 
     return sum
@@ -72,7 +74,7 @@ export τᵢ
 
 function lagrangian_dynamics()
     result = Node[]
-    links = Linkage(4)
+    links = Linkage(3)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
 
