@@ -46,6 +46,8 @@ top_vertex(e::PathEdge) = e.top_vertex
 export top_vertex
 bott_vertex(e::PathEdge) = e.bott_vertex
 export bott_vertex
+vertices(e::PathEdge) = (top_vertex(e), bott_vertex(e))
+export vertices
 
 times_used(a::PathEdge) = sum(reachable_roots(a)) * sum(reachable_variables(a))
 

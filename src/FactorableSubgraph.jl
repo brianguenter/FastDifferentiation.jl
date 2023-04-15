@@ -228,16 +228,24 @@ export add_non_dom_edges!
 function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
     edges_to_delete = PathEdge{T}[]
 
-    for edge in forward_edges(subgraph, dominated_node(subgraph))
+    for fwd_edge in forward_edges(subgraph, dominated_node(subgraph))
         bypass_mask = .!copy(non_dominance_mask(subgraph)) #bypass mask tracks which variables/roots are on a backward path that bypasses the dominated_node. These variables/roots cannot be reset. 0 means can be reset 1 means can't.
 
-        if test_edge(subgraph, edge)
-            for pedge in edge_path(subgraph, edge)
+
+
+
+
+        if test_edge(subgraph, fwd_edge)
+            #test
+            tmp_rt = reachable_roots(edges(graph(subgraph), 43, 3)[1])[1]
+            #end test
+
+            for pedge in edge_path(subgraph, fwd_edge)
                 mask = non_dominance_mask(subgraph, pedge)
                 @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. 
 
                 if !any(bypass_mask .& non_dominance_mask(subgraph)) #no edges bypass dominated node so can reset all dominance bits. If any edges bypass cannot reset any dominance bits.
-                    fmask = dominance_mask(subgraph, edge)
+                    fmask = dominance_mask(subgraph, fwd_edge)
                     fmask = fmask .& .!dominance_mask(subgraph)
                 end
 
@@ -253,7 +261,30 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
                 if can_delete(pedge)
                     push!(edges_to_delete, pedge)
                 end
+
+                #test
+                tmp_rt2 = reachable_roots(edges(graph(subgraph), 43, 3)[1])[1]
+                if tmp_rt == 1 && tmp_rt2 == 0
+                    println("$tmp_rt $tmp_rt2")
+                    Vis.draw_dot(
+                        graph(subgraph), start_nodes=[93], graph_label="reset edge $(vertices(pedge))", reachability_labels=true,
+                        value_labels=false)
+                    readline()
+                end
+                # end
+                #test
+                # verts = vertices(subgraph)
+                # if verts == (93, 4) || verts == (93, 10) || verts == (93, 3)
+                #     Vis.draw_dot(
+                #         graph(subgraph), start_nodes=[93], graph_label="reset edge $(vertices(pedge))", reachability_labels=true,
+                #         value_labels=false)
+                #     readline()
+                # end
+                #end test
+
             end
+
+
         end
     end
 
