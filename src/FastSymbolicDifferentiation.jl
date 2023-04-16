@@ -18,6 +18,15 @@ export NoDeriv
 end #module
 export AutomaticDifferentiation
 
+const INVARIANTS = false
+
+"""This macro is used to create invariant test code that is dependent on the global constant `INVARIANTS`. If `INVARIANTS` is false then the test code will not be inserted into the program and there will be no run time overhead. If `INVARIANTS` is true then the code will be inserted. Code that tests invariants tends to increase run time substantially so only set `INVARIANTS` true when you are debugging or testing."""
+macro invariant(ex, msgs...)
+    if INVARIANTS
+        return :(@assert $(esc(ex)) $(esc(msgs)))
+    end
+end
+
 """
 Created this because it is not safe to use @infiltrate. If you use `@infiltrate` then you also must have a `using` or `import Infiltrator` 
 statement. Unfortunately this triggers the package manager to 

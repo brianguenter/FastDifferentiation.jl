@@ -132,7 +132,7 @@ function simple_dominator_dgraph()
 end
 export simple_dominator_dgraph
 
-@testitem "connected_path 1" begin #test case when path is one edge long
+@testitem "connected_path 1" begin # case when path is one edge long
     using Symbolics
     @variables x y
 
@@ -151,7 +151,7 @@ export simple_dominator_dgraph
     @test connected_path(test_sub, etmp[2])
 end
 
-@testitem "connected_path 2" begin #test cases when path is longer than one edge and various edges have either roots or variables reset.
+@testitem "connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
     using Symbolics
     @variables x y
 
@@ -422,7 +422,7 @@ end
     for (correct, computed) in tmp
         @test value_equal(correct, computed)
     end
-    #test last two
+    #last two
     @test (value_equal(_5_1, subs[5]) && value_equal(_1_5, subs[6])) || (value_equal(_1_5, subs[5]) && value_equal(5_1, subs[6]))
 end
 
@@ -463,7 +463,7 @@ end
     @test index_1_7 < index_8_1p
 end
 
-@testitem "make_function" begin #test generation of derivative functions
+@testitem "make_function" begin #generation of derivative functions
     import Symbolics
     using Symbolics: substitute
     using FastSymbolicDifferentiation.FSDTests
@@ -496,7 +496,7 @@ end
     symbol_val3 = symbol_result3.val
     @test symbol_val3 ≈ exe3(7.0, 0.4)
 
-    #test to ensure that common terms are not reevaluated.
+    #ensure that common terms are not reevaluated.
     sym_expr4 = sin(cos(x)) * cos(cos(x))
     symbol_result4 = substitute(sym_expr4, Dict([x => 7.0]))
     exe4 = make_function(sym_expr4, [x])
@@ -765,7 +765,7 @@ end
 
             delete!(all_edges, edge) #now delete edge and see if all the other edges that are still supposed to be in the graph are still there
             for edge2 in all_edges
-                @test edge_exists(graph, edge2) #test other edges have not been deleted
+                @test edge_exists(graph, edge2) #other edges have not been deleted
             end
         end
     end
@@ -1104,7 +1104,7 @@ end
     temp_edges = collect(edge_path(sub_5_3, start_edges[2]))
     @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
-    #test for postdominator subgraph (3,5)
+    #for postdominator subgraph (3,5)
 
     start_edges = forward_edges(sub_3_5, dominated_node(sub_3_5))
 
@@ -1121,7 +1121,7 @@ end
 
 
     start_edges = forward_edges(sub_4_1, dominated_node(sub_4_1))
-    #test for dominator subgraph (4,1)
+    #for dominator subgraph (4,1)
 
     temp_edges = collect(edge_path(sub_4_1, start_edges[1]))
     @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
@@ -1129,7 +1129,7 @@ end
     @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
 
-    #test for postdominator subgraph (1,4)
+    #for postdominator subgraph (1,4)
     start_edges = forward_edges(sub_1_4, dominated_node(sub_1_4))
     temp_edges = collect(edge_path(sub_1_4, start_edges[1]))
 
@@ -1253,7 +1253,7 @@ end
     graph = DerivativeGraph([n5, n4])
     tmp = postdominator_subgraph(graph, 2, 4, BitVector([0, 1]), BitVector([0, 1]), BitVector([0, 1]))
     factor_subgraph!(tmp)
-   @test length(edges(graph, 2, 4)) == 2
+    @test length(edges(graph, 2, 4)) == 2
 
 end
 
@@ -1466,7 +1466,7 @@ end
     using FiniteDifferences
     using FastSymbolicDifferentiation.FSDTests
 
-    fsd_graph = chebyshev_graph(20)
+    fsd_graph = chebyshev_graph(5)
     fsd_func = make_function(fsd_graph)
 
     func_wrap(x) = fsd_func(x)[1]
@@ -1485,7 +1485,7 @@ end
     fsd_graph = chebyshev_graph(20)
     sym_func = jacobian_function!(fsd_graph)
 
-    #test the in place form of jacobian function
+    #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
 

@@ -412,34 +412,12 @@ end
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
-    count = 0
-
     for subgraph in subgraph_list
-        #test
-        # println("before factoring $subgraph")
-        # Vis.draw_dot(
-        #     graph(subgraph), start_nodes=[93], reachability_labels=true,
-        #     value_labels=false)
-        # readline()
-
-
-        #end test
-        if subgraph_exists(subgraph)
-            count += 1
-        end
 
         factor_subgraph!(subgraph)
 
-        #test
-        # println("after factoring $subgraph")
-        # Vis.draw_dot(
-        #     graph(subgraph), start_nodes=[93], reachability_labels=true,
-        #     value_labels=false)
-        # readline()
-        #end test
         delete!(subgraph_dict, vertices(subgraph))
     end
-    println("subgraphs factored $count")
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
 export factor!

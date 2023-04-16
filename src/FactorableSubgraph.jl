@@ -185,15 +185,29 @@ function connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T
 end
 export connected_path
 
+function edges_on_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
+    current_edge = start_edge
+    result = PathEdge{T}[]
 
+    if test_edge(a, start_edge) #ensure that start_edge satisfies conditions for being on a connected path
+        while forward_vertex(a, current_edge) != dominating_node(a)
+            current_edge = next_valid_edge(a, current_edge)
+            if current_edge === nothing
+                return (false, PathEdge{T}[])
+            else
+                push!(result, current_edge)
+            end
+        end
+        return (true, result)
+    else
+        return (false, PathEdge{T}[])
+    end
+end
+export edges_on_path
 
 """Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
     temp_edges = PathEdge{T}[]
-
-    if vertices(subgraph) == (93, 1)
-        println("here")
-    end
 
     for s_edge in forward_edges(subgraph, dominated_node(subgraph))
         if test_edge(subgraph, s_edge)
@@ -231,16 +245,9 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
     for fwd_edge in forward_edges(subgraph, dominated_node(subgraph))
         bypass_mask = .!copy(non_dominance_mask(subgraph)) #bypass mask tracks which variables/roots are on a backward path that bypasses the dominated_node. These variables/roots cannot be reset. 0 means can be reset 1 means can't.
 
-
-
-
-
         if test_edge(subgraph, fwd_edge)
-            #test
-            tmp_rt = reachable_roots(edges(graph(subgraph), 43, 3)[1])[1]
-            #end test
-
             for pedge in edge_path(subgraph, fwd_edge)
+
                 mask = non_dominance_mask(subgraph, pedge)
                 @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. 
 
@@ -261,30 +268,7 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
                 if can_delete(pedge)
                     push!(edges_to_delete, pedge)
                 end
-
-                #test
-                tmp_rt2 = reachable_roots(edges(graph(subgraph), 43, 3)[1])[1]
-                if tmp_rt == 1 && tmp_rt2 == 0
-                    println("$tmp_rt $tmp_rt2")
-                    Vis.draw_dot(
-                        graph(subgraph), start_nodes=[93], graph_label="reset edge $(vertices(pedge))", reachability_labels=true,
-                        value_labels=false)
-                    readline()
-                end
-                # end
-                #test
-                # verts = vertices(subgraph)
-                # if verts == (93, 4) || verts == (93, 10) || verts == (93, 3)
-                #     Vis.draw_dot(
-                #         graph(subgraph), start_nodes=[93], graph_label="reset edge $(vertices(pedge))", reachability_labels=true,
-                #         value_labels=false)
-                #     readline()
-                # end
-                #end test
-
             end
-
-
         end
     end
 
@@ -325,10 +309,28 @@ function subgraph_exists(subgraph::FactorableSubgraph)
         return false
     else
         count = 0
+        sub_edges = Set{PathEdge}()
+
         for edge in fedges
             if connected_path(subgraph, edge) !== nothing
                 count += 1
             end
+            #TODO write macro that inserts this when global invariant flag is true.
+            @invariant begin
+                good_edges, tmp = edges_on_path(subgraph, edge)
+                good_subgraph = true
+
+                if good_edges
+                    for pedge in tmp
+                        if in(pedge, sub_edges)
+                            good_subgraph = false
+                            break
+                        end
+                        push!(sub_edges, pedge)
+                    end
+                end
+                good_subgraph
+            end "Visited edge $(vertices(pedge)) more than once in subgraph $(vertices(subgraph)). Edges in factorable subgraph should only be visited once. "
         end
         if count >= 2
             return true

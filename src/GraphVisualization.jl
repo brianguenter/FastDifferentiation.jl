@@ -54,16 +54,17 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     else
         edges_to_draw = collect(FastSymbolicDifferentiation.unique_edges(graph))
     end
-    if !no_path_edges #only draw edges on path from root to variable
-        edges_to_draw = collect(filter(x -> any(reachable_variables(x)) && any(reachable_roots(x)), edges_to_draw))
-    end
 
-    return _make_dot_file(graph, edges_to_draw, label, reachability_labels, value_labels)
+    return make_dot_file(graph, edges_to_draw, label, reachability_labels, value_labels, no_path_edges)
 
 end
 export make_dot_file
 
-function _make_dot_file(graph, edges_to_draw::AbstractVector{PathEdge}, label::String, reachability_labels=true, value_labels=true)
+function make_dot_file(graph, edges_to_draw::AbstractVector{PathEdge}, label::String, reachability_labels=true, value_labels=true, no_path_edges=false)
+    if !no_path_edges #only draw edges on path from root to variable
+        edges_to_draw = collect(filter(x -> any(reachable_variables(x)) && any(reachable_roots(x)), edges_to_draw))
+    end
+
     gr = "digraph{\nnode [style = filled]\n"
     if label != ""
         gr *= "label = \"$label\"\n"
@@ -118,6 +119,15 @@ function _make_dot_file(graph, edges_to_draw::AbstractVector{PathEdge}, label::S
     return gr
 end
 
+function draw_dot(graph, edges_to_draw::AbstractVector{PathEdge}; graph_label::String="", reachability_labels=true, value_labels=true)
+    gr = make_dot_file(graph, edges_to_draw, graph_label, reachability_labels, value_labels)
+    path, io = mktemp(cleanup=true)
+    name, ext = splitext(path)
+    write_dot(name * ".svg", gr)
+    svg = read(name * ".svg", String)
+    display("image/svg+xml", svg)
+end
+export draw_dot
 
 function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
     path, io = mktemp(cleanup=true)
@@ -132,12 +142,17 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
 end
 export draw_dot
 
-function write_dot(filename, graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
+function write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)
     write_dot(filename, gr)
 end
 export write_dot
 
+function write_dot(filename, graph::DerivativeGraph, edges_to_draw::AbstractVector{PathEdge}; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
+    gr = make_dot_file(graph, edges_to_draw, graph_label, reachability_labels, value_labels, no_path_edges)
+    write_dot(filename, gr)
+end
+export write_dot
 function write_dot(filename, dot_string::String)
     name, ext = splitext(filename)
     name = name * ".dot"

@@ -37,7 +37,6 @@ W(linkage::Linkage, index::Int) = Node.(reduce(*, linkage.Aᵢ[1:index], init=I(
 export W
 
 function τᵢ(linkage::Linkage, index::Int)
-    println("here")
     qᵢ = linkage.joint_angles[index]
     sum = Node(0)
     t = linkage.time_var
@@ -45,33 +44,13 @@ function τᵢ(linkage::Linkage, index::Int)
 
 
     for j in index:num_links(linkage)
-
-
-        #test
-        if j == 3 && index == 1
-            println("link $j")
-            dgr = FastSymbolicDifferentiation.DerivativeGraph(vec(W(linkage, j)))
-
-            FastSymbolicDifferentiation.Vis.write_dot(
-                "lagrangian before.pdf", dgr, start_nodes=[93], graph_label="before factoring", reachability_labels=true,
-                value_labels=false)
-            FastSymbolicDifferentiation.factor!(dgr)
-            FastSymbolicDifferentiation.Vis.write_dot(
-                "lagrangian after factorin.pdf", dgr, start_nodes=[93], graph_label="after factoring", reachability_labels=true,
-                value_labels=false)
-        end
-        #end test
-
-
-        # DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
-
-
-        # DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
-        # Dtt = derivative(W(linkage, j), t, t)
-        # J = Jⱼ(linkage, index)
-        # grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
-        # trace = LinearAlgebra.tr(Node.(DWⱼ_qᵢ * J * Dtt)) #for some reason matrix multiplication can't determine the type of the output. Maybe I have to define an interface function.
-        # sum += trace - grav
+       DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+       DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
+        Dtt = derivative(W(linkage, j), t, t)
+        J = Jⱼ(linkage, index)
+        grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
+        trace = LinearAlgebra.tr(Node.(DWⱼ_qᵢ * J * Dtt)) #for some reason matrix multiplication can't determine the type of the output. Maybe I have to define an interface function.
+        sum += trace - grav
     end
 
     return sum
