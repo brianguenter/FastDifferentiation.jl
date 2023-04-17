@@ -18,7 +18,7 @@ export NoDeriv
 end #module
 export AutomaticDifferentiation
 
-const INVARIANTS = false
+const INVARIANTS = true
 
 """This macro is used to create invariant test code that is dependent on the global constant `INVARIANTS`. If `INVARIANTS` is false then the test code will not be inserted into the program and there will be no run time overhead. If `INVARIANTS` is true then the code will be inserted. Code that tests invariants tends to increase run time substantially so only set `INVARIANTS` true when you are debugging or testing."""
 macro invariant(ex, msgs...)
