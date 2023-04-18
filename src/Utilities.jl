@@ -32,3 +32,12 @@ export value_equal
 
 show_all(a::AbstractArray) = show(stdout, "text/plain", a)
 export show_all
+
+"""creates exemplar `FactorableSubgraph`. Useful for testing."""
+function exemplar_factorable_subgraph()
+    @variables x
+
+    gr = DerivativeGraph(Node(x) * Node(x))
+    return FactorableSubgraph{Int64,DominatorSubgraph}(gr, 2, 1, BitVector([1]), BitVector([1]), BitVector([1]))
+end
+export exemplar_factorable_subgraph

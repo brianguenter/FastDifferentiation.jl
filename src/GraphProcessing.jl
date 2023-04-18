@@ -323,30 +323,6 @@ function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators:
 
     doms = [Dict{T,T}() for _ in 1:length(start_vertices)]  #create one idom table for each root
 
-    #threading this loop causes this error. Seems that @threads macro is inserting a call to firstindex(current_dom) but firstindex is not defined for Dict and there is no obvious reason why this should be done anyway.
-    #ERROR: TaskFailedException
-    # Stacktrace:
-    # [1] wait @ .\task.jl:345 [inlined]
-    # [2] threading_run(fun::FastSymbolicDifferentiation.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}},
-    # static::Bool) @ Base.Threads .\threadingconstructs.jl:38
-    # [3] macro expansion @ .\threadingconstructs.jl:89 [inlined]       
-    # [4] compute_dominance_tables(graph::RnToRmGraph{Int64}, compute_dominators::Bool) @ FastSymbolicDifferentiation.GraphProcessing c:\Users\seatt\source\FastSymbolicDifferentiation\src\jl:207
-    # [5] factor @ c:\Users\seatt\source\FastSymbolicDifferentiation\src\RnToRmGraph.jl:287 [inlined]
-    # [6] test(dag::Vector{Node}) @ FastSymbolicDifferentiation c:\Users\seatt\source\FastSymbolicDifferentiation\src\Test.jl:159
-    # [7] top-level scope @ REPL[73]:1
-
-    #    nested task error: MethodError: no method matching firstindex(::Dict{Int64, Int64})
-    #    Closest candidates are:
-    #      firstindex(::Any, ::Any) at abstractarray.jl:402
-    #      firstindex(::Union{ArrayInterfaceCore.BidiagonalIndex, ArrayInterfaceCore.TridiagonalIndex}) at C:\Users\seatt\.julia\packages\ArrayInterfaceCore\PRhHD\src\ArrayInterfaceCore.jl:654
-    #      firstindex(::Union{Tables.AbstractColumns, Tables.AbstractRow}) at C:\Users\seatt\.julia\packages\Tables\T7rHm\src\Tables.jl:182
-    #      ...
-    #    Stacktrace:
-    #     [1] #279#threadsfor_fun#70 @ .\threadingconstructs.jl:69 [inlined]
-    #     [2] #279#threadsfor_fun @ .\threadingconstructs.jl:51 [inlined]
-    #     [3] (::Base.Threads.var"#1#2"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#74"{FastSymbolicDifferentiation.var"#279#threadsfor_fun#70#75"{Int64, RnToRmGraph{Int64}, Bool, Dict{Int64, Int64}}}, Int64})() @ Base.Threads .\threadingconstructs.jl:30  
-
-
     for (start_index, node_postorder_number) in pairs(start_vertices)
         path_constraint = DomPathConstraint(graph, upward_path, start_index)
         current_dom = doms[start_index]
@@ -428,4 +404,6 @@ function check_dominance(idoms::Dict{T,T}, top::T, bott::T, test1, test2) where 
         end
     end
 end
+
+
 

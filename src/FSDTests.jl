@@ -134,14 +134,16 @@ export simple_dominator_dgraph
 
 @testitem "connected_path 1" begin # case when path is one edge long
     using Symbolics
+    using DataStructures
+    
     @variables x y
 
     nx = Node(x)
     func = nx * nx
 
     gr = DerivativeGraph([func])
-    subs, _ = compute_factorable_subgraphs(gr)
-
+    subs_heap, _ = compute_factorable_subgraphs(gr)
+    subs = extract_all!(subs_heap)
     test_sub = subs[1]
     etmp = parent_edges(gr, dominated_node(test_sub))
     rroots = reachable_roots(etmp[1])
@@ -153,6 +155,8 @@ end
 
 @testitem "connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
     using Symbolics
+    using DataStructures
+
     @variables x y
 
     nx = Node(x)
@@ -163,7 +167,8 @@ end
 
 
     graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
+    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(subs_heap)
     _5_3 = subs[1]
     @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
     _2_4 = subs[2]
@@ -195,6 +200,8 @@ end
 
 @testitem "add_non_dom_edges" begin
     using Symbolics
+    using DataStructures
+
     @variables x y
 
     nx = Node(x)
@@ -204,7 +211,8 @@ end
     n5 = n2 * n4
 
     graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
+    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(subs_heap)
     _5_3 = subs[1]
     @assert (5, 3) == vertices(_5_3)
 
@@ -218,7 +226,8 @@ end
     @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
 
     graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
+    sub_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
     _2_4 = subs[2]
     @assert (2, 4) == vertices(_2_4)
 
@@ -234,6 +243,8 @@ end
 
 @testitem "iteration" begin
     using Symbolics
+    using DataStructures
+
     @variables x y
 
     nx = Node(x)
@@ -244,7 +255,9 @@ end
 
 
     graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
+    subs_heap, _ = compute_factorable_subgraphs(graph)
+
+    subs = extract_all!(subs_heap)
 
     _5_3 = subs[1]
     @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
@@ -395,6 +408,7 @@ end
 
 @testitem "compute_factorable_subgraphs test order" begin
     using Symbolics
+    using DataStructures
 
     @variables x y
 
@@ -407,7 +421,8 @@ end
 
     graph = DerivativeGraph([n4, n5])
     # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    subs, _ = compute_factorable_subgraphs(graph)
+    sub_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
 
     _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
     _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
@@ -428,10 +443,12 @@ end
 
 @testitem "compute_factorable_subgraphs" begin
     using FastSymbolicDifferentiation.FSDTests
+    using DataStructures
 
     dgraph = DerivativeGraph(complex_dominator_dag())
 
-    subs, subs_dict = compute_factorable_subgraphs(dgraph)
+    sub_heap, subs_dict = compute_factorable_subgraphs(dgraph)
+    subs = extract_all!(sub_heap)
 
     for sub in subs
         @test subs_dict[vertices(sub)][1] == sub
@@ -978,12 +995,14 @@ end
 
 @testitem "factor_order" begin
     using FastSymbolicDifferentiation.FSDTests
+    using DataStructures
 
     _, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
 
 
 
-    subgraphs, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    subgraphs = extract_all!(sub_heap)
     @test length(subgraphs) == 4
     four_one = subgraphs[findfirst(x -> x.subgraph == (4, 1), subgraphs)]
     one_3 = subgraphs[findfirst(x -> x.subgraph == (1, 3), subgraphs)]
@@ -1031,6 +1050,7 @@ end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
     using Symbolics
+    using DataStructures
 
     @variables x, y
 
@@ -1043,7 +1063,9 @@ end
     gnodes = (nx1, ny2, nxy3, r2_4, r1_5)
 
     graph = DerivativeGraph([r1_5, r2_4])
-    subs, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
+
     subnums = ((5, 3), (4, 1), (5, 1), (1, 5), (3, 5), (1, 4))
     roots = (BitVector([1, 0]), BitVector([1, 1]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 1]))
     variables = (BitVector([1, 1]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 0]), BitVector([1, 1]), BitVector([1, 0]))
@@ -1067,6 +1089,7 @@ end
 
 @testitem "Path_Iterator" begin
     using Symbolics
+    using DataStructures
 
     @variables x, y
 
@@ -1085,7 +1108,9 @@ end
         @assert node(graph, i) == nd
     end
 
-    subs, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
+
     sub_5_3 = first(filter(x -> x.subgraph == (5, 3), subs))
     sub_3_5 = first((filter(x -> x.subgraph == (3, 5), subs)))
 
@@ -1185,6 +1210,7 @@ end
 
 @testitem "make_factored_edge" begin
     using Symbolics
+    using DataStructures
 
     @variables v1, v2
 
@@ -1197,7 +1223,8 @@ end
 
     graph = DerivativeGraph([n5, n6])
 
-    subs, sub_dict = compute_factorable_subgraphs(graph)
+    sub_heap, sub_dict = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
 
     _5_3 = filter(x -> vertices(x) == (5, 3), subs)[1]
     e_5_3, _, _ = make_factored_edge(_5_3)

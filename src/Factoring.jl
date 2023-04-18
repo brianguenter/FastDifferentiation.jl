@@ -107,6 +107,16 @@ function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominate
     end
 end
 
+struct FactorOrder <: Base.Order.Ordering
+end
+export FactorOrder
+
+Base.lt(order::FactorOrder, a, b) = factor_order(a, b)
+Base.isless(order::FactorOrder, a, b) = factor_order(a, b)
+
+
+
+
 """returns true if a should be sorted before b"""
 function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
     if times_used(a) > times_used(b) #num_uses of contained subgraphs always ≥ num_uses of containing subgraphs. Contained subgraphs should always be factored first. It might be that a ⊄ b, but it's still correct to factor a before b.
@@ -217,9 +227,7 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
         subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
     end
 
-    sort_in_factor_order!(result) #return subgraphs sorted in lexicographic order. If the subgraphs are processed from lowest index to highest index this will guarantee that innermost graphs are processed first.
-
-    return result, subgraph_map
+    return BinaryHeap(FactorOrder(), result), subgraph_map
 end
 export compute_factorable_subgraphs
 
@@ -412,7 +420,8 @@ end
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
 
-    for subgraph in subgraph_list
+    while !isempty(subgraph_list)
+        subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
 

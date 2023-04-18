@@ -6,16 +6,35 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    fsd_graph = chebyshev_graph(6)
+    @variables x y
+println("here")
+    nv1 = Node(x)
+    nv2 = Node(y)
+    n3 = nv1 * nv2
+    n4 = n3 * nv1
 
-    subs, _ = compute_factorable_subgraphs(fsd_graph)
-    println(map(x -> vertices(x), subs))
-    Vis.draw_dot(fsd_graph; value_labels=false)
-    readline()
-    factor!(fsd_graph)
-    Vis.draw_dot(fsd_graph; value_labels=false)
-    readline()
-    sym_func = symbolic_jacobian!(fsd_graph)
+    n5 = n3 * n4
+
+    graph = DerivativeGraph([n4, n5])
+    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
+    sub_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(sub_heap)
+
+    _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
+    _3_5 = postdominator_subgraph(graph, 3, 5, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _4_1 = dominator_subgraph(graph, 4, 1, Bool[1, 0], Bool[1, 1], Bool[1, 0])
+    _5_1 = dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
+    _1_5 = postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
+
+    correctly_ordered_subs = (_5_3, _1_4, _3_5, _4_1, _5_1, _1_5) #order of last two could switch and still be correct but all others should be in exactly this order.
+
+    tmp = zip(correctly_ordered_subs[1:4], subs[1:4])
+    for (correct, computed) in tmp
+        @assert value_equal(correct, computed)
+    end
+    #last two
+    @assert (value_equal(_5_1, subs[5]) && value_equal(_1_5, subs[6])) || (value_equal(_1_5, subs[5]) && value_equal(5_1, subs[6]))
 
 
 end
