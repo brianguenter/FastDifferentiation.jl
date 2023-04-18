@@ -135,7 +135,7 @@ export simple_dominator_dgraph
 @testitem "connected_path 1" begin # case when path is one edge long
     using Symbolics
     using DataStructures
-    
+
     @variables x y
 
     nx = Node(x)
@@ -169,12 +169,16 @@ end
     graph = DerivativeGraph([n4, n5])
     subs_heap, _ = compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
-    _5_3 = subs[1]
-    @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
-    _2_4 = subs[2]
-    @assert (2, 4) == vertices(_2_4)
-    _3_5 = subs[4]
-    @assert (3, 5) == vertices(_3_5)
+    println(subs)
+    _5_3_index = findfirst(x -> vertices(x) == (5, 3), subs)
+    _5_3 = subs[_5_3_index]
+
+    _2_4_index = findfirst(x -> vertices(x) == (2, 4), subs)
+    _2_4 = subs[_2_4_index]
+
+    _3_5_index = findfirst(x -> vertices(x) == (3, 5), subs)
+    _3_5 = subs[_3_5_index]
+
     etmp = edges(graph, 3, 5)[1]
     @test connected_path(_5_3, etmp)
 
@@ -195,7 +199,7 @@ end
     e3_4 = edges(graph, 3, 4)[1]
     vars = reachable_variables(e3_4)
     @. vars &= !vars
-    @test !connected_path(_2_4, e3_4)
+    @assert !connected_path(_2_4, e3_4)
 end
 
 @testitem "add_non_dom_edges" begin
@@ -259,12 +263,14 @@ end
 
     subs = extract_all!(subs_heap)
 
-    _5_3 = subs[1]
-    @assert (5, 3) == vertices(_5_3) #these are not tests. Put these here in case some future change to code causes order of subgraphs to change. Shouldn't happen but could.
-    _2_4 = subs[2]
-    @assert (2, 4) == vertices(_2_4)
-    _3_5 = subs[4]
-    @assert (3, 5) == vertices(_3_5)
+    _5_3_index = findfirst(x -> vertices(x) == (5, 3), subs)
+    _5_3 = subs[_5_3_index]
+
+    _2_4_index = findfirst(x -> vertices(x) == (2, 4), subs)
+    _2_4 = subs[_2_4_index]
+
+    _3_5_index = findfirst(x -> vertices(x) == (3, 5), subs)
+    _3_5 = subs[_3_5_index]
 
     e5_3 = edges(graph, 5, 3)[1]
 

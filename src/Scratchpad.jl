@@ -7,34 +7,48 @@ using .FSDTests
 
 function test()
     @variables x y
-println("here")
-    nv1 = Node(x)
-    nv2 = Node(y)
-    n3 = nv1 * nv2
-    n4 = n3 * nv1
 
-    n5 = n3 * n4
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
+
 
     graph = DerivativeGraph([n4, n5])
-    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    sub_heap, _ = compute_factorable_subgraphs(graph)
-    subs = extract_all!(sub_heap)
+    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs = extract_all!(subs_heap)
+    println(subs)
+    _5_3_index = findfirst(x -> vertices(x) == (5, 3), subs)
+    _5_3 = subs[_5_3_index]
 
-    _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
-    _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
-    _3_5 = postdominator_subgraph(graph, 3, 5, Bool[0, 1], Bool[0, 1], Bool[1, 1])
-    _4_1 = dominator_subgraph(graph, 4, 1, Bool[1, 0], Bool[1, 1], Bool[1, 0])
-    _5_1 = dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
-    _1_5 = postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
+    _2_4_index = findfirst(x -> vertices(x) == (2, 4), subs)
+    _2_4 = subs[_2_4_index]
 
-    correctly_ordered_subs = (_5_3, _1_4, _3_5, _4_1, _5_1, _1_5) #order of last two could switch and still be correct but all others should be in exactly this order.
+    _3_5_index = findfirst(x -> vertices(x) == (3, 5), subs)
+    _3_5 = subs[_3_5_index]
 
-    tmp = zip(correctly_ordered_subs[1:4], subs[1:4])
-    for (correct, computed) in tmp
-        @assert value_equal(correct, computed)
-    end
-    #last two
-    @assert (value_equal(_5_1, subs[5]) && value_equal(_1_5, subs[6])) || (value_equal(_1_5, subs[5]) && value_equal(5_1, subs[6]))
+    etmp = edges(graph, 3, 5)[1]
+    @assert connected_path(_5_3, etmp)
+
+
+    etmp = edges(graph, 3, 4)[1]
+    @assert connected_path(_5_3, etmp)
+    rts = reachable_roots(etmp)
+    rts[2] = 0
+
+    @assert !connected_path(_5_3, etmp)
+    #reset path
+    rts[2] = 1
+
+    e2_4 = edges(graph, 2, 4)[1]
+    @assert connected_path(_2_4, e2_4)
+    e2_3 = edges(graph, 2, 3)[1]
+    @assert connected_path(_2_4, e2_3)
+    e3_4 = edges(graph, 3, 4)[1]
+    vars = reachable_variables(e3_4)
+    @. vars &= !vars
+    @assert !connected_path(_2_4, e3_4)
 
 
 end
