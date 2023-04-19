@@ -578,10 +578,6 @@ function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     return nodes
 end
 
-"""Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""
-num_unique_nodes(jacobian::AbstractArray{T}) where {T<:Node} = length(unique_nodes(jacobian))
-export num_unique_nodes
-
 number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
 export number_of_operations
 
