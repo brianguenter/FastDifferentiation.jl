@@ -54,6 +54,22 @@ function test()
 end
 export test
 
+function make_relations(size)
+    relations = Vector{Vector{Int64}}(undef, size)
+    for i in eachindex(relations)
+        if i == size
+            relations[i] = Int64[]
+        elseif i == size - 1
+            relations[i] = [size]
+        elseif i == size - 2
+            relations[i] = [size - 1, size]
+        else
+            relations[i] = [i + 1, i + 2]
+        end
+    end
+    return relations
+end
+export make_relations
 
 function bad_case()
     @variables x

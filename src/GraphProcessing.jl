@@ -405,5 +405,40 @@ function check_dominance(idoms::Dict{T,T}, top::T, bott::T, test1, test2) where 
     end
 end
 
+function simple_dominance(relations::Vector{Vector{Int64}}, dom_masks::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
+    if dom_masks === nothing
+        dom_masks = [falses(length(relations)) for _ in 1:length(relations)]
+    end
 
+    temp = BitVector(undef, length(relations))
+    if idoms === nothing
+        idoms = Vector{Int64}(undef, length(relations))
+    end
+
+    for index in length(dom_masks):-1:1
+        dom_masks[index][index] = 1
+        if index != length(dom_masks)
+            temp .= dom_masks[relations[index][1]]
+        else
+            temp .= dom_masks[index]
+        end
+
+        for i in 2:min(2, length(relations[index]))
+            @. temp = temp & dom_masks[relations[index][i]]
+        end
+        @. dom_masks[index] |= temp
+    end
+
+    for (i, mask) in pairs(dom_masks)
+        if i ≠ length(relations)
+            mask[i] = 0
+            idoms[i] = findfirst(mask)
+        else
+            idoms[i] = i
+        end
+    end
+
+    return idoms
+end
+export simple_dominance
 
