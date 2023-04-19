@@ -6,51 +6,33 @@ using FiniteDifferences
 using .FSDTests
 
 function test()
-    @variables x y
+    fsd_graph = chebyshev_graph(5)
+    fsd_func = make_function(fsd_graph)
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
-    n5 = n2 * n4
+    func_wrap(x) = fsd_func(x)[1]
 
+    sym_func = jacobian_function!(fsd_graph)
 
-    graph = DerivativeGraph([n4, n5])
-    subs_heap, _ = compute_factorable_subgraphs(graph)
-    subs = extract_all!(subs_heap)
-    println(subs)
-    _5_3_index = findfirst(x -> vertices(x) == (5, 3), subs)
-    _5_3 = subs[_5_3_index]
+    for xr in -1.0:0.214:1.0
+        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
 
-    _2_4_index = findfirst(x -> vertices(x) == (2, 4), subs)
-    _2_4 = subs[_2_4_index]
+        symbolic = sym_func(xr)
 
-    _3_5_index = findfirst(x -> vertices(x) == (3, 5), subs)
-    _3_5 = subs[_3_5_index]
+        @assert isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
+    end
 
-    etmp = edges(graph, 3, 5)[1]
-    @assert connected_path(_5_3, etmp)
+    tmp = Matrix{Float64}(undef, 1, 1)
+    fsd_graph = chebyshev_graph(20)
+    sym_func = jacobian_function!(fsd_graph)
 
+    #the in place form of jacobian function
+    for xr in -1.0:0.214:1.0
+        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
 
-    etmp = edges(graph, 3, 4)[1]
-    @assert connected_path(_5_3, etmp)
-    rts = reachable_roots(etmp)
-    rts[2] = 0
+        symbolic = sym_func(xr, tmp)
 
-    @assert !connected_path(_5_3, etmp)
-    #reset path
-    rts[2] = 1
-
-    e2_4 = edges(graph, 2, 4)[1]
-    @assert connected_path(_2_4, e2_4)
-    e2_3 = edges(graph, 2, 3)[1]
-    @assert connected_path(_2_4, e2_3)
-    e3_4 = edges(graph, 3, 4)[1]
-    vars = reachable_variables(e3_4)
-    @. vars &= !vars
-    @assert !connected_path(_2_4, e3_4)
-
-
+        @assert isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
+    end
 end
 export test
 

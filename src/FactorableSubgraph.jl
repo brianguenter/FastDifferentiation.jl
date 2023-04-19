@@ -292,6 +292,30 @@ function check_edges(subgraph::FactorableSubgraph, edge_list::Vector{PathEdge{T}
     end
 end
 
+"""Returns true if a new factorable subgraph was created inside `subgraph` during the factorization process. If true the must compute factorable subgraphs for the edges inside `subgraph` and insert the new subgraphs into the worklist of subgraphs to be factored. `subgraph_exists` should be called before executing this function otherwise it may return false when no new subgraphs have been created."""
+function needs_factoring(subgraph)
+    fedges = forward_edges(subgraph, dominated_node(subgraph))
+
+    sub_edges = Set{PathEdge}()
+    bad_subgraph = false
+    for edge in fedges #for each forward edge from the dominated node find all edges on that path. If any edge in the subgraph is visited more than once this means a new factorable subgraph has been created.
+        good_edges, tmp = edges_on_path(subgraph, edge)
+
+        if good_edges
+            for pedge in tmp
+                if in(pedge, sub_edges)
+                    bad_subgraph = true
+                    break
+                end
+                push!(sub_edges, pedge)
+            end
+        end
+    end
+
+    return bad_subgraph
+end
+
+
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
     #Do fast tests that guarantee subgraph has been destroyed by factorization: no edges connected to dominated node, dominated_node or dominator node has < 2 subgraph edges
