@@ -15,10 +15,13 @@ using LaTeXStrings
 import LinearAlgebra
 
 
+
+
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
 include("Transformations.jl")
 include("LagrangianDynamics.jl")
+include("SimpsonHermite.jl")
 
 
 @variables x, y, z
