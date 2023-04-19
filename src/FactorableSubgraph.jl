@@ -303,7 +303,7 @@ function needs_factoring(subgraph)
 
         if good_edges
             for pedge in tmp
-                if in(pedge, sub_edges)
+                if in(pedge, sub_edges) #edge has been visited twice.
                     bad_subgraph = true
                     break
                 end
