@@ -78,11 +78,7 @@ Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
 Base.one(::Node) = Node(1)
-Base.length(::Node) = 1 #this method should allow broadcasting to work in cases like this: [Node(x),Node(y)] .- Node(2)
-# Base.iterate(a::Node) = (a, nothing)
-# Base.iterate(a::Node, state::Nothing) = (a, nothing)
-# Base.axes(a::Node) = ()
-# Base.getindex()
+
 Broadcast.broadcastable(a::Node) = (a,)
 
 value(a::Node) = a.node_value
