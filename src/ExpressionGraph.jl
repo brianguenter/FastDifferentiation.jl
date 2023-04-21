@@ -78,6 +78,12 @@ Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
 Base.one(::Node) = Node(1)
+Base.length(::Node) = 1 #this method should allow broadcasting to work in cases like this: [Node(x),Node(y)] .- Node(2)
+# Base.iterate(a::Node) = (a, nothing)
+# Base.iterate(a::Node, state::Nothing) = (a, nothing)
+# Base.axes(a::Node) = ()
+# Base.getindex()
+Broadcast.broadcastable(a::Node) = (a,)
 
 value(a::Node) = a.node_value
 export value
@@ -626,6 +632,18 @@ function graph_leaves(node::Node)
     return result
 end
 export graph_leaves
+
+function make_variables(name::Symbol, how_many::Int64)
+    result = Vector{Node}(undef, how_many)
+
+    for i in 1:how_many
+        temp = :(@variables $(Symbol(name, i)))
+        result[i] = Node(eval(temp)[1])
+    end
+    return result
+end
+export make_variables
+
 
 # macro declare_variables(a...)
 #     vars = filter(x->x isa Symbol,a)

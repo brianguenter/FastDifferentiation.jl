@@ -3,7 +3,7 @@ module SimpsonHermite
 using DifferentialEquations
 using Interpolations
 using Plots
-
+using FastSymbolicDifferentiation
 struct VarAssimVectorField
     vf::Function #out-of-place vector field with type signature vf(u,oc,p,sc) where u is state, oc are optimized controls, p are parameters, sc are static controls (e.g. driving current, observed data)
     D::Int64 #state dim = dim(u)
@@ -17,8 +17,8 @@ function simpson_hermite_residual(vavf::VarAssimVectorField, x00, oc00, x01, oc0
     f01 = vavf.vf(x01, oc01, p, sc01)
     f10 = vavf.vf(x10, oc10, p, sc10)
 
-    simp = x10 - x00 - (dt / 6) * (f00 + 4 * f01 + f10)
-    herm = x01 - ((x00 + x10) / 2 + (dt / 8) * (f00 - f10))
+    simp = x10 .- x00 .- ((dt / 6) .* (f00 + 4 * f01 + f10))
+    herm = x01 .- ((x00 .+ x10) ./ 2 .+ ((dt / 8) .* (f00 - f10)))
 
     vcat(simp, herm)
 end
@@ -29,7 +29,7 @@ end
 function C(vavf::VarAssimVectorField, XOC, P, SC, DTVEC)
     N = div(length(SC) - 1, 2)
 
-    all_constraints = zeros(2 * vavf.D * N)
+    all_constraints = zeros(Node, 2 * vavf.D * N)
 
     for j = 1:N
         x00 = XOC[2j-1][1:vavf.D]
@@ -113,7 +113,7 @@ end
 ## Generate lorenz data
 
 lor_tmax = 160.0
-lor_dt = 0.005
+lor_dt = 0.5
 
 lor_u0 = [-1.31; 0.8; 19.77]
 lor_tspan = (0.0, lor_tmax)
@@ -169,7 +169,7 @@ function hhvf_for_datagen(x, pvec, t)
 end
 
 hh_tmax = 200.0
-hh_saveat = 0.02
+hh_saveat = 2
 
 hh_u0 = [-68.24221681836171
     0.056029230048653705
@@ -193,5 +193,31 @@ XOC = [XOC_mat[:, i] for i in 1:size(XOC_mat, 2)]
 ##### Test C function
 #Test C function by calling like this C(vavf, XOC, P, SC, DTVEC)
 
+function SiH_test()
+    global SC, DTVEC, P, XOC
+    SC_var = Vector{Vector{Node}}(undef, length(SC))
+    XOC_var = Vector{Vector{Node}}(undef, length(XOC))
+
+    for i in eachindex(SC)
+        SC_var[i] = make_variables(:SC_var, length(SC[i]))
+    end
+
+    for i in eachindex(XOC)
+        XOC_var[i] = make_variables(:XOC_var, length(XOC[i]))
+    end
+
+    DTVEC_var = make_variables(:DTVEC_var, length(DTVEC))
+    P_var = make_variables(:P_var, length(P))
+
+    temp = C(vavf, XOC_var, P_var, SC_var, DTVEC_var)
+    gr = DerivativeGraph(temp)
+end
+export SiH_test
+
 end #module
+
+
+
+const SiH = SimpsonHermite
+export SiH
 
