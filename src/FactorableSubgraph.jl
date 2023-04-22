@@ -410,8 +410,8 @@ Base.IteratorEltype(::Type{<:PathIterator}) = Base.HasEltype()
 Base.eltype(::Type{<:PathIterator{T}}) where {T} = PathEdge{T}
 
 
-"""Returns subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
-function r1r1subgraph(graph::DerivativeGraph,
+"""Returns the edges in the subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
+function r1r1subgraph_edges(graph::DerivativeGraph,
     current_index::Integer,
     root_index::Integer,
     variable_index::Integer,
@@ -430,7 +430,7 @@ function r1r1subgraph(graph::DerivativeGraph,
         for child in child_edges(graph, current_index)
             if reachable_variables(child)[variable_index] && reachable_roots(child)[root_index]
                 push!(sub_edges, child)
-                r1r1subgraph(graph, bott_vertex(child), root_index, variable_index, visited, sub_edges)
+                r1r1subgraph_edges(graph, bott_vertex(child), root_index, variable_index, visited, sub_edges)
             end
         end
     end
@@ -438,6 +438,10 @@ function r1r1subgraph(graph::DerivativeGraph,
     return sub_edges
 end
 
+"""Finds the node indices in the subgraph. Computes relations for each node (indices of parents inside subgraph for dom, children for pdom. Returns two vectors: the indices of the graph nodes, and a vector of vectors that contains the relations informations."""
+function graph_array(subgraph::DominatorSubgraph)
+
+end
 
 
 

@@ -274,6 +274,7 @@ export compute_edge_paths!
 """convenience function to avoid calling messier low level function"""
 compute_edge_paths!(graph::DerivativeGraph) = compute_edge_paths!(length(nodes(graph)), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
+
 function intersection(order_test, node1::Integer, node2::Integer, idoms::Dict{T,T}) where {T<:Integer}
     count = 0
     max_count = length(idoms)
