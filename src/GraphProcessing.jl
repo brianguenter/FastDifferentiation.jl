@@ -307,61 +307,71 @@ function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_t
     end
 end
 
-"""If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
-function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
+function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T) where {T}
     if compute_dominators
-        start_vertices = root_index_to_postorder_number(graph)
         next_vertices_relation = (curr_node::Integer) -> children(graph, curr_node)
         upward_path = true
         order_test = <
     else
-        start_vertices = variable_index_to_postorder_number(graph)
         next_vertices_relation = (curr_node::Integer) -> parents(graph, curr_node)
         upward_path = false
         order_test = >
     end
 
-    doms = [Dict{T,T}() for _ in 1:length(start_vertices)]  #create one idom table for each root
+    path_constraint = DomPathConstraint(graph, compute_dominators, start_index)
+    current_dom = Dict{T,T}()
 
-    for (start_index, node_postorder_number) in pairs(start_vertices)
-        path_constraint = DomPathConstraint(graph, upward_path, start_index)
-        current_dom = doms[start_index]
+    #this is only necessary if trying to multithread, otherwise can have single work_heap allocated outside for loop which is almost certainly more efficient for single threaded code.
+    if compute_dominators
+        work_heap = MutableBinaryMaxHeap{T}()
+    else
+        work_heap = MutableBinaryMinHeap{T}()
+    end
 
-        #this is only necessary if trying to multithread, otherwise can have single work_heap allocated outside for loop which is almost certainly more efficient for single threaded code.
-        if compute_dominators
-            work_heap = MutableBinaryMaxHeap{T}()
-        else
-            work_heap = MutableBinaryMinHeap{T}()
-        end
+    visited = Set{T}() #could have a single visited and empty it each time through the loop but that wouldn't be thread safe. This loop will probably benefit from multithreading for large graphs.
 
-        visited = Set{T}() #could have a single visited and empty it each time through the loop but that wouldn't be thread safe. This loop will probably benefit from multithreading for large graphs.
+    push!(work_heap, node_postorder_number)
 
-        push!(work_heap, node_postorder_number)
+    #do BFS traversal of graph from largest postorder numbers downward. Don't think BFS is necessary and would probably be faster to use DFS without work_heap.
 
-        #do BFS traversal of graph from largest postorder numbers downward. Don't think BFS is necessary and would probably be faster to use DFS without work_heap.
+    while length(work_heap) != 0
+        curr_level = length(work_heap)
 
-        while length(work_heap) != 0
-            curr_level = length(work_heap)
+        for _ in 1:curr_level
 
-            for _ in 1:curr_level
+            curr_node = pop!(work_heap)
+            parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
-                curr_node = pop!(work_heap)
-                parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
+            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
 
-                fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
-
-                if next_vertices_relation(curr_node) !== nothing
-                    #get next set of vertices
-                    for next_vertex in next_vertices_relation(curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
-                        if !(next_vertex in visited)
-                            push!(work_heap, next_vertex)
-                            union!(visited, next_vertex)
-                        end
-
+            if next_vertices_relation(curr_node) !== nothing
+                #get next set of vertices
+                for next_vertex in next_vertices_relation(curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
+                    if !(next_vertex in visited)
+                        push!(work_heap, next_vertex)
+                        union!(visited, next_vertex)
                     end
+
                 end
             end
         end
+    end
+
+    return current_dom
+end
+
+"""If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
+function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
+    if compute_dominators
+        start_vertices = root_index_to_postorder_number(graph)
+    else
+        start_vertices = variable_index_to_postorder_number(graph)
+    end
+
+    doms = Dict{T,T}[]   #create one idom table for each root
+
+    for (start_index, node_postorder_number) in pairs(start_vertices)
+        push!(doms, compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
     end
     return doms
 end
