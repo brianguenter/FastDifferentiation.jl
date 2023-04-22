@@ -142,7 +142,7 @@ export simple_dominator_dgraph
     func = nx * nx
 
     gr = DerivativeGraph([func])
-    subs_heap, _ = compute_factorable_subgraphs(gr)
+    subs_heap = compute_factorable_subgraphs(gr)
     subs = extract_all!(subs_heap)
     test_sub = subs[1]
     etmp = parent_edges(gr, dominated_node(test_sub))
@@ -167,7 +167,7 @@ end
 
 
     graph = DerivativeGraph([n4, n5])
-    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
     println(subs)
     _5_3_index = findfirst(x -> vertices(x) == (5, 3), subs)
@@ -215,7 +215,7 @@ end
     n5 = n2 * n4
 
     graph = DerivativeGraph([n4, n5])
-    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
     _5_3 = subs[1]
     @assert (5, 3) == vertices(_5_3)
@@ -230,7 +230,7 @@ end
     @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
 
     graph = DerivativeGraph([n4, n5])
-    sub_heap, _ = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
     _2_4 = subs[2]
     @assert (2, 4) == vertices(_2_4)
@@ -259,7 +259,7 @@ end
 
 
     graph = DerivativeGraph([n4, n5])
-    subs_heap, _ = compute_factorable_subgraphs(graph)
+    subs_heap = compute_factorable_subgraphs(graph)
 
     subs = extract_all!(subs_heap)
 
@@ -427,7 +427,7 @@ end
 
     graph = DerivativeGraph([n4, n5])
     # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    sub_heap, _ = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
     _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
@@ -453,16 +453,9 @@ end
 
     dgraph = DerivativeGraph(complex_dominator_dag())
 
-    sub_heap, subs_dict = compute_factorable_subgraphs(dgraph)
+    sub_heap = compute_factorable_subgraphs(dgraph)
     subs = extract_all!(sub_heap)
 
-    for sub in subs
-        @test subs_dict[vertices(sub)][1] == sub
-    end
-
-    for (sub, index) in values(subs_dict)
-        @test sub in subs
-    end
 
     equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && dominance_mask(x) == dominance_mask(y)
 
@@ -1007,7 +1000,7 @@ end
 
 
 
-    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subgraphs = extract_all!(sub_heap)
     @test length(subgraphs) == 4
     four_one = subgraphs[findfirst(x -> x.subgraph == (4, 1), subgraphs)]
@@ -1069,7 +1062,7 @@ end
     gnodes = (nx1, ny2, nxy3, r2_4, r1_5)
 
     graph = DerivativeGraph([r1_5, r2_4])
-    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
     subnums = ((5, 3), (4, 1), (5, 1), (1, 5), (3, 5), (1, 4))
@@ -1114,7 +1107,7 @@ end
         @assert node(graph, i) == nd
     end
 
-    sub_heap, subs_dict = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
     sub_5_3 = first(filter(x -> x.subgraph == (5, 3), subs))
@@ -1229,7 +1222,7 @@ end
 
     graph = DerivativeGraph([n5, n6])
 
-    sub_heap, sub_dict = compute_factorable_subgraphs(graph)
+    sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
     _5_3 = filter(x -> vertices(x) == (5, 3), subs)[1]
@@ -1259,7 +1252,7 @@ end
 
     graph = DerivativeGraph([n4, n5])
     # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    subs, subgraph_dict = compute_factorable_subgraphs(graph)
+    subs = compute_factorable_subgraphs(graph)
 
     _5_3 = dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
     _1_4 = postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])

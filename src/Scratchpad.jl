@@ -7,13 +7,12 @@ using .FSDTests
 
 
 function test()
-    @variables x y
-
+    @variables x
     nx = Node(x)
     func = nx * nx
 
     gr = DerivativeGraph([func])
-    subs_heap, _ = compute_factorable_subgraphs(gr)
+    subs_heap = compute_factorable_subgraphs(gr)
 end
 export test
 

@@ -111,8 +111,8 @@ struct FactorOrder <: Base.Order.Ordering
 end
 export FactorOrder
 
-Base.lt(order::FactorOrder, a, b) = factor_order(a, b)
-Base.isless(order::FactorOrder, a, b) = factor_order(a, b)
+Base.lt(::FactorOrder, a, b) = factor_order(a, b)
+Base.isless(::FactorOrder, a, b) = factor_order(a, b)
 
 
 
@@ -160,14 +160,17 @@ subgraph `(a,b)` is in the subset of the ℝⁿ->ℝᵐ graph reachable from var
 function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     dom_subgraphs = Dict{Tuple{T,T},BitVector}()
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
-    dual_subgraphs = Tuple{T,T,BitVector,BitVector}[]
-    idoms = compute_dominance_tables(graph, true)
-    pidoms = compute_dominance_tables(graph, false)
     subgraph_map = Dict{Tuple{T,T},Tuple{FactorableSubgraph,T}}()
 
+    temp_doms = Dict{T,T}()
+
     for root_index in 1:codomain_dimension(graph)
-        for dominated in keys(idoms[root_index])
-            dsubgraph = dom_subgraph(graph, root_index, dominated, idoms[root_index])
+        post_num = root_index_to_postorder_number(graph, root_index)
+        empty!(temp_doms)
+        temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+
+        for dominated in keys(temp_dom)
+            dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
             if dsubgraph !== nothing
                 existing_subgraph = get(dom_subgraphs, dsubgraph, nothing)
                 if existing_subgraph !== nothing
@@ -182,8 +185,11 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     end
 
     for variable_index in 1:domain_dimension(graph)
-        for dominated in keys(pidoms[variable_index])
-            psubgraph = pdom_subgraph(graph, variable_index, dominated, pidoms[variable_index])
+        post_num = variable_index_to_postorder_number(graph, variable_index)
+        empty!(temp_doms)
+        temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
+        for dominated in keys(temp_dom)
+            psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
             if psubgraph !== nothing
                 existing_p_subgraph = get(pdom_subgraphs, psubgraph, nothing)
 
@@ -201,8 +207,10 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     #convert to factorable subgraphs
 
-    result = Vector{FactorableSubgraph}(undef, length(dom_subgraphs) + length(pdom_subgraphs)) #slightly faster and more memory efficient than pushing to a zero length array
-    empty!(result)
+    # result = Vector{FactorableSubgraph}(undef, length(dom_subgraphs) + length(pdom_subgraphs)) #slightly faster and more memory efficient than pushing to a zero length array
+    # empty!(result)
+
+    result = BinaryHeap{FactorableSubgraph{T,S} where {S<:AbstractFactorableSubgraph},FactorOrder}()
 
     #Explanation of the computation of uses. Assume key[1] > key[2] so subgraph is a dom. subgraphs[key] stores the number of roots for which this dom was found to be factorable. 
     #For each root that has the dom as a factorable subgraph the number of paths from the bottom node of the subgraph to the variables will be the same. Total number of uses is the
@@ -214,7 +222,6 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
             subgraph = dominator_subgraph(graph, dominator, dominated, dom_subgraphs[key], reachable_roots(graph, dominator), reachable_variables(graph, dominated))
 
             push!(result, subgraph)
-            subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
         end
     end
 
@@ -224,10 +231,9 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
         subgraph = postdominator_subgraph(graph, dominator, dominated, pdom_subgraphs[key], reachable_roots(graph, dominated), reachable_variables(graph, dominator))
 
         push!(result, subgraph)
-        subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
     end
 
-    return BinaryHeap(FactorOrder(), result), subgraph_map
+    return result
 end
 export compute_factorable_subgraphs
 
@@ -418,14 +424,12 @@ function print_edges(a, msg)
 end
 
 function factor!(a::DerivativeGraph{T}) where {T}
-    subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
+    subgraph_list = compute_factorable_subgraphs(a)
 
     while !isempty(subgraph_list)
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
-
-        delete!(subgraph_dict, vertices(subgraph))
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end

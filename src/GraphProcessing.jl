@@ -308,7 +308,7 @@ function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_t
     end
 end
 
-function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T) where {T}
+function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
     if compute_dominators
         next_vertices_relation = (curr_node::Integer) -> children(graph, curr_node)
         upward_path = true
@@ -320,7 +320,10 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
     end
 
     path_constraint = DomPathConstraint(graph, compute_dominators, start_index)
-    current_dom = Dict{T,T}()
+
+    if current_dom === nothing
+        current_dom = Dict{T,T}()
+    end
 
     #this is only necessary if trying to multithread, otherwise can have single work_heap allocated outside for loop which is almost certainly more efficient for single threaded code.
     if compute_dominators
