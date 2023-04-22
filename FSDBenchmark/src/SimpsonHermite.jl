@@ -110,21 +110,7 @@ function scale_timeseries(ts, minv, maxv)
     minv .+ (maxv - minv) * (ts .- tsmin) / (tsmax - tsmin)
 end
 
-## Generate lorenz data
 
-lor_tmax = 160.0
-lor_dt = 0.5
-
-lor_u0 = [-1.31; 0.8; 19.77]
-lor_tspan = (0.0, lor_tmax)
-lor_prob = ODEProblem(lorenz, lor_u0, lor_tspan)
-lor_sol = solve(lor_prob, RK4(), adaptive=true, dt=lor_dt)
-
-## Linear interpolation of Lorenz x coordinate for use as HH stimulus
-
-lorfunc = linear_interpolation(scale_timeseries(lor_sol.t, 0.0, 1200.0),
-    scale_timeseries(lor_sol[1, :], -200.0, 50.0),
-    extrapolation_bc=0.0)
 
 gtp = (
     Cm=1.0,
@@ -168,33 +154,50 @@ function hhvf_for_datagen(x, pvec, t)
     hhvf_assim_controlled(x, [0.0], pvec, [lorfunc(t), 0.0])
 end
 
-hh_tmax = 200.0
-hh_saveat = 2
-
-hh_u0 = [-68.24221681836171
-    0.056029230048653705
-    0.7700232861002139
-    0.3402655968929933
-    0.0
-    0.0]
-
-hh_prob = ODEProblem(hhvf_for_datagen, hh_u0, (0.0, hh_tmax), collect(gtp))
-@time hh_sol = solve(hh_prob, saveat=hh_saveat)
-
-##### Set up inputs to C function
-
-SC_mat = vcat(lorfunc.(hh_sol.t)', hh_sol[1, :]')
-SC = [SC_mat[:, i] for i in 1:size(SC_mat, 2)]
-DTVEC = diff(hh_sol.t)
-P = collect(gtp)
-XOC_mat = vcat(Array(hh_sol), zeros(length(hh_sol.t))')
-XOC = [XOC_mat[:, i] for i in 1:size(XOC_mat, 2)]
 
 ##### Test C function
 #Test C function by calling like this C(vavf, XOC, P, SC, DTVEC)
 
 function SiH_test()
-    global SC, DTVEC, P, XOC
+    ## Generate lorenz data
+
+    lor_tmax = 160.0
+    lor_dt = 0.5
+
+    lor_u0 = [-1.31; 0.8; 19.77]
+    lor_tspan = (0.0, lor_tmax)
+    lor_prob = ODEProblem(lorenz, lor_u0, lor_tspan)
+    lor_sol = solve(lor_prob, RK4(), adaptive=true, dt=lor_dt)
+
+    ## Linear interpolation of Lorenz x coordinate for use as HH stimulus
+
+    lorfunc = linear_interpolation(scale_timeseries(lor_sol.t, 0.0, 1200.0),
+        scale_timeseries(lor_sol[1, :], -200.0, 50.0),
+        extrapolation_bc=0.0)
+
+    hh_tmax = 200.0
+    hh_saveat = 0.02
+
+    hh_u0 = [-68.24221681836171
+        0.056029230048653705
+        0.7700232861002139
+        0.3402655968929933
+        0.0
+        0.0]
+
+    hh_prob = ODEProblem(hhvf_for_datagen, hh_u0, (0.0, hh_tmax), collect(gtp))
+    @time hh_sol = solve(hh_prob, saveat=hh_saveat)
+
+    ##### Set up inputs to C function
+
+    SC_mat = vcat(lorfunc.(hh_sol.t)', hh_sol[1, :]')
+    SC = [SC_mat[:, i] for i in 1:size(SC_mat, 2)]
+    DTVEC = diff(hh_sol.t)
+    P = collect(gtp)
+    XOC_mat = vcat(Array(hh_sol), zeros(length(hh_sol.t))')
+    XOC = [XOC_mat[:, i] for i in 1:size(XOC_mat, 2)]
+
+
     SC_var = Vector{Vector{Node}}(undef, length(SC))
     XOC_var = Vector{Vector{Node}}(undef, length(XOC))
 
@@ -210,7 +213,11 @@ function SiH_test()
     P_var = make_variables(:P_var, length(P))
 
     temp = C(vavf, XOC_var, P_var, SC_var, DTVEC_var)
+    @info "Beginning derivative graph construction"
     gr = DerivativeGraph(temp)
+    @info "roots = $(length(roots(gr))) variables = $(length(variables(gr))) nodes = $(length(nodes(gr)))"
+    @info "Done with derivative graph"
+    return gr
 end
 export SiH_test
 
