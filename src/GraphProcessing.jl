@@ -340,20 +340,14 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
 
     #do BFS traversal of graph from largest postorder numbers downward. Don't think BFS is necessary and would probably be faster to use DFS without work_heap.
 
-    #test
-    count = 0
-    #end test
 
     while length(work_heap) != 0
         curr_level = length(work_heap)
 
         for _ in 1:curr_level
 
-            #test
-            count += 1
-            #end test
             curr_node = pop!(work_heap)
-            parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
+            @timeit TIMER "relation_node_indices" parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
             @timeit TIMER "fill_idom_table" fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
 
@@ -370,9 +364,6 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
         end
     end
 
-    #test
-    print(" $count")
-    #end test
     return current_dom
 end
 
