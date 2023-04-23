@@ -166,8 +166,16 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     for root_index in 1:codomain_dimension(graph)
         post_num = root_index_to_postorder_number(graph, root_index)
-        empty!(temp_doms)
         temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+
+        #test
+        # @time temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+        # println("size of dom table $(length(temp_dom))")
+        #end test
+
+        # if mod(root_index, 10) == 0
+        #     @info "computed $root_index out of $(codomain_dimension(graph)) root dom tables"
+        # end
 
         for dominated in keys(temp_dom)
             dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
@@ -186,7 +194,6 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     for variable_index in 1:domain_dimension(graph)
         post_num = variable_index_to_postorder_number(graph, variable_index)
-        empty!(temp_doms)
         temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
         for dominated in keys(temp_dom)
             psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
@@ -424,9 +431,15 @@ function print_edges(a, msg)
 end
 
 function factor!(a::DerivativeGraph{T}) where {T}
-    subgraph_list = compute_factorable_subgraphs(a)
+    @time subgraph_list = compute_factorable_subgraphs(a)
 
+    count = 0
+    total = length(subgraph_list)
+    @info "$total factorable subgraphs"
     while !isempty(subgraph_list)
+        # @info "Processed $count subgraphs out of $total"
+        count += 1
+
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)

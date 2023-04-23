@@ -150,9 +150,6 @@ gtp = (
     τp2=0.0
 )
 
-function hhvf_for_datagen(x, pvec, t)
-    hhvf_assim_controlled(x, [0.0], pvec, [lorfunc(t), 0.0])
-end
 
 
 ##### Test C function
@@ -170,13 +167,17 @@ function SiH_test()
     lor_sol = solve(lor_prob, RK4(), adaptive=true, dt=lor_dt)
 
     ## Linear interpolation of Lorenz x coordinate for use as HH stimulus
-
     lorfunc = linear_interpolation(scale_timeseries(lor_sol.t, 0.0, 1200.0),
         scale_timeseries(lor_sol[1, :], -200.0, 50.0),
         extrapolation_bc=0.0)
 
+
+    function hhvf_for_datagen(x, pvec, t)
+        hhvf_assim_controlled(x, [0.0], pvec, [lorfunc(t), 0.0])
+    end
+
     hh_tmax = 200.0
-    hh_saveat = 0.02
+    hh_saveat = 0.1
 
     hh_u0 = [-68.24221681836171
         0.056029230048653705
@@ -218,6 +219,7 @@ function SiH_test()
     @info "roots = $(length(roots(gr))) variables = $(length(variables(gr))) nodes = $(length(nodes(gr)))"
     @info "Done with derivative graph"
     return gr
+    # return nothing
 end
 export SiH_test
 

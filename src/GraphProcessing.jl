@@ -323,6 +323,8 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
 
     if current_dom === nothing
         current_dom = Dict{T,T}()
+    else
+        empty!(current_dom)
     end
 
     #this is only necessary if trying to multithread, otherwise can have single work_heap allocated outside for loop which is almost certainly more efficient for single threaded code.
@@ -332,7 +334,7 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
         work_heap = MutableBinaryMinHeap{T}()
     end
 
-    visited = Set{T}() #could have a single visited and empty it each time through the loop but that wouldn't be thread safe. This loop will probably benefit from multithreading for large graphs.
+    visited = Set{T}()
 
     push!(work_heap, node_postorder_number)
 
@@ -353,7 +355,7 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
                 for next_vertex in next_vertices_relation(curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
                     if !(next_vertex in visited)
                         push!(work_heap, next_vertex)
-                        union!(visited, next_vertex)
+                        push!(visited, next_vertex)
                     end
 
                 end
@@ -375,6 +377,10 @@ function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators:
     doms = Dict{T,T}[]   #create one idom table for each root
 
     for (start_index, node_postorder_number) in pairs(start_vertices)
+        #test
+        @time temp = compute_dom_table(graph, compute_dominators, start_index, node_postorder_number)
+        println("size of dom table $(length(temp))")
+        #end test
         push!(doms, compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
     end
     return doms

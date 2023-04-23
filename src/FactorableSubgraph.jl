@@ -410,27 +410,27 @@ Base.IteratorEltype(::Type{<:PathIterator}) = Base.HasEltype()
 Base.eltype(::Type{<:PathIterator{T}}) where {T} = PathEdge{T}
 
 
-"""Returns the edges in the subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
-function r1r1subgraph_edges(graph::DerivativeGraph,
-    current_index::Integer,
-    root_index::Integer,
-    variable_index::Integer,
-    visited::Union{Set{Integer},Nothing}=nothing,
-    sub_edges::Union{Nothing,Set{PathEdge}}=nothing)
+function r1r1subgraph_edges(graph::DerivativeGraph{T}, root_index::T, variable_index::T) where {T}
+    visited = Set{T}()
+    sub_edges = Set{PathEdge}()
+    return _r1r1subgraph_edges(graph, root_index_to_postorder_number(graph, root_index), root_index, variable_index, visited, sub_edges)
+end
 
-    if visited === nothing
-        visited = Set{Integer}()
-    end
-    if sub_edges === nothing
-        sub_edges = Set{PathEdge}()
-    end
+
+"""Returns the edges in the subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
+function _r1r1subgraph_edges(graph::DerivativeGraph{T},
+    current_index::T,
+    root_index::T,
+    variable_index::T,
+    visited::Set{T},
+    sub_edges::Set{PathEdge}) where {T}
 
     if !in(current_index, visited)
         push!(visited, current_index)
         for child in child_edges(graph, current_index)
-            if reachable_variables(child)[variable_index] && reachable_roots(child)[root_index]
+            if reachable_roots(child)[root_index]#&& reachable_variables(child)[variable_index]
                 push!(sub_edges, child)
-                r1r1subgraph_edges(graph, bott_vertex(child), root_index, variable_index, visited, sub_edges)
+                _r1r1subgraph_edges(graph, bott_vertex(child), root_index, variable_index, visited, sub_edges)
             end
         end
     end
