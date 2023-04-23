@@ -160,13 +160,14 @@ subgraph `(a,b)` is in the subset of the ℝⁿ->ℝᵐ graph reachable from var
 function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     dom_subgraphs = Dict{Tuple{T,T},BitVector}()
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
-    subgraph_map = Dict{Tuple{T,T},Tuple{FactorableSubgraph,T}}()
+
+    timer = TimerOutput()
 
     temp_doms = Dict{T,T}()
 
     for root_index in 1:codomain_dimension(graph)
         post_num = root_index_to_postorder_number(graph, root_index)
-        temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+        @timeit timer "compute_dom_table" temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
 
         #test
         # @time temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
