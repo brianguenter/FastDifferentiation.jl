@@ -4,6 +4,8 @@ using DifferentialEquations
 using Interpolations
 using Plots
 using FastSymbolicDifferentiation
+using TimerOutputs
+
 struct VarAssimVectorField
     vf::Function #out-of-place vector field with type signature vf(u,oc,p,sc) where u is state, oc are optimized controls, p are parameters, sc are static controls (e.g. driving current, observed data)
     D::Int64 #state dim = dim(u)
@@ -223,8 +225,14 @@ function SiH_test()
 end
 export SiH_test
 
-end #module
+function time_test(gr)
+    TimerOutputs.reset_timer!(FastSymbolicDifferentiation.TIMER)
+    factor!(gr)
+    show(FastSymbolicDifferentiation.TIMER)
+end
+export time_test
 
+end #module
 
 
 const SiH = SimpsonHermite

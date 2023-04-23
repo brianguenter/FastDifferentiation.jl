@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "f1b2f101437f4e72ea646d9ca481248a0d31703f"
+project_hash = "f1ed6bc1c7f7f0bea266b7ed8e7cb14ffffa1658"
 
 [[deps.AbstractAlgebra]]
 deps = ["GroupsCore", "InteractiveUtils", "LinearAlgebra", "MacroTools", "Random", "RandomExtensions", "SparseArrays", "Test"]
@@ -448,7 +448,7 @@ uuid = "29a986be-02c6-4525-aec4-84b980013641"
 version = "1.2.9"
 
 [[deps.FastSymbolicDifferentiation]]
-deps = ["ColorTypes", "Colors", "DataStructures", "DiffRules", "ElectronDisplay", "FiniteDifferences", "GraphRecipes", "Graphs", "Logging", "Memoize", "NaNMath", "Plots", "Rotations", "RuntimeGeneratedFunctions", "SpecialFunctions", "StaticArrays", "Statistics", "SymbolicUtils", "Symbolics", "TermInterface", "TestItemRunner", "TestItems"]
+deps = ["ColorTypes", "Colors", "DataStructures", "DiffRules", "ElectronDisplay", "FiniteDifferences", "GraphRecipes", "Graphs", "Logging", "Memoize", "NaNMath", "Plots", "Rotations", "RuntimeGeneratedFunctions", "SpecialFunctions", "StaticArrays", "Statistics", "SymbolicUtils", "Symbolics", "TermInterface", "TestItemRunner", "TestItems", "TimerOutputs"]
 path = ".."
 uuid = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
 version = "0.1.0"

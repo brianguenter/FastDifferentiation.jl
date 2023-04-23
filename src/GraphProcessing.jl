@@ -310,11 +310,11 @@ end
 
 function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
     if compute_dominators
-        next_vertices_relation = (curr_node::Integer) -> children(graph, curr_node)
+        next_vertices_relation = (gr, curr_node::Integer) -> children(gr, curr_node)
         upward_path = true
         order_test = <
     else
-        next_vertices_relation = (curr_node::Integer) -> parents(graph, curr_node)
+        next_vertices_relation = (gr, curr_node::Integer) -> parents(gr, curr_node)
         upward_path = false
         order_test = >
     end
@@ -340,19 +340,26 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
 
     #do BFS traversal of graph from largest postorder numbers downward. Don't think BFS is necessary and would probably be faster to use DFS without work_heap.
 
+    #test
+    count = 0
+    #end test
+
     while length(work_heap) != 0
         curr_level = length(work_heap)
 
         for _ in 1:curr_level
 
+            #test
+            count += 1
+            #end test
             curr_node = pop!(work_heap)
             parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
-            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
+            @timeit TIMER "fill_idom_table" fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
 
-            if next_vertices_relation(curr_node) !== nothing
+            if next_vertices_relation(graph, curr_node) !== nothing
                 #get next set of vertices
-                for next_vertex in next_vertices_relation(curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
+                for next_vertex in next_vertices_relation(graph, curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
                     if !(next_vertex in visited)
                         push!(work_heap, next_vertex)
                         push!(visited, next_vertex)
@@ -363,6 +370,9 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
         end
     end
 
+    #test
+    print(" $count")
+    #end test
     return current_dom
 end
 

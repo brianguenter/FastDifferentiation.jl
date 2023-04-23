@@ -161,14 +161,18 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     dom_subgraphs = Dict{Tuple{T,T},BitVector}()
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
 
-    timer = TimerOutput()
-
     temp_doms = Dict{T,T}()
+
+    #test
+    doms = Int64[]
+    #end test
 
     for root_index in 1:codomain_dimension(graph)
         post_num = root_index_to_postorder_number(graph, root_index)
-        @timeit timer "compute_dom_table" temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+        @timeit TIMER "compute_dom_table doms" temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
 
+        #test
+        push!(doms, length(temp_dom))
         #test
         # @time temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
         # println("size of dom table $(length(temp_dom))")
@@ -193,9 +197,13 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
         end
     end
 
+    #test
+    @info "avg dom size $(mean(doms)) max $(maximum(doms)) min $(minimum(doms)))"
+    #end test
+
     for variable_index in 1:domain_dimension(graph)
         post_num = variable_index_to_postorder_number(graph, variable_index)
-        temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
+        @timeit TIMER "compute_dom_table postdoms" temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
         for dominated in keys(temp_dom)
             psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
             if psubgraph !== nothing
@@ -432,12 +440,12 @@ function print_edges(a, msg)
 end
 
 function factor!(a::DerivativeGraph{T}) where {T}
-    @time subgraph_list = compute_factorable_subgraphs(a)
+    @timeit TIMER "compute factorable subgraphs" subgraph_list = compute_factorable_subgraphs(a)
 
     count = 0
     total = length(subgraph_list)
     @info "$total factorable subgraphs"
-    while !isempty(subgraph_list)
+    @timeit TIMER "factor_subgraph total" while !isempty(subgraph_list)
         # @info "Processed $count subgraphs out of $total"
         count += 1
 
