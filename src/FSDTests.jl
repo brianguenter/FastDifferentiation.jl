@@ -15,6 +15,22 @@ include("../FSDBenchmark/src/Chebyshev.jl")
 include("../FSDBenchmark/src/SphericalHarmonics.jl")
 include("../FSDBenchmark/src/LagrangianDynamics.jl")
 
+"""If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
+function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
+    if compute_dominators
+        start_vertices = root_index_to_postorder_number(graph)
+    else
+        start_vertices = variable_index_to_postorder_number(graph)
+    end
+
+    doms = Dict{T,T}[]   #create one idom table for each root
+
+    for (start_index, node_postorder_number) in pairs(start_vertices)
+        push!(doms, FastSymbolicDifferentiation.compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
+    end
+    return doms
+end
+export compute_dominance_tables
 
 """ Utility function for working with symbolic expressions as Symbolics.jl defines them."""
 function number_of_operations(symbolic_expr)
@@ -851,6 +867,7 @@ end
 
 @testitem "dominators DerivativeGraph" begin
     using Symbolics
+    using FastSymbolicDifferentiation.FSDTests
 
 
     @variables x, y
@@ -921,6 +938,7 @@ end
     using Symbolics
 
     using FastSymbolicDifferentiation: dom_subgraph, pdom_subgraph
+    using FastSymbolicDifferentiation.FSDTests
 
     @variables x, y
 

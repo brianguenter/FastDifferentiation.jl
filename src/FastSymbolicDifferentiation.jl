@@ -11,6 +11,7 @@ using Statistics
 using RuntimeGeneratedFunctions
 using Logging
 import Base: iterate
+using TimerOutputs
 module AutomaticDifferentiation
 struct NoDeriv
 end

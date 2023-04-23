@@ -366,26 +366,7 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
     return current_dom
 end
 
-"""If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
-function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
-    if compute_dominators
-        start_vertices = root_index_to_postorder_number(graph)
-    else
-        start_vertices = variable_index_to_postorder_number(graph)
-    end
 
-    doms = Dict{T,T}[]   #create one idom table for each root
-
-    for (start_index, node_postorder_number) in pairs(start_vertices)
-        #test
-        @time temp = compute_dom_table(graph, compute_dominators, start_index, node_postorder_number)
-        println("size of dom table $(length(temp))")
-        #end test
-        push!(doms, compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
-    end
-    return doms
-end
-export compute_dominance_tables
 
 
 function pdom(idoms::Dict{T,T}, bott::T, top::T) where {T<:Integer}
