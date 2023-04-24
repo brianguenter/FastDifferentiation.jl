@@ -367,45 +367,6 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
 end
 
 
-
-
-function pdom(idoms::Dict{T,T}, bott::T, top::T) where {T<:Integer}
-    if bott > top
-        return false
-    else
-        return check_dominance(idoms, bott, top, <, >)
-    end
-end
-export pdom
-
-function dom(idoms::Dict{T,T}, top::T, bott::T) where {T<:Integer}
-    if top < bott
-        return false
-    else
-        return check_dominance(idoms, top, bott, >, <)
-    end
-end
-export dom
-
-"""Returns true if top dominates bott, false otherwise. `order_test` must be either `<` or `>`"""
-function check_dominance(idoms::Dict{T,T}, top::T, bott::T, test1, test2) where {T<:Integer}
-    if bott == top
-        return true
-    elseif test1(bott, top)
-        return false
-    else
-        tmp = bott
-        while test2(tmp, top) #work up the idoms table. If top dom bott then eventually tmp will equal top.
-            tmp = idoms[tmp]
-        end
-        if tmp == top
-            return true
-        else
-            return false
-        end
-    end
-end
-
 function simple_dominance(predecessors::Vector{Vector{Int64}}, dom_masks::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
     if dom_masks === nothing
         dom_masks = [falses(length(predecessors)) for _ in 1:length(predecessors)]
