@@ -92,9 +92,10 @@ end
 
 """Returns node indices connected to `node_index` which satisfy the path constraint. This is different from edge_relations functions below which return edges, not node indices."""
 function relation_node_indices(a::DomPathConstraint{T}, node_index::T) where {T<:Integer}
-    node_relations = a.relations #use scratch array in path constraint. This should only be used by a single thread so this should be multi-thread safe and avoids allocating many small arrays.
-    #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a PathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
-    empty!(node_relations) #reset array to zero
+    # node_relations = a.relations #use scratch array in path constraint. This should only be used by a single thread so this should be multi-thread safe and avoids allocating many small arrays.
+    # #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a PathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
+    # empty!(node_relations) #reset array to zero
+    node_relations = T[] #for now do not reuse a.relations since this could cause subtle bugs. Optimize later
 
     curr_edges = node_edges(graph(a), node_index)
     if curr_edges === nothing
@@ -305,6 +306,7 @@ function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_t
     end
 end
 
+"""compute the idom or pidom table starting from root or variable corresponding to start_index."""
 function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
     if compute_dominators
         next_vertices_relation = (gr, curr_node::Integer) -> children(gr, curr_node)

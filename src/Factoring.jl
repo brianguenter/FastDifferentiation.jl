@@ -163,24 +163,9 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     temp_doms = Dict{T,T}()
 
-    #test
-    doms = Int64[]
-    #end test
-
     for root_index in 1:codomain_dimension(graph)
         post_num = root_index_to_postorder_number(graph, root_index)
         @timeit TIMER "compute_dom_table doms" temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
-
-        #test
-        push!(doms, length(temp_dom))
-        #test
-        # @time temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
-        # println("size of dom table $(length(temp_dom))")
-        #end test
-
-        # if mod(root_index, 10) == 0
-        #     @info "computed $root_index out of $(codomain_dimension(graph)) root dom tables"
-        # end
 
         for dominated in keys(temp_dom)
             dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
@@ -196,10 +181,6 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
             end
         end
     end
-
-    #test
-    @info "avg dom size $(mean(doms)) max $(maximum(doms)) min $(minimum(doms)))"
-    #end test
 
     for variable_index in 1:domain_dimension(graph)
         post_num = variable_index_to_postorder_number(graph, variable_index)
@@ -222,9 +203,6 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
 
     #convert to factorable subgraphs
-
-    # result = Vector{FactorableSubgraph}(undef, length(dom_subgraphs) + length(pdom_subgraphs)) #slightly faster and more memory efficient than pushing to a zero length array
-    # empty!(result)
 
     result = BinaryHeap{FactorableSubgraph{T,S} where {S<:AbstractFactorableSubgraph},FactorOrder}()
 
