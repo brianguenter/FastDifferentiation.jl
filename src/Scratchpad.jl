@@ -31,6 +31,13 @@ function make_relations(size)
 end
 export make_relations
 
+function time_relations()
+    gr = simple_dominator_dgraph()[1]
+    dp = DomPathConstraint(gr, true, 1)
+    return gr, dp
+end
+export time_relations
+
 function bad_case()
     @variables x
     nx = Node(x)

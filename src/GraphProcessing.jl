@@ -36,7 +36,7 @@ function DomPathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_o
     return DomPathConstraint(graph, iterate_parents, roots_mask, variables_mask)
 end
 
-graph_edges(a::DomPathConstraint) = edges(a.graph)
+graph(a::DomPathConstraint) = a.graph
 roots_mask(a::DomPathConstraint) = a.roots_mask
 variables_mask(a::DomPathConstraint) = a.variables_mask
 relations(a::DomPathConstraint) = a.relations
@@ -83,9 +83,6 @@ variables_mask(a::PathConstraint) = a.variables_mask
 graph(a::PathConstraint) = a.graph
 export graph
 
-graph_edges(a::PathConstraint) = edges(graph(a))
-export graph_edges
-
 
 is_dominator_constraint(a::PathConstraint) = a.iterate_parents
 
@@ -94,12 +91,12 @@ function Base.show(io::IO, a::PathConstraint)
 end
 
 """Returns node indices connected to `node_index` which satisfy the path constraint. This is different from edge_relations functions below which return edges, not node indices."""
-function relation_node_indices(a::DomPathConstraint, node_index::T) where {T<:Integer}
+function relation_node_indices(a::DomPathConstraint{T}, node_index::T) where {T<:Integer}
     node_relations = a.relations #use scratch array in path constraint. This should only be used by a single thread so this should be multi-thread safe and avoids allocating many small arrays.
     #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a PathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
     empty!(node_relations) #reset array to zero
 
-    curr_edges = _node_edges(graph_edges(a), node_index)
+    curr_edges = node_edges(graph(a), node_index)
     if curr_edges === nothing
         return nothing
     end
@@ -158,7 +155,7 @@ function relation_edges!(a::PathConstraint{T}, node_index::Integer, result::Unio
         empty!(result)
     end
 
-    tmp_edges = _node_edges(graph_edges(a), node_index)
+    tmp_edges = node_edges(graph(a), node_index)
     if tmp_edges === nothing
         return nothing
     end
@@ -190,7 +187,7 @@ function relation_edges!(a::PathConstraint{T}, edge::PathEdge, result::Union{Not
     end
     #these tests do not allow for empty variables_mask or roots_mask. The functions which call this variant of this function depend on this. Hacky, should be fixed. Later.
     if a.iterate_parents
-        tmp = _node_edges(graph_edges(a), top_vertex(edge))
+        tmp = node_edges(graph(a), top_vertex(edge))
 
         if tmp === nothing
             return nothing
@@ -203,7 +200,7 @@ function relation_edges!(a::PathConstraint{T}, edge::PathEdge, result::Union{Not
             end
         end
     else
-        tmp = _node_edges(graph_edges(a), bott_vertex(edge))
+        tmp = node_edges(graph(a), bott_vertex(edge))
 
         if tmp === nothing
             return nothing
