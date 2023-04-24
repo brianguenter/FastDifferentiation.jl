@@ -551,3 +551,19 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
     return @RuntimeGeneratedFunction(Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body))
 end
 export make_function
+
+function graph_statistics(graph::DerivativeGraph)
+    @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
+
+    avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
+    @info "average reachable roots $avg_reach_roots"
+    n_relations(relation_func, graph) = length.(relation_func.(values(edges(graph))))
+    pnums = n_relations(parents, graph)
+    cnums = n_relations(children, graph)
+    f(relation_func, nums) = @info "$(nameof(relation_func)): total edges $(sum(nums)) mean $(mean(nums)) max and min $(extrema(nums)) median $(median(nums)) variance $(var(nums)) quantile $(quantile(nums,.1:.1:1.0))"
+
+    f(parents, pnums)
+    f(children, cnums)
+end
+export graph_statistics
+

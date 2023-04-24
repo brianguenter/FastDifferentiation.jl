@@ -226,7 +226,9 @@ end
 export SiH_test
 
 function time_test(gr)
+    graph_statistics(gr)
     TimerOutputs.reset_timer!(FastSymbolicDifferentiation.TIMER)
+    FastSymbolicDifferentiation.reset_total()
     factor!(gr)
     show(FastSymbolicDifferentiation.TIMER)
 end

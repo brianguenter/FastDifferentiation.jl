@@ -58,13 +58,13 @@ graph(a::FactorableSubgraph) = a.graph
 vertices(subgraph::FactorableSubgraph) = subgraph.subgraph
 export vertices
 
-reachable_variables(a::FactorableSubgraph) = copy(a.reachable_variables) #TODO remove when code is reliable not strictly necessary and causes allocations. But until code is realiable make sure this bitmask won't be reset after it is created.
+reachable_variables(a::FactorableSubgraph) = a.reachable_variables
 function mask_variables!(a::FactorableSubgraph, mask::BitVector)
     @assert domain_dimension(graph(a)) == length(mask)
     a.reachable_variables .&= mask
 end
 
-reachable_roots(a::FactorableSubgraph) = copy(a.reachable_roots) #TODO remove when code is reliablenot strictly necessary and causes allocations. But until code is realiable make sure this bitmask won't be reset after it is created.
+reachable_roots(a::FactorableSubgraph) = a.reachable_roots
 function mask_roots!(a::FactorableSubgraph, mask::BitVector)
     @assert codomain_dimension(graph(a)) == length(mask)
     a.reachable_roots .&= mask
