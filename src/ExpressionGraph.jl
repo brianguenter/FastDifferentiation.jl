@@ -528,11 +528,27 @@ function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, nod
     return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
 end
 
-"""Creates a runtime generated function that returns the value of the dag evaluated at the runtime variable values. If `variable_order` is `nothing` then the order of the arguments to the function will be however the variables happen to be ordered in the dag which is unpredictable and can lead to confusing results. In general you should set `variable_order` to non-nothing value. 
+"""Creates a runtime generated function that returns the value of the function expression evaluated at the runtime variable values. If `variable_order` is `nothing` then the order of the arguments to the function will be however the variables happen to be ordered when the expression graph was created. This is unpredictable, not guaranteed to be consistent between software releases, and can lead to confusing results. In general you should set `variable_order` to a non `nothing` value. 
 
-Variables can disappear from the dag during differentiation. For example, if  your dag is `2x+y^2` and you compute just the partial with respect to `x` the derivative function is the constant 2. If you call `make_function` on this dag with `variable_order=nothing` then the runtime derivative function will not have any arguments. 
+## Example:
 
-Since, in general, you do not know what the derivative of your function will be you will also not be able to predict what variables will be present in the derivative function. This makes it difficult to figure out how the runtime generated functions should be called. A simple solution is to always set `variable_order` to be all the variables in the original dag. Then the runtime function will take all those variables as arguments, even if none of them are present in the computed derivative.
+```
+julia>  @variables x y
+2-element Vector{Num}:
+ x
+ y
+julia> h = expr_to_dag(cos(x)*cos(y))
+(cos(x) * cos(y))
+
+julia> g = make_function(h,[x,y]);
+
+julia> g(1.0,2.0)
+-0.2248450953661529
+```
+
+Variables can disappear from the DAG during differentiation. For example, if  your dag is `2x+y^2` and you compute just the partial with respect to `x` the derivative function is the constant 2. If you call `make_function` on this dag with `variable_order=nothing` then the runtime derivative function will not have any arguments. 
+
+In general, you won't know what variables will be used in the derivative function. A simple solution to consistently and correctly evalute the derivative is to set `variable_order` to be all the variables in the original dag before differentiation. The runtime function will take all the variables as arguments, even if none of them are present in the computed derivative.
 """
 function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
     return @RuntimeGeneratedFunction(_make_function(dag, variable_order, node_to_var))

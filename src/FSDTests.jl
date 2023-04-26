@@ -1325,6 +1325,7 @@ end
     graph = DerivativeGraph([r1_4, r2_5])
     result = symbolic_jacobian!(graph, [nx1, ny2])
 
+    #symbolic equality will work here because of common subexpression caching.
     @test result[1, 1] == cos(nx1 * ny2) * ny2
     @test result[1, 2] == cos(nx1 * ny2) * nx1
     @test result[2, 1] == -sin(nx1 * ny2) * ny2
@@ -1416,25 +1417,11 @@ end
 
     graph = complex_dominator_graph()
     origf = make_function(root(graph, 1))
-    @test isapprox(central_fdm(5, 1)(origf, 3), df(3))
+    for test_val in -3.0:0.013:3.0
+        @test isapprox(central_fdm(5, 1)(origf, test_val), df(test_val))
+    end
 end
 
-#TODO write actual tests here.
-@testitem "factor ℝ²->ℝ² " begin
-    using Symbolics
-
-    @variables x y
-
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
-    n5 = n2 * n4
-
-    graph = DerivativeGraph([n4, n5])
-    # factor_subgraph!(graph, postdominator_subgraph(2, 4, 2, BitVector([0, 1]), BitVector([0, 1])))
-    factor!(graph)
-end
 
 @testitem "symbolic_jacobian" begin
     using Symbolics

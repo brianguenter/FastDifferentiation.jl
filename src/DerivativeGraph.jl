@@ -85,6 +85,29 @@ export parents
 children(a::EdgeRelations) = a.children
 export children
 
+""" Creates an ℝⁿ->ℝᵐ expression graph from `m` input DAGs. At creation time a new graph, called the derivative graph, is constructed based on the input DAG's. The derivative graph is destructively modified to compute the Jacobian of the function. The input DAG's are not modified.
+
+## Example:
+
+````
+julia> @variables x y
+2-element Vector{Num}:
+ x
+ y
+
+julia> nx = Node(x); ny = Node(y);
+
+julia>  h = [cos(nx)*sin(ny), exp(ny)*nx^2];
+
+julia> g = DerivativeGraph(h);
+
+julia> symbolic_jacobian!(g)
+[ Info: 0 factorable subgraphs
+2×2 Matrix{Node}:
+ (sin(y) * -(sin(x)))  (cos(x) * cos(y))
+ (exp(y) * (2 * x))    ((x ^ 2) * exp(y))
+```
+"""
 struct DerivativeGraph{T<:Integer}
     postorder_number::Dict{Node,T}
     nodes::Vector{Node}

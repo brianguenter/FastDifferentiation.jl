@@ -7,10 +7,30 @@ using .FSDTests
 
 
 function test()
-    fsd_graph, x, y, z = to_graph(40)
-    reset_timer!(TIMER)
-    subs_heap = compute_factorable_subgraphs(fsd_graph)
-    show(TIMER)
+    @variables x y
+
+    nx = Node(x)
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
+    fsd_graph = DerivativeGraph([n4, n5])
+    fsd_func = make_function()
+
+    sym_func = jacobian_function!(fsd_graph, [nx, ny])
+
+
+    for xr in -1.0:0.3:1.0
+        for yr in -1.0:0.3:1.0
+            for zr = -1.0:0.3:1.0
+                finite_diff = jacobian(central_fdm(12, 1, adapt=3), fsd_func, xr, yr)
+                mat_form = hcat(finite_diff[1], finite_diff[2], finite_diff[3])
+                symbolic = sym_func(xr, yr, zr)
+
+                @assert isapprox(symbolic, mat_form, rtol=1e-8)
+            end
+        end
+    end
 end
 export test
 
