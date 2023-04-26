@@ -564,6 +564,42 @@ function graph_statistics(graph::DerivativeGraph)
 
     f(parents, pnums)
     f(children, cnums)
+
+    shared_roots = BitVector(undef, codomain_dimension(graph))
+    shared_variables = BitVector(undef, domain_dimension(graph))
+
+    #compute nodes with branches.
+    branch_nodes = 0
+
+    for node in nodes(graph)
+        if !is_variable(graph, node) && !is_root(graph, node)
+            edges = node_edges(graph, node)
+            if edges !== nothing
+                if length(parents(edges)) == 0 || length(parents(edges)) == 1
+                    shared_roots .= 0
+                else
+                    shared_roots = reachable_roots(parents(edges)[1])
+
+                    for pedge in parents(edges) #poetntially redundant computation but efficiency not important
+                        shared_roots .&= reachable_roots(pedge)
+                    end
+                end
+
+                if length(children(edges)) == 0 || length(children(edges)) == 1
+                    shared_variables .= 0
+                else
+                    shared_variables = reachable_variables(children(edges)[1])
+                    for cedge in children(edges)
+                        shared_variables .&= reachable_variables(cedge)
+                    end
+                end
+                if any(shared_roots) || any(shared_variables)
+                    branch_nodes += 1
+                end
+            end
+        end
+    end
+    @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
 end
 export graph_statistics
 
