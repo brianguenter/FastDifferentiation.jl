@@ -168,7 +168,7 @@ function next_valid_edge(a::FactorableSubgraph, current_edge::PathEdge{T}) where
     end
 end
 
-function connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
+function isa_connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
     current_edge = start_edge
 
     if test_edge(a, start_edge) #ensure that start_edge satisfies conditions for being on a connected path
@@ -183,7 +183,7 @@ function connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T
         return false
     end
 end
-export connected_path
+export isa_connected_path
 
 function edges_on_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
     current_edge = start_edge
@@ -315,6 +315,30 @@ function needs_factoring(subgraph)
     return bad_subgraph
 end
 
+"""Returns all edges in the subgraph as a set or `nothing` if the subgraph no longer exists."""
+function subgraph_edges(subgraph::FactorableSubgraph{T}) where {T}
+    result = Set{PathEdge{T}}()
+
+    if !subgraph_exists(subgraph)
+        return nothing
+    else
+        for fedge in forward_edges(subgraph, dominated_node(subgraph))
+            good_edges, tmp = edges_on_path(subgraph, fedge)
+
+            if good_edges
+                union!(result, tmp)
+                push!(result, fedge)
+            end
+        end
+
+        @assert length(result) ≥ 2 "If subgraph exists should be at least two valid edges in subgraph. Instead got none."
+
+        return result
+    end
+end
+export subgraph_edges
+
+
 
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
@@ -336,7 +360,7 @@ function subgraph_exists(subgraph::FactorableSubgraph)
         sub_edges = Set{PathEdge}()
 
         for edge in fedges
-            if connected_path(subgraph, edge) !== nothing
+            if isa_connected_path(subgraph, edge) !== nothing
                 count += 1
             end
             #TODO write macro that inserts this when global invariant flag is true.
@@ -386,7 +410,7 @@ export edge_path
 
 """Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}
-    if !connected_path(a.subgraph, a.start_edge)
+    if !isa_connected_path(a.subgraph, a.start_edge)
         return nothing
     else
         return (a.start_edge, a.start_edge)

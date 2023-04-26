@@ -277,6 +277,8 @@ function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
     return filter(x -> bott_vertex(x) == bott, child_edges(a, top))
 end
 
+edges(a::DerivativeGraph,verts::Tuple{Integer,Integer}) = edges(a,verts[1],verts[2])
+
 """This is not an especially fast function. Currently only used for testing and diagnostics so this isn't a problem."""
 function unique_edges(a::DerivativeGraph)
     edges_unique = Set{PathEdge}()

@@ -7,32 +7,53 @@ using .FSDTests
 
 
 function test()
+    dgraph = DerivativeGraph([complex_dominator_dag()])
+
+    _1_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
+
+    _8_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 5), (5, 4), (7, 4)))))
+
+    subs = extract_all!(compute_factorable_subgraphs(dgraph))
+    _1_4_sub = subs[findfirst(x -> vertices(x) == (1, 4), subs)]
+    _1_7_sub = subs[findfirst(x -> vertices(x) == (1, 7), subs)]
+    _8_4_sub = subs[findfirst(x -> vertices(x) == (8, 4), subs)]
+    _8_1_sub = subs[findfirst(x -> vertices(x) == (8, 1), subs)]
+    _1_8_sub = subs[findfirst(x -> vertices(x) == (1, 8), subs)]
+
+    @assert issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
+    factor_subgraph!(_1_4_sub)
+    _1_7_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
+
+
+    @assert issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
+    @assert issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
+    factor_subgraph!(_8_4_sub)
+    _8_1_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
+    @assert issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
+    @assert issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
+
+end
+export test
+
+
+function test2()
     @variables x y
 
     nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
-    n5 = n2 * n4
-    fsd_graph = DerivativeGraph([n4, n5])
-    fsd_func = make_function()
+    func = nx * nx
 
-    sym_func = jacobian_function!(fsd_graph, [nx, ny])
+    gr = DerivativeGraph([func])
+    subs_heap = compute_factorable_subgraphs(gr)
+    subs = extract_all!(subs_heap)
+    test_sub = subs[1]
+    etmp = parent_edges(gr, dominated_node(test_sub))
+    rroots = reachable_roots(etmp[1])
+    rroots .= rroots .& .!rroots
 
-
-    for xr in -1.0:0.3:1.0
-        for yr in -1.0:0.3:1.0
-            for zr = -1.0:0.3:1.0
-                finite_diff = jacobian(central_fdm(12, 1, adapt=3), fsd_func, xr, yr)
-                mat_form = hcat(finite_diff[1], finite_diff[2], finite_diff[3])
-                symbolic = sym_func(xr, yr, zr)
-
-                @assert isapprox(symbolic, mat_form, rtol=1e-8)
-            end
-        end
-    end
+    @assert !connected_path(test_sub, etmp[1])
+    @assert connected_path(test_sub, etmp[2])
 end
-export test
+export test2
 
 function make_relations(size)
     relations = Vector{Vector{Int64}}(undef, size)

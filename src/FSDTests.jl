@@ -148,7 +148,7 @@ function simple_dominator_dgraph()
 end
 export simple_dominator_dgraph
 
-@testitem "connected_path 1" begin # case when path is one edge long
+@testitem "isa_connected_path 1" begin # case when path is one edge long
     using Symbolics
     using DataStructures
 
@@ -165,11 +165,11 @@ export simple_dominator_dgraph
     rroots = reachable_roots(etmp[1])
     rroots .= rroots .& .!rroots
 
-    @test !connected_path(test_sub, etmp[1])
-    @test connected_path(test_sub, etmp[2])
+    @test !isa_connected_path(test_sub, etmp[1])
+    @test isa_connected_path(test_sub, etmp[2])
 end
 
-@testitem "connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
+@testitem "isa_connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
     using Symbolics
     using DataStructures
 
@@ -196,26 +196,26 @@ end
     _3_5 = subs[_3_5_index]
 
     etmp = edges(graph, 3, 5)[1]
-    @test connected_path(_5_3, etmp)
+    @test isa_connected_path(_5_3, etmp)
 
 
     etmp = edges(graph, 3, 4)[1]
-    @test connected_path(_5_3, etmp)
+    @test isa_connected_path(_5_3, etmp)
     rts = reachable_roots(etmp)
     rts[2] = 0
 
-    @test !connected_path(_5_3, etmp)
+    @test !isa_connected_path(_5_3, etmp)
     #reset path
     rts[2] = 1
 
     e2_4 = edges(graph, 2, 4)[1]
-    @test connected_path(_2_4, e2_4)
+    @test isa_connected_path(_2_4, e2_4)
     e2_3 = edges(graph, 2, 3)[1]
-    @test connected_path(_2_4, e2_3)
+    @test isa_connected_path(_2_4, e2_3)
     e3_4 = edges(graph, 3, 4)[1]
     vars = reachable_variables(e3_4)
     @. vars &= !vars
-    @assert !connected_path(_2_4, e3_4)
+    @assert !isa_connected_path(_2_4, e3_4)
 end
 
 @testitem "add_non_dom_edges" begin
@@ -1060,10 +1060,36 @@ end
     @test index_1_3 < index_1_4
 end
 
-@testitem "TODO factor order with times used" begin
-    #create test that checks order with different times used values for subgraphs
-end
+@testitem "subgraph_edges" begin
+    using FastSymbolicDifferentiation.FSDTests
+    using DataStructures
 
+    dgraph = DerivativeGraph([complex_dominator_dag()])
+
+    _1_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
+
+    _8_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 5), (5, 4), (7, 4)))))
+
+    subs = extract_all!(compute_factorable_subgraphs(dgraph))
+    _1_4_sub = subs[findfirst(x -> vertices(x) == (1, 4), subs)]
+    _1_7_sub = subs[findfirst(x -> vertices(x) == (1, 7), subs)]
+    _8_4_sub = subs[findfirst(x -> vertices(x) == (8, 4), subs)]
+    _8_1_sub = subs[findfirst(x -> vertices(x) == (8, 1), subs)]
+    _1_8_sub = subs[findfirst(x -> vertices(x) == (1, 8), subs)]
+
+    @assert issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
+    factor_subgraph!(_1_4_sub)
+    _1_7_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
+
+
+    @assert issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
+    @assert issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
+    factor_subgraph!(_8_4_sub)
+    _8_1_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
+    @assert issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
+    @assert issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
+
+end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
     using Symbolics
