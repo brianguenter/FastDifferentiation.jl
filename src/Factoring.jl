@@ -394,9 +394,37 @@ function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph
 end
 export make_factored_edge
 
+
+"""Returns true if a new factorable subgraph was created inside `subgraph` during the factorization process. If true then must compute factorable subgraphs for the edges inside `subgraph`. `subgraph_exists` should be called before executing this function otherwise it may return false when no new subgraphs have been created."""
+function needs_factoring(subgraph)
+    fedges = forward_edges(subgraph, dominated_node(subgraph))
+
+    sub_edges = Set{PathEdge}()
+    bad_subgraph = false
+    for edge in fedges #for each forward edge from the dominated node find all edges on that path. If any edge in the subgraph is visited more than once this means a new factorable subgraph has been created.
+        good_edges, tmp = edges_on_path(subgraph, edge)
+
+        if good_edges
+            for pedge in tmp
+                if in(pedge, sub_edges) #edge has been visited twice.
+                    bad_subgraph = true
+                    break
+                end
+                push!(sub_edges, pedge)
+            end
+        end
+    end
+
+    return bad_subgraph
+end
+
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph)
     if subgraph_exists(subgraph)
+        if needs_factoring(subgraph)
+            process_new_subgraphs(subgraph)
+        end
+
         new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
         add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
@@ -409,6 +437,10 @@ function factor_subgraph!(subgraph::FactorableSubgraph)
     end
 end
 export factor_subgraph!
+
+"""Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
+function process_new_subgraphs(subgraph::FactorableSubgraph)
+end
 
 function print_edges(a, msg)
     println(msg)
