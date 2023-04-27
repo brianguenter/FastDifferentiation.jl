@@ -50,8 +50,8 @@ function test2()
     rroots = reachable_roots(etmp[1])
     rroots .= rroots .& .!rroots
 
-    @assert !connected_path(test_sub, etmp[1])
-    @assert connected_path(test_sub, etmp[2])
+    @assert !isa_connected_path(test_sub, etmp[1])
+    @assert isa_connected_path(test_sub, etmp[2])
 end
 export test2
 
