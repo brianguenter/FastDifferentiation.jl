@@ -1,6 +1,6 @@
 
-next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), false, reachable_roots(sub), dominance_mask(sub))
-next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), true, dominance_mask(sub), reachable_variables(sub))
+next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), false, reachable_roots(sub), reachable_dominance(sub))
+next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), true, reachable_dominance(sub), reachable_variables(sub))
 top_down_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint()
 
 """Evaluates the subgraph, creates a new edge with this value, and then inserts the new edge into `graph`"""
@@ -379,7 +379,7 @@ export evaluate_subgraph
 function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
     sum, _, _ = evaluate_subgraph(subgraph)
 
-    roots_reach = copy(dominance_mask(subgraph))
+    roots_reach = copy(reachable_dominance(subgraph))
     vars_reach = copy(reachable_variables(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
 end
@@ -389,7 +389,7 @@ function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph
     sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
 
     roots_reach = copy(reachable_roots(subgraph))
-    vars_reach = copy(dominance_mask(subgraph))
+    vars_reach = copy(reachable_dominance(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
 end
 export make_factored_edge

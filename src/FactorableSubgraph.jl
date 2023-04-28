@@ -74,9 +74,31 @@ reachable(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_vari
 reachable(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
 export reachable
 
-dominance_mask(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
-dominance_mask(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
-export dominance_mask
+"""Returns reachable roots of the node at `node_index`"""
+function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
+    gr = graph(a)
+    result = falses(codomain_dimension(a))
+
+    for edge in parent_edges(graph, node_index)
+        @. result |= reachable_roots(edge)
+    end
+    return result
+end
+
+"""Returns reachable variables of the node at `node_index`"""
+function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
+    gr = graph(a)
+    result = falses(codomain_dimension(a))
+
+    for edge in child_edges(graph, node_index)
+        @. result |= reachable_variables(edge)
+    end
+    return result
+end
+
+reachable_dominance(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
+reachable_dominance(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
+export reachable_dominance
 
 dominating_node(a::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}} = a.subgraph[1]
 export dominating_node
@@ -94,7 +116,7 @@ end
 
 function summarize(a::FactorableSubgraph{T,DominatorSubgraph}) where {T}
     doms = ""
-    doms *= to_string(dominance_mask(a), "r")
+    doms *= to_string(reachable_dominance(a), "r")
     doms *= " ↔ "
     doms *= to_string(reachable_variables(a), "v")
 
@@ -106,7 +128,7 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     doms = ""
     doms *= to_string(reachable_roots(a), "r")
     doms *= " ↔ "
-    doms *= to_string(dominance_mask(a), "v")
+    doms *= to_string(reachable_dominance(a), "v")
 
     return "[" * doms * " $(times_used(a))* " * string((vertices(a))) * "]"
 end
@@ -126,11 +148,11 @@ backward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::T) wh
 
 backward_edges(a::FactorableSubgraph, edge::PathEdge) = backward_edges(a, forward_vertex(a, edge))
 
-test_edge(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = subset(dominance_mask(a), reachable_roots(edge)) && overlap(reachable_variables(a), reachable_variables(edge))
-test_edge(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = subset(dominance_mask(a), reachable_variables(edge)) && overlap(reachable_roots(a), reachable_roots(edge))
+test_edge(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = subset(reachable_dominance(a), reachable_roots(edge)) && overlap(reachable_variables(a), reachable_variables(edge))
+test_edge(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = subset(reachable_dominance(a), reachable_variables(edge)) && overlap(reachable_roots(a), reachable_roots(edge))
 
-dominance_mask(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = reachable_roots(edge)
-dominance_mask(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = reachable_variables(edge)
+reachable_dominance(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = reachable_roots(edge)
+reachable_dominance(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = reachable_variables(edge)
 
 non_dominance_mask(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = reachable_variables(edge)
 non_dominance_mask(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = reachable_roots(edge)
@@ -212,8 +234,8 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
     for s_edge in forward_edges(subgraph, dominated_node(subgraph))
         if test_edge(subgraph, s_edge)
             for pedge in edge_path(subgraph, s_edge)
-                edge_mask = dominance_mask(subgraph, pedge)
-                diff = set_diff(edge_mask, dominance_mask(subgraph)) #important that diff is a new BitVector, not reused.
+                edge_mask = reachable_dominance(subgraph, pedge)
+                diff = set_diff(edge_mask, reachable_dominance(subgraph)) #important that diff is a new BitVector, not reused.
                 if any(diff)
                     gr = graph(subgraph)
 
@@ -252,8 +274,8 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
                 @. mask = mask & bypass_mask #if any bits in bypass mask are 1 then those bits won't be reset. 
 
                 if !any(bypass_mask .& non_dominance_mask(subgraph)) #no edges bypass dominated node so can reset all dominance bits. If any edges bypass cannot reset any dominance bits.
-                    fmask = dominance_mask(subgraph, fwd_edge)
-                    fmask = fmask .& .!dominance_mask(subgraph)
+                    fmask = reachable_dominance(subgraph, fwd_edge)
+                    fmask = fmask .& .!reachable_dominance(subgraph)
                 end
 
                 if forward_vertex(subgraph, pedge) != dominating_node(subgraph)

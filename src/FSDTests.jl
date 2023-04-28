@@ -473,7 +473,7 @@ end
     subs = extract_all!(sub_heap)
 
 
-    equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && dominance_mask(x) == dominance_mask(y)
+    equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && reachable_dominance(x) == reachable_dominance(y)
 
 
     index_1_4 = findfirst(x -> equal_subgraphs(x, postdominator_subgraph(dgraph, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))), subs)
@@ -1041,7 +1041,7 @@ end
     @test factor_order(one_4, one_3) == false
     @test factor_order(one_4, four_2) == false #one_3 should be sorted before one_4
 
-    equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && dominance_mask(x) == dominance_mask(y)
+    equal_subgraphs(x, y) = dominating_node(x) == dominating_node(y) && dominated_node(x) == dominated_node(y) && times_used(x) == times_used(y) && reachable_dominance(x) == reachable_dominance(y)
 
 
     # doms = dominator_subgraph.((
@@ -1157,7 +1157,7 @@ end
     sub_5_3 = first(filter(x -> x.subgraph == (5, 3), subs))
     sub_3_5 = first((filter(x -> x.subgraph == (3, 5), subs)))
 
-    rmask = dominance_mask(sub_5_3)
+    rmask = reachable_dominance(sub_5_3)
     V = reachable_variables(sub_5_3)
 
 
