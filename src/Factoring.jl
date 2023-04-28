@@ -87,12 +87,11 @@ function dom_subgraph(graph::DerivativeGraph, root_index::Integer, dominated_nod
 end
 
 function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
-    tmp = _node_edges(edges(graph), dominated_node)
-    if tmp === nothing #no edges down. Must be a root with no children. dominated_node can't be part of a factorable pdom subgraph.
+    dominated_edges = child_edges(graph, dominated_node)
+
+    if length(dominated_edges) == 0  #no edges edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
-        dominated_edges = children(tmp)
-
         count = 0
         for edge in dominated_edges
             if top_vertex(edge) == dominated_node && reachable_variables(edge)[variable_index] #there is an edge downward which has a path to the variable
