@@ -366,10 +366,10 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
     return current_dom
 end
 
-
-function simple_dominance(predecessors::Vector{Vector{Int64}}, dom_masks::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
-    if dom_masks === nothing
-        dom_masks = [falses(length(predecessors)) for _ in 1:length(predecessors)]
+"""Computes immediate dominators/postdominators of all nodes in a graph. Assumes `predecessors` contains the predecessors of nodes in post order for dominators (the leaves of the graph have the lowest post order numbers and come earliest in predecessors), and reverse post order for postdominators (similar except order of nodes reverse). In the immediate **dominator** case the root node is visited first and is its own dominator. The remaining nodes are visited in reverse post order. The immediate dominator of any node i = node i ∪ (∩ dominance(predecessors[i]))."""
+function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
+    if dominance === nothing
+        dominance = [falses(length(predecessors)) for _ in 1:length(predecessors)]
     end
 
     temp = BitVector(undef, length(predecessors))
@@ -377,24 +377,24 @@ function simple_dominance(predecessors::Vector{Vector{Int64}}, dom_masks::Union{
         idoms = Vector{Int64}(undef, length(predecessors))
     end
 
-    for index in length(dom_masks):-1:1
-        dom_masks[index][index] = 1
-        if index != length(dom_masks)
-            temp .= dom_masks[predecessors[index][1]]
+    for index in length(dominance):-1:1
+        dominance[index][index] = 1
+        if index != length(dominance)
+            temp .= dominance[predecessors[index][1]] #first value in intersection of dom_masks of predecessors. This intersection contains all the dominators of this node
         else
-            temp .= dom_masks[index]
+            temp .= dominance[index] #root or varible node gets its own dom_mask
         end
 
         for i in 2:min(2, length(predecessors[index]))
-            @. temp = temp & dom_masks[predecessors[index][i]]
+            @. temp = temp & dominance[predecessors[index][i]]
         end
-        @. dom_masks[index] |= temp
+        @. dominance[index] |= temp
     end
 
-    for (i, mask) in pairs(dom_masks)
-        if i ≠ length(predecessors)
-            mask[i] = 0
-            idoms[i] = findfirst(mask)
+    for (i, mask) in pairs(dominance)
+        if i ≠ length(predecessors) #don't reset root or variable node mask since it is the only node that can be its own idom.
+            mask[i] = 0 #set dom mask for this node index to 0 so don't incorrectly find it to be its own idom.
+            idoms[i] = findfirst(mask) #nodes are in reverse post order for doms and post order for pdoms. The index of the first non-zero bit in mask is the immediate dominator of node i.
         else
             idoms[i] = i
         end
