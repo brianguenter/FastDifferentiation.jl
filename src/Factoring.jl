@@ -68,12 +68,11 @@ Proof:
 Assume `a` has only one child. Since `a=idom(b)` all upward paths from `b` must pass through `a`. Since `a` has only one child, `nᵢ`, all paths from `b` must first pass through `nᵢ` before passing through `a`. But then `nᵢ` would be the idom of `b`, not `a`, which violates `a=idom(b)`. Hence there must be two downward paths from `a` to `b`.
 """
 function dom_subgraph(graph::DerivativeGraph, root_index::Integer, dominated_node::Integer, idom)
-    tmp = _node_edges(edges(graph), dominated_node)
+    dominated_edges = parent_edges(graph, dominated_node)
 
-    if tmp === nothing #no edges edges up or down so must be a root. dominated_node can't be part of a factorable dom subgraph.
+    if length(dominated_edges) == 0  #no edges edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
-        dominated_edges = parents(tmp)
         count = 0
         for edge in dominated_edges
             if bott_vertex(edge) == dominated_node && reachable_roots(edge)[root_index] #there is an edge upward which has a path to the root
@@ -89,7 +88,7 @@ end
 
 function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
     tmp = _node_edges(edges(graph), dominated_node)
-    if tmp === nothing #no edges up or down. Must be a root with no children. dominated_node can't be part of a factorable pdom subgraph.
+    if tmp === nothing #no edges down. Must be a root with no children. dominated_node can't be part of a factorable pdom subgraph.
         return nothing
     else
         dominated_edges = children(tmp)

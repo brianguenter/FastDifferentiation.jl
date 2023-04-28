@@ -7,30 +7,13 @@ using .FSDTests
 
 
 function test()
-    dgraph = DerivativeGraph([complex_dominator_dag()])
+    @variables x y
 
-    _1_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
+    nx = Node(x)
+    func = nx * nx
 
-    _8_4_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 5), (5, 4), (7, 4)))))
-
-    subs = extract_all!(compute_factorable_subgraphs(dgraph))
-    _1_4_sub = subs[findfirst(x -> vertices(x) == (1, 4), subs)]
-    _1_7_sub = subs[findfirst(x -> vertices(x) == (1, 7), subs)]
-    _8_4_sub = subs[findfirst(x -> vertices(x) == (8, 4), subs)]
-    _8_1_sub = subs[findfirst(x -> vertices(x) == (8, 1), subs)]
-    _1_8_sub = subs[findfirst(x -> vertices(x) == (1, 8), subs)]
-
-    @assert issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
-    factor_subgraph!(_1_4_sub)
-    _1_7_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
-
-
-    @assert issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
-    @assert issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
-    factor_subgraph!(_8_4_sub)
-    _8_1_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
-    @assert issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
-    @assert issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
+    gr = DerivativeGraph([func])
+    subs_heap = compute_factorable_subgraphs(gr)
 
 end
 export test
