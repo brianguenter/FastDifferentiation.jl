@@ -165,7 +165,7 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     for root_index in 1:codomain_dimension(graph)
         post_num = root_index_to_postorder_number(graph, root_index)
-        @timeit TIMER "compute_dom_table doms" temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+        temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
 
         for dominated in keys(temp_dom)
             dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
@@ -184,7 +184,8 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     for variable_index in 1:domain_dimension(graph)
         post_num = variable_index_to_postorder_number(graph, variable_index)
-        @timeit TIMER "compute_dom_table postdoms" temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
+        temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
+
         for dominated in keys(temp_dom)
             psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
             if psubgraph !== nothing
