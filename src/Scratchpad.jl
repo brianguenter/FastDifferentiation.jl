@@ -7,103 +7,41 @@ using .FSDTests
 
 
 function test()
-    @variables x y
+    graph, subs = simple_factorable_subgraphs()
 
-    nx = Node(x)
-    func = nx * nx
+    all_edges = collect(unique_edges(graph))
 
-    gr = DerivativeGraph([func])
-    subs_heap = compute_factorable_subgraphs(gr)
+    _4_2 = all_edges[findfirst(x -> vertices(x) == (4, 2), all_edges)]
+    _4_3 = all_edges[findfirst(x -> vertices(x) == (4, 3), all_edges)]
+    _3_2 = all_edges[findfirst(x -> vertices(x) == (3, 2), all_edges)]
+    _2_1 = all_edges[findfirst(x -> vertices(x) == (2, 1), all_edges)]
+    _3_1 = all_edges[findfirst(x -> vertices(x) == (3, 1), all_edges)]
 
-end
-export test
+    ed, nod = deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
+    @assert issetequal([4, 2, 3], nod)
+    @assert issetequal((_4_2, _4_3, _3_2), ed)
 
+    ed, nod = deconstruct_subgraph(subs[2])
+    @assert issetequal((_3_2, _3_1, _2_1), ed)
+    @assert issetequal([1, 2, 3], nod)
 
-function test2()
-    @variables x y
+    factor_subgraph!(subs[1]) #now can test larger subgraphs
 
-    nx = Node(x)
-    func = nx * nx
+    #new edges created during factorization so get them again
+    all_edges = collect(unique_edges(graph))
 
-    gr = DerivativeGraph([func])
-    subs_heap = compute_factorable_subgraphs(gr)
-    subs = extract_all!(subs_heap)
-    test_sub = subs[1]
-    etmp = parent_edges(gr, dominated_node(test_sub))
-    rroots = reachable_roots(etmp[1])
-    rroots .= rroots .& .!rroots
+    _4_2 = all_edges[findfirst(x -> vertices(x) == (4, 2), all_edges)]
+    _4_3 = all_edges[findfirst(x -> vertices(x) == (4, 3), all_edges)]
+    _2_1 = all_edges[findfirst(x -> vertices(x) == (2, 1), all_edges)]
+    _3_1 = all_edges[findfirst(x -> vertices(x) == (3, 1), all_edges)]
 
-    @assert !isa_connected_path(test_sub, etmp[1])
-    @assert isa_connected_path(test_sub, etmp[2])
-end
-export test2
-
-function make_relations(size)
-    relations = Vector{Vector{Int64}}(undef, size)
-    for i in eachindex(relations)
-        if i == size
-            relations[i] = Int64[]
-        elseif i == size - 1
-            relations[i] = [size]
-        elseif i == size - 2
-            relations[i] = [size - 1, size]
-        else
-            relations[i] = [i + 1, i + 2]
-        end
-    end
-    return relations
-end
-export make_relations
-
-function time_relations()
-    gr = simple_dominator_dgraph()[1]
-    dp = DomPathConstraint(gr, true, 1)
-    return gr, dp
-end
-export time_relations
-
-function bad_case()
-    @variables x
-    nx = Node(x)
-
-    n2 = cos(nx)
-    n3 = sin(nx)
-    n4 = n2 * n3
-    n5 = n2 * n4
-    n6 = n2 - n3
-    n7 = n5 * n6
-
-    gr = DerivativeGraph(n7)
-    println(map(x -> vertices(x), compute_factorable_subgraphs(gr)[1]))
-    #if swap (1,4) and (7,3) in factorable subgraph list then get the error.
-    #(1,4) comes first because its node difference is smaller than (7,3), which comes second. 
-    #in this case can swap the order without introducing an ordering error. But the
-    #factorization of (7,3) first creates a new factorable subgraph where factoring (1,4)
-    #first didn't. 
-    println(values(gr.postorder_number))
-    Vis.draw_dot(gr, graph_label="before factoring")
-    factor!(gr)
-end
-export bad_case
-
-function make_subdata()
-    @variables x y
-
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
-    n5 = n2 * n4
-
-
-    graph = DerivativeGraph([n4, n5])
-    subs, _ = compute_factorable_subgraphs(graph)
-
-    _5_3 = subs[1]
-    @assert (5, 3) == vertices(_5_3)
-    e5_3 = edges(graph, 5, 3)[1]
-    e3_4 = edges(graph, 3, 4)[1]
-
-    return path(_5_3, e3_4)
+    ed, nod = deconstruct_subgraph(subs[3])
+    println(ed)
+    sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
+    @assert issetequal(sub_4_1, ed)
+    @assert issetequal([1, 2, 3, 4], nod)
+    ed, nod = deconstruct_subgraph(subs[4])
+    @assert issetequal(sub_4_1, ed)
+    @assert issetequal([1, 2, 3, 4], nod)
 end
 export make_subdata

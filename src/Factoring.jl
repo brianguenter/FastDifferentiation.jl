@@ -437,8 +437,11 @@ function factor_subgraph!(subgraph::FactorableSubgraph)
 end
 export factor_subgraph!
 
+
 """Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
 function process_new_subgraphs(subgraph::FactorableSubgraph)
+    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
+
 end
 
 function print_edges(a, msg)

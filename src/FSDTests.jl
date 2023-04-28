@@ -6,6 +6,7 @@ import Symbolics
 using StaticArrays
 using Memoize
 using Rotations
+using DataStructures
 
 using ..FastSymbolicDifferentiation
 
@@ -141,12 +142,18 @@ function simple_dominator_graph()
 end
 export simple_dominator_graph
 
-function simple_dominator_dgraph()
-    x, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
-
-    return graph, four_2_subgraph, one_3_subgraph, x
+"""returns 4 factorable subgraphs in this order: (4,2),(1,3),(1,4),(4,1)"""
+function simple_factorable_subgraphs()
+    _, graph, _, _ = simple_dominator_graph()
+    temp = extract_all!(compute_factorable_subgraphs(graph))
+    return graph, [
+        temp[findfirst(x -> vertices(x) == (4, 2), temp)],
+        temp[findfirst(x -> vertices(x) == (1, 3), temp)],
+        temp[findfirst(x -> vertices(x) == (1, 4), temp)],
+        temp[findfirst(x -> vertices(x) == (4, 1), temp)]
+    ]
 end
-export simple_dominator_dgraph
+export simple_factorable_subgraphs
 
 @testitem "isa_connected_path 1" begin # case when path is one edge long
     using Symbolics
@@ -411,7 +418,7 @@ end
 @testitem "simple make_function" begin
     using FastSymbolicDifferentiation.FSDTests
 
-    graph, four_2_subgraph, one_3_subgraph, _ = simple_dominator_dgraph()
+    x, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
     #not practical to compare the graphs directly since the order in which nodes come out of the differentiation
     #process is complicated. For dom subgraphs it depends on the order nodes appear in the parents list of a node. This 
     #is determined by code that has nothing to do with differentiation so don't want to take a dependency on it since it is
@@ -1091,6 +1098,47 @@ end
 
 end
 
+@testitem "deconstruct_subgraph" begin
+    using FastSymbolicDifferentiation.FSDTests
+    
+    graph, subs = simple_factorable_subgraphs()
+
+    all_edges = collect(unique_edges(graph))
+
+    _4_2 = all_edges[findfirst(x -> vertices(x) == (4, 2), all_edges)]
+    _4_3 = all_edges[findfirst(x -> vertices(x) == (4, 3), all_edges)]
+    _3_2 = all_edges[findfirst(x -> vertices(x) == (3, 2), all_edges)]
+    _2_1 = all_edges[findfirst(x -> vertices(x) == (2, 1), all_edges)]
+    _3_1 = all_edges[findfirst(x -> vertices(x) == (3, 1), all_edges)]
+
+    ed, nod = deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
+    @assert issetequal([4, 2, 3], nod)
+    @assert issetequal((_4_2, _4_3, _3_2), ed)
+
+    ed, nod = deconstruct_subgraph(subs[2])
+    @assert issetequal((_3_2, _3_1, _2_1), ed)
+    @assert issetequal([1, 2, 3], nod)
+
+    factor_subgraph!(subs[1]) #now can test larger subgraphs
+
+    #new edges created and some edges deleted during factorization so get them again
+    all_edges = collect(unique_edges(graph))
+
+    _4_2 = all_edges[findfirst(x -> vertices(x) == (4, 2), all_edges)]
+    _4_3 = all_edges[findfirst(x -> vertices(x) == (4, 3), all_edges)]
+    _2_1 = all_edges[findfirst(x -> vertices(x) == (2, 1), all_edges)]
+    _3_1 = all_edges[findfirst(x -> vertices(x) == (3, 1), all_edges)]
+
+    ed, nod = deconstruct_subgraph(subs[3])
+    println(ed)
+    sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
+    @assert issetequal(sub_4_1, ed)
+    @assert issetequal([1, 2, 3, 4], nod)
+    ed, nod = deconstruct_subgraph(subs[4])
+    @assert issetequal(sub_4_1, ed)
+    @assert issetequal([1, 2, 3, 4], nod)
+end
+
 @testitem "subgraph reachable_roots, reachable_variables" begin
     using Symbolics
     using DataStructures
@@ -1550,7 +1598,6 @@ end
 
         @test isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
     end
-
 end
 
 @testitem "derivative of matrix" begin

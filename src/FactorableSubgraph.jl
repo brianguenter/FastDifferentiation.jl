@@ -74,27 +74,27 @@ reachable(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_vari
 reachable(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
 export reachable
 
-"""Returns reachable roots of the node at `node_index`"""
-function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
-    gr = graph(a)
-    result = falses(codomain_dimension(a))
+# """Returns reachable roots of the node at `node_index`"""
+# function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
+#     gr = graph(a)
+#     result = falses(codomain_dimension(a))
 
-    for edge in parent_edges(graph, node_index)
-        @. result |= reachable_roots(edge)
-    end
-    return result
-end
+#     for edge in parent_edges(graph, node_index)
+#         @. result |= reachable_roots(edge)
+#     end
+#     return result
+# end
 
-"""Returns reachable variables of the node at `node_index`"""
-function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
-    gr = graph(a)
-    result = falses(codomain_dimension(a))
+# """Returns reachable variables of the node at `node_index`"""
+# function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
+#     gr = graph(a)
+#     result = falses(codomain_dimension(a))
 
-    for edge in child_edges(graph, node_index)
-        @. result |= reachable_variables(edge)
-    end
-    return result
-end
+#     for edge in child_edges(graph, node_index)
+#         @. result |= reachable_variables(edge)
+#     end
+#     return result
+# end
 
 reachable_dominance(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
 reachable_dominance(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
@@ -338,6 +338,19 @@ end
 export subgraph_edges
 
 
+"""returns subgraph edges, as a `Set`, and nodes, as a `Vector`."""
+function deconstruct_subgraph(subgraph::FactorableSubgraph)
+    sub_edges = subgraph_edges(subgraph)
+    sub_nodes = map(x -> bott_vertex(x), collect(sub_edges))
+    if subgraph isa FactorableSubgraph{T,DominatorSubgraph} where {T}
+        push!(sub_nodes, dominating_node(subgraph))
+    else
+        push!(sub_nodes, dominated_node(subgraph))
+    end
+
+    return sub_edges, unique(sub_nodes)
+end
+export deconstruct_subgraph
 
 """Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
