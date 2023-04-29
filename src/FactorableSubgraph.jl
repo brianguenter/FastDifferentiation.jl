@@ -323,7 +323,7 @@ function subgraph_edges(subgraph::FactorableSubgraph{T}) where {T}
     else
         for fedge in forward_edges(subgraph, dominated_node(subgraph))
             good_edges, tmp = edges_on_path(subgraph, fedge)
-
+            #this needs to be recursive. Can't use edges_on_path because that assumes the subgraph doesn't have branches. subgraph_edges is only called when branches have edges.
             if good_edges
                 union!(result, tmp)
                 push!(result, fedge)
@@ -375,7 +375,7 @@ function subgraph_exists(subgraph::FactorableSubgraph)
             if isa_connected_path(subgraph, edge) !== nothing
                 count += 1
             end
-            #TODO write macro that inserts this when global invariant flag is true.
+
             @invariant begin
                 good_edges, tmp = edges_on_path(subgraph, edge)
                 good_subgraph = true

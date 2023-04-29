@@ -368,13 +368,14 @@ end
 
 """Computes immediate dominators/postdominators of all nodes in a graph. Assumes `predecessors` contains the predecessors of nodes in post order for dominators (the leaves of the graph have the lowest post order numbers and come earliest in predecessors), and reverse post order for postdominators (similar except order of nodes reverse). In the immediate **dominator** case the root node is visited first and is its own dominator. The remaining nodes are visited in reverse post order. The immediate dominator of any node i = node i ∪ (∩ dominance(predecessors[i]))."""
 function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
+    num_preds = length(predecessors)
     if dominance === nothing
-        dominance = [falses(length(predecessors)) for _ in 1:length(predecessors)]
+        dominance = [falses(num_preds) for _ in 1:num_preds]
     end
 
-    temp = BitVector(undef, length(predecessors))
+    temp = BitVector(undef, num_preds)
     if idoms === nothing
-        idoms = Vector{Int64}(undef, length(predecessors))
+        idoms = Vector{Int64}(undef, num_preds)
     end
 
     for index in length(dominance):-1:1
@@ -392,7 +393,7 @@ function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{
     end
 
     for (i, mask) in pairs(dominance)
-        if i ≠ length(predecessors) #don't reset root or variable node mask since it is the only node that can be its own idom.
+        if i ≠ num_preds #don't reset root or variable node mask since it is the only node that can be its own idom.
             mask[i] = 0 #set dom mask for this node index to 0 so don't incorrectly find it to be its own idom.
             idoms[i] = findfirst(mask) #nodes are in reverse post order for doms and post order for pdoms. The index of the first non-zero bit in mask is the immediate dominator of node i.
         else
