@@ -315,25 +315,32 @@ function check_edges(subgraph::FactorableSubgraph, edge_list::Vector{PathEdge{T}
 end
 
 """Returns all edges in the subgraph as a set or `nothing` if the subgraph no longer exists."""
-function subgraph_edges(subgraph::FactorableSubgraph{T}) where {T}
-    result = Set{PathEdge{T}}()
+function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothing,Set{PathEdge{T}}}=nothing, visited::Union{Nothing,Set{PathEdge{T}}}=nothing, curr_node::Union{Nothing,T}=nothing) where {T}
+    if sub_edges === nothing
+        sub_edges = Set{PathEdge{T}}()
+    end
 
-    if !subgraph_exists(subgraph)
-        return nothing
-    else
-        for fedge in forward_edges(subgraph, dominated_node(subgraph))
-            good_edges, tmp = edges_on_path(subgraph, fedge)
-            #this needs to be recursive. Can't use edges_on_path because that assumes the subgraph doesn't have branches. subgraph_edges is only called when branches have edges.
-            if good_edges
-                union!(result, tmp)
-                push!(result, fedge)
+    if visited === nothing
+        visited = Set{PathEdge{T}}()
+    end
+
+    if curr_node === nothing
+        curr_node = dominated_node(subgraph)
+    end
+
+    for fedge in forward_edges(subgraph, curr_node)
+        if test_edge(subgraph, fedge) && !in(fedge, visited)
+            push!(sub_edges, fedge)
+            fvert = forward_vertex(subgraph, fedge)
+            if fvert != dominating_node(subgraph)
+                subgraph_edges(subgraph, sub_edges, visited, fvert)
             end
         end
-
-        @assert length(result) ≥ 2 "If subgraph exists should be at least two valid edges in subgraph. Instead got none."
-
-        return result
     end
+
+    @assert length(sub_edges) ≥ 2 "If subgraph exists should be at least two valid edges in subgraph. Instead got none."
+
+    return sub_edges
 end
 export subgraph_edges
 

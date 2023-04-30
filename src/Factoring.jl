@@ -441,17 +441,14 @@ order!(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:I
 order!(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes) #smallest node number first
 
 predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex(filter(test_edge(sub, x), parent_edges(graph(subgraph), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
-predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex(filter(test_edge(sub, x), parent_edges(graph(subgraph), node_index)))
+predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex(filter(test_edge(sub, x), child_edges(graph(subgraph), node_index)))
 
 """Computes idoms for special case when new factorable subgraphs are created by factorization."""
 function compute_internal_idoms(subgraph::FactorableSubgraph)
-    gr = graph(subgraph)
-    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
+    _, sub_nodes = deconstruct_subgraph(subgraph)
     order!(a, sub_nodes)
     preds = [predecessors(subgraph, node) for node in sub_nodes] #allocates but this function should rarely be called
-    idom_table = simple_dominance(preds)
-
-
+    return simple_dominance(preds)
 end
 
 """Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
