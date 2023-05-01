@@ -229,6 +229,15 @@ end
     using Symbolics
     using DataStructures
 
+    #utility function to make it easier to create edges and test them against edges generated during graph operations.
+    function edge_fields_equal(edge1, edge2)
+        return edge1.top_vertex == edge2.top_vertex &&
+               edge1.bott_vertex == edge2.bott_vertex &&
+               edge1.edge_value == edge2.edge_value &&
+               edge1.reachable_variables == edge2.reachable_variables &&
+               edge1.reachable_roots == edge2.reachable_roots
+    end
+
     @variables x y
 
     nx = Node(x)
@@ -246,11 +255,11 @@ end
     add_non_dom_edges!(_5_3)
     #single edge 3,4 should be split into two: ([r1,r2],[v1,v2]) -> ([r1],[v1,v2]),([r2],[v1,v2])
     edges3_4 = edges(graph, 4, 3)
-    @test length(edges3_4) == 2
+    @assert length(edges3_4) == 2
     test_edge = PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([0, 1]))
-    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
     test_edge = (PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([1, 0])))
-    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 
     graph = DerivativeGraph([n4, n5])
     sub_heap = compute_factorable_subgraphs(graph)
@@ -261,11 +270,11 @@ end
     add_non_dom_edges!(_2_4)
     #single edge 3,4 should be split in two: ([r1,r2],[v1,v2])->([r1,r2],[v1]),([r1,r2],[v2])
     edges3_4 = edges(graph, 4, 3)
-    @test length(edges3_4) == 2
+    @assert length(edges3_4) == 2
     test_edge = PathEdge(4, 3, ny, BitVector([1, 0]), BitVector([1, 1]))
-    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
     test_edge = (PathEdge(4, 3, ny, BitVector([0, 1]), BitVector([1, 1])))
-    @test count(value_equal.(edges3_4, Ref(test_edge))) == 1
+    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 end
 
 @testitem "iteration" begin
@@ -1100,7 +1109,7 @@ end
 
 @testitem "deconstruct_subgraph" begin
     using FastSymbolicDifferentiation.FSDTests
-    
+
     graph, subs = simple_factorable_subgraphs()
 
     all_edges = collect(unique_edges(graph))

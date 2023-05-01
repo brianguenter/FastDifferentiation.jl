@@ -12,6 +12,7 @@ using RuntimeGeneratedFunctions
 using Logging
 import Base: iterate
 using TimerOutputs
+using UUIDs
 module AutomaticDifferentiation
 struct NoDeriv
 end

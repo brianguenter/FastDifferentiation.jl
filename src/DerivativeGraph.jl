@@ -277,7 +277,7 @@ function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
     return filter(x -> bott_vertex(x) == bott, child_edges(a, top))
 end
 
-edges(a::DerivativeGraph,verts::Tuple{Integer,Integer}) = edges(a,verts[1],verts[2])
+edges(a::DerivativeGraph, verts::Tuple{Integer,Integer}) = edges(a, verts[1], verts[2])
 
 """This is not an especially fast function. Currently only used for testing and diagnostics so this isn't a problem."""
 function unique_edges(a::DerivativeGraph)
@@ -460,14 +460,14 @@ function edge_exists(graph::DerivativeGraph, edge::PathEdge)
     if edges === nothing
         val1 = false
     else
-        val1 = any(value_equal(x, edge) for x in parents(edges))
+        val1 = any(x == edge for x in parents(edges))
     end
 
     edges = node_edges(graph, top_vertex(edge))
     if edges === nothing
         val2 = false
     else
-        val2 = any(value_equal(x, edge) for x in children(edges))
+        val2 = any(x == edge for x in children(edges))
     end
 
     @assert val1 == val2
