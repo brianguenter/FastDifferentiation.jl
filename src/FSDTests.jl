@@ -1107,6 +1107,33 @@ end
 
 end
 
+@testitem "subgraph_edges with branching" begin
+    using Symbolics
+    
+    @variables x
+
+    nx = Node(x)
+    gr = DerivativeGraph((cos(nx) * cos(nx)) + nx)
+    Vis.draw_dot(gr)
+    Vis.draw_dot(gr)
+    sub = FactorableSubgraph{Int64,DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
+
+    edges_4_1 = collect(subgraph_edges(sub))
+
+    sub = FactorableSubgraph{Int64,PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
+    edges_1_4 = collect(subgraph_edges(sub))
+
+    @test count(x -> vertices(x) == (4, 3), edges_4_1) == 1
+    @test count(x -> vertices(x) == (4, 1), edges_4_1) == 1
+    @test count(x -> vertices(x) == (3, 2), edges_4_1) == 2
+    @test count(x -> vertices(x) == (2, 1), edges_4_1) == 1
+
+    @test count(x -> vertices(x) == (4, 3), edges_1_4) == 1
+    @test count(x -> vertices(x) == (4, 1), edges_1_4) == 1
+    @test count(x -> vertices(x) == (3, 2), edges_1_4) == 2
+    @test count(x -> vertices(x) == (2, 1), edges_1_4) == 1
+end
+
 @testitem "deconstruct_subgraph" begin
     using FastSymbolicDifferentiation.FSDTests
 
