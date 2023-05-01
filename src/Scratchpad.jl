@@ -29,5 +29,9 @@ function test()
     @assert count(x -> vertices(x) == (4, 1), edges_1_4) == 1
     @assert count(x -> vertices(x) == (3, 2), edges_1_4) == 2
     @assert count(x -> vertices(x) == (2, 1), edges_1_4) == 1
+
+    gr = DerivativeGraph(cos(nx) * cos(nx))
+    sub = FactorableSubgraph{Int64,PostDominatorSubgraph}(gr, 1, 3, BitVector([1]), BitVector([1]), BitVector([1]))
+    subgraph_edges(sub)
 end
 export test

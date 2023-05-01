@@ -72,9 +72,6 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{PathEdge}, label::St
     gr *= "ratio=\"fill\"\n"
     gr *= "size = 12 12\n"
     gr_copy = deepcopy(graph)
-    # FastSymbolicDifferentiation.remove_dangling_edges!(gr_copy)
-
-
 
     nodes_to_draw = Set{Node}()
     for e in edges_to_draw
