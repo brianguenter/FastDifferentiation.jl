@@ -89,7 +89,7 @@ end
 function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
     dominated_edges = child_edges(graph, dominated_node)
 
-    if length(dominated_edges) == 0  #no edges edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
+    if length(dominated_edges) == 0  #no edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
         count = 0
@@ -137,6 +137,7 @@ export factor_order
 sort_in_factor_order!(a::AbstractVector{T}) where {T<:FactorableSubgraph} = sort!(a, lt=factor_order)
 export sort_in_factor_order!
 
+
 """
 Given subgraph `(a,b)` in the subset of the ℝⁿ->ℝᵐ graph reachable from root `rᵢ`.  
 `(a,b)` is factorable iff: 
@@ -156,8 +157,21 @@ subgraph `(a,b)` is in the subset of the ℝⁿ->ℝᵐ graph reachable from var
 `&& num_children(b) > 1 for children on the path to variable `vᵢ` through `a`  
 """
 function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
-    dom_subgraphs = Dict{Tuple{T,T},BitVector}()
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
+    dom_subgraphs = Dict{Tuple{T,T},BitVector}()
+
+    function set_dom_bits!(subgraph::Union{Nothing,Tuple{T,T}}, all_subgraphs::Dict, var_or_root_index::Integer, bit_dimension::Integer) where {T<:Integer}
+        if subgraph !== nothing
+            existing_subgraph = get(all_subgraphs, subgraph, nothing)
+            if existing_subgraph !== nothing
+                all_subgraphs[subgraph][var_or_root_index] = 1
+            else
+                tmp = falses(bit_dimension)
+                tmp[var_or_root_index] = 1
+                all_subgraphs[subgraph] = tmp
+            end
+        end
+    end
 
     temp_doms = Dict{T,T}()
 
@@ -167,16 +181,7 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
         for dominated in keys(temp_dom)
             dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
-            if dsubgraph !== nothing
-                existing_subgraph = get(dom_subgraphs, dsubgraph, nothing)
-                if existing_subgraph !== nothing
-                    dom_subgraphs[dsubgraph][root_index] = 1
-                else
-                    tmp = falses(codomain_dimension(graph))
-                    tmp[root_index] = 1
-                    dom_subgraphs[dsubgraph] = tmp
-                end
-            end
+            set_dom_bits!(dsubgraph, dom_subgraphs, root_index, codomain_dimension(graph))
         end
     end
 
@@ -186,17 +191,7 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
         for dominated in keys(temp_dom)
             psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
-            if psubgraph !== nothing
-                existing_p_subgraph = get(pdom_subgraphs, psubgraph, nothing)
-
-                if existing_p_subgraph !== nothing
-                    pdom_subgraphs[psubgraph][variable_index] = 1
-                else
-                    tmp = falses(domain_dimension(graph))
-                    tmp[variable_index] = 1
-                    pdom_subgraphs[psubgraph] = tmp
-                end
-            end
+            set_dom_bits!(psubgraph, pdom_subgraphs, variable_index, domain_dimension(graph))
         end
     end
 
@@ -437,24 +432,31 @@ function factor_subgraph!(subgraph::FactorableSubgraph)
 end
 export factor_subgraph!
 
-order!(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
-order!(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes) #smallest node number first
+order!(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
+) #largest node number last
+order!(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
 
-predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex(filter(test_edge(sub, x), parent_edges(graph(subgraph), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
-predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex(filter(test_edge(sub, x), child_edges(graph(subgraph), node_index)))
+undo_order(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = nodes
+undo_order(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = reverse(nodes)
 
-"""Computes idoms for special case when new factorable subgraphs are created by factorization."""
-function compute_internal_idoms(subgraph::FactorableSubgraph)
+predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
+predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
+
+"""Computes idoms for special case when new factorable subgraphs are created by factorization. This seems redundant with compute_factorable_subgraphs, fill_idom_tables, etc. but invariants that held when graph was first factored no longer hold so need specialized code."""
+function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
     _, sub_nodes = deconstruct_subgraph(subgraph)
-    order!(a, sub_nodes)
-    preds = [predecessors(subgraph, node) for node in sub_nodes] #allocates but this function should rarely be called
-    return simple_dominance(preds)
+    order!(subgraph, sub_nodes)
+    compressed_index = Dict((sub_nodes[i] => i) for i in eachindex(sub_nodes))
+
+    preds = [map(x -> compressed_index[x], predecessors(subgraph, node)) for node in sub_nodes] #allocates but this function should rarely be called
+    compressed_doms = simple_dominance(preds) #idom table in compressed index format_string
+    return Dict{T,T}([(sub_nodes[i], sub_nodes[compressed_doms[i]]) for i in eachindex(sub_nodes)])
 end
 
 """Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
 function process_new_subgraphs(subgraph::FactorableSubgraph)
-    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
-    order!(subgraph, sub_nodes)
+    idoms = compute_internal_idoms(subgraph)
+    compute_factorable_subgraphs
 
 end
 

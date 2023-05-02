@@ -380,7 +380,7 @@ function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{
 
     for index in length(dominance):-1:1
         dominance[index][index] = 1
-        if index != length(dominance)
+        if length(predecessors[index]) != 0
             temp .= dominance[predecessors[index][1]] #first value in intersection of dom_masks of predecessors. This intersection contains all the dominators of this node
         else
             temp .= dominance[index] #root or varible node gets its own dom_mask
@@ -393,7 +393,7 @@ function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{
     end
 
     for (i, mask) in pairs(dominance)
-        if i ≠ num_preds #don't reset root or variable node mask since it is the only node that can be its own idom.
+        if i ≠ length(dominance) #don't reset root or variable node mask since it is the only node that can be its own idom.
             mask[i] = 0 #set dom mask for this node index to 0 so don't incorrectly find it to be its own idom.
             idoms[i] = findfirst(mask) #nodes are in reverse post order for doms and post order for pdoms. The index of the first non-zero bit in mask is the immediate dominator of node i.
         else
