@@ -9,6 +9,8 @@ using Rotations
 using DataStructures
 
 using ..FastSymbolicDifferentiation
+const FSD = FastSymbolicDifferentiation
+export FSD
 
 using TestItems
 
@@ -1109,18 +1111,19 @@ end
 
 @testitem "subgraph_edges with branching" begin
     using Symbolics
-    
+    using FastSymbolicDifferentiation.FSDTests
+
     @variables x
 
     nx = Node(x)
     gr = DerivativeGraph((cos(nx) * cos(nx)) + nx)
-    Vis.draw_dot(gr)
-    Vis.draw_dot(gr)
-    sub = FactorableSubgraph{Int64,DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
+    # Vis.draw_dot(gr)
+    # Vis.draw_dot(gr)
+    sub = FactorableSubgraph{Int64,FSD.DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
 
     edges_4_1 = collect(subgraph_edges(sub))
 
-    sub = FactorableSubgraph{Int64,PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
+    sub = FactorableSubgraph{Int64,FSD.PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
     edges_1_4 = collect(subgraph_edges(sub))
 
     @test count(x -> vertices(x) == (4, 3), edges_4_1) == 1
@@ -1173,6 +1176,10 @@ end
     ed, nod = deconstruct_subgraph(subs[4])
     @assert issetequal(sub_4_1, ed)
     @assert issetequal([1, 2, 3, 4], nod)
+end
+
+@testitem "process_new_subgraphs" begin
+
 end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
