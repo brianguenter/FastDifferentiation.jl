@@ -434,6 +434,10 @@ order!(::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T
 predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
 predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
 
+predecessor_edges(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index)) #allocates but this should rarely be called so shouldn't be efficiency issue.
+predecessor_edges(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index))
+
+
 """Computes idoms for special case when new factorable subgraphs are created by factorization. This seems redundant with compute_factorable_subgraphs, fill_idom_tables, etc. but invariants that held when graph was first factored no longer hold so need specialized code. Not currently used, experimental code."""
 function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
     _, sub_nodes = deconstruct_subgraph(subgraph)
@@ -460,22 +464,35 @@ function vertex_counts(subgraph::FactorableSubgraph{T}) where {T}
 end
 
 function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
+    global num_times += 1
+    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
     counts = vertex_counts(subgraph)
+    counts[dominated_node(subgraph)] = 1
     vertex_sums = Dict{T,Node}()
+    # Vis.draw_dot(subgraph)
+    _evaluate_branching_subgraph(subgraph, Node(1), dominated_node(subgraph), sub_edges, counts, vertex_sums)
 
-    _evaluate_branching_subgraph(subgraph, Node(0), dominated_node(subgraph), counts, vertex_sums)
-    return vertex_sums(dominating_node(subgraph))
+    return vertex_sums[dominating_node(subgraph)]
 end
 
-function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
-    counts[current_vertex] -= 1
+num_times = 0
 
-    if counts[current_vertex] != 0
-        vertex_sums[current_vertex] += sum
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, sub_edges, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
+    if get(vertex_sums, current_vertex, nothing) === nothing
+        vertex_sums[current_vertex] = sum
     else
-        for edge in predecessors(subgraph, current_vertex)
-            sum *= value(edge)
-            _evaluate_branching_subgraph(subgraph, sum, forward_vertex(subgraph, edge), counts, vertex_sums)
+        vertex_sums[current_vertex] += sum
+    end
+
+    counts[current_vertex] -= 1
+    if counts[current_vertex] == 0
+        for edge in predecessor_edges(subgraph, current_vertex)
+            if !in(edge, sub_edges)
+                continue
+            else
+                sum *= value(edge)
+                _evaluate_branching_subgraph(subgraph, sum, forward_vertex(subgraph, edge), sub_edges, counts, vertex_sums)
+            end
         end
     end
 end
