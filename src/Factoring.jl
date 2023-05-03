@@ -341,11 +341,9 @@ end
 export old_edge_path
 
 
-#TODO: seems wrong. root_intersect sould be &'ed with the dominance_mask for DominatorSubgraph's and similarly for vars_intersect and PostDominatorSubgraphs. Test to make sure this is correct.
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
-    gr = graph(subgraph)
 
     rel_edges = get_edge_vector()
     for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
@@ -414,7 +412,7 @@ end
 function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
     local new_edge::PathEdge{T}
     if subgraph_exists(subgraph)
-        if needs_factoring(subgraph)
+        if needs_factoring(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
             new_edge = process_new_subgraphs(subgraph)
         else
             new_edge = make_factored_edge(subgraph)
@@ -434,9 +432,6 @@ export factor_subgraph!
 order!(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
 ) #largest node number last
 order!(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
-
-undo_order(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = nodes
-undo_order(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = reverse(nodes)
 
 predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
 predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
