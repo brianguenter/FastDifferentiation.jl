@@ -340,6 +340,8 @@ function old_edge_path(next_node_constraint, dominating::T, is_dominator::Bool, 
 end
 export old_edge_path
 
+
+#TODO: seems wrong. root_intersect sould be &'ed with the dominance_mask for DominatorSubgraph's and similarly for vars_intersect and PostDominatorSubgraphs. Test to make sure this is correct.
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
@@ -375,16 +377,16 @@ function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) w
 
     roots_reach = copy(reachable_dominance(subgraph))
     vars_reach = copy(reachable_variables(subgraph))
-    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
 end
-
 export make_factored_edge
+
 function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
 
     roots_reach = copy(reachable_roots(subgraph))
     vars_reach = copy(reachable_dominance(subgraph))
-    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach), roots_reach, vars_reach
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
 end
 export make_factored_edge
 
@@ -413,15 +415,16 @@ function needs_factoring(subgraph)
 end
 
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
-function factor_subgraph!(subgraph::FactorableSubgraph)
+function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
+    local new_edge::PathEdge{T}
     if subgraph_exists(subgraph)
         if needs_factoring(subgraph)
-            process_new_subgraphs(subgraph)
+            new_edge = process_new_subgraphs(subgraph)
+        else
+            new_edge = make_factored_edge(subgraph)
         end
-
-        new_edge, roots_reach, vars_reach = make_factored_edge(subgraph)
         add_non_dom_edges!(subgraph)
-        #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
+        #reset roots in R, if possible. All edges earlier in the path than the first vertex with more than one child cannot be reset.
         edges_to_delete = reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
         for edge in edges_to_delete
             delete_edge!(graph(subgraph), edge)
@@ -442,7 +445,7 @@ undo_order(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) whe
 predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
 predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
 
-"""Computes idoms for special case when new factorable subgraphs are created by factorization. This seems redundant with compute_factorable_subgraphs, fill_idom_tables, etc. but invariants that held when graph was first factored no longer hold so need specialized code."""
+"""Computes idoms for special case when new factorable subgraphs are created by factorization. This seems redundant with compute_factorable_subgraphs, fill_idom_tables, etc. but invariants that held when graph was first factored no longer hold so need specialized code. Not currently used, experimental code."""
 function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
     _, sub_nodes = deconstruct_subgraph(subgraph)
     order!(subgraph, sub_nodes)
@@ -453,10 +456,43 @@ function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
     return Dict{T,T}([(sub_nodes[i], sub_nodes[compressed_doms[i]]) for i in eachindex(sub_nodes)])
 end
 
+function sum_count(subgraph::FactorableSubgraph{T}) where {T}
+    visited = Set{T}()
+    counts = Dict{T,T}()
+
+    _sum_count!(subgraph, dominated_node(subgraph), visited, counts)
+    return counts
+end
+
+
+function _sum_count!(subgraph::FactorableSubgraph, current_node::T, visited::Set{T}, counts::Dict{T,T}) where {T<:Integer}
+    if !in(current_node, visited)
+        push!(visited, current_node)
+        if get(counts, current_node, nothing) === nothing
+            counts[current_node] = 1
+        else
+            counts[current_node] += 1
+        end
+
+        for node in predecessors(subgraph, current_node)
+            _sum_count(subgraph, node, visited, counts)
+        end
+    end
+end
+
+function evaluate_branching_subgraph(subgraph::FactorableSubgraph)
+    counts = sum_count(subgraph)
+    visited = Dict{T,T}()
+end
+
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph)
+end
+
+
 """Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
 function process_new_subgraphs(subgraph::FactorableSubgraph)
-    idoms = compute_internal_idoms(subgraph)
-    compute_factorable_subgraphs
+    counts = sum_count(subgraph)
+    new_val = evaluate_subgraph(subgraph)
 
 end
 

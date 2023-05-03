@@ -12,30 +12,19 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
     dom_mask::Union{Nothing,BitVector}
     pdom_mask::Union{Nothing,BitVector}
     #if these two numbers are unchanged since the creation of the subgraph then the subgraph still exists. Quick test for subgraph destruction.
-    num_dominator_edges::T #number of edges from the dominator node that satisfy the subgraph relation.
-    num_dominated_edges::T #number of edges from the dominated node that satisfy the subgraph relation
+    # num_dominator_edges::T #number of edges from the dominator node that satisfy the subgraph relation.
+    # num_dominated_edges::T #number of edges from the dominated node that satisfy the subgraph relation
 
     function FactorableSubgraph{T,DominatorSubgraph}(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node > dominated_node
-        dominator_relation_edges = length(child_edges(graph, dominating_node)) #when graph is created all children of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
-        constraint = PathConstraint(dominating_node, graph, true, dom_mask, variables_reachable)
-        tmp_edges = get_edge_vector()
-        relation_edges!(constraint, dominated_node, tmp_edges)
-        dominated_relation_edges = length(tmp_edges)
-        reclaim_edge_vector(tmp_edges)
-        sum(dom_mask) * sum(variables_reachable)
-        return new{T,DominatorSubgraph}(graph, (dominating_node, dominated_node), sum(dom_mask) * sum(variables_reachable), roots_reachable, variables_reachable, dom_mask, nothing, dominator_relation_edges, dominated_relation_edges)
+
+        return new{T,DominatorSubgraph}(graph, (dominating_node, dominated_node), sum(dom_mask) * sum(variables_reachable), roots_reachable, variables_reachable, dom_mask, nothing)
     end
 
     function FactorableSubgraph{T,PostDominatorSubgraph}(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node < dominated_node
-        dominator_relation_edges = length(parent_edges(graph, dominating_node)) #when graph is created all parents of dominating_node satisfy relation_edges. After subgraphs are factored this may no longer be true. 
-        constraint = PathConstraint(dominating_node, graph, false, roots_reachable, pdom_mask)
-        tmp_edges = get_edge_vector()
-        relation_edges!(constraint, dominated_node, tmp_edges)
-        dominated_relation_edges = length(tmp_edges)
-        reclaim_edge_vector(tmp_edges)
-        return new{T,PostDominatorSubgraph}(graph, (dominating_node, dominated_node), sum(roots_reachable) * sum(pdom_mask), roots_reachable, variables_reachable, nothing, pdom_mask, dominator_relation_edges, dominated_relation_edges)
+
+        return new{T,PostDominatorSubgraph}(graph, (dominating_node, dominated_node), sum(roots_reachable) * sum(pdom_mask), roots_reachable, variables_reachable, nothing, pdom_mask)
     end
 end
 export FactorableSubgraph
