@@ -303,7 +303,7 @@ function check_edges(subgraph::FactorableSubgraph, edge_list::Vector{PathEdge{T}
     end
 end
 
-"""Returns all edges in the subgraph as a set or `nothing` if the subgraph no longer exists."""
+"""Returns all edges in the subgraph as a set. Recursively traverses the subgraph so will work even for subgraphs with branching paths."""
 function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothing,Set{PathEdge{T}}}=nothing, visited::Union{Nothing,Set{PathEdge{T}}}=nothing, curr_node::Union{Nothing,T}=nothing) where {T}
     if sub_edges === nothing
         sub_edges = Set{PathEdge{T}}()

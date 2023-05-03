@@ -429,9 +429,9 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
 end
 export factor_subgraph!
 
-order!(a::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
+order!(::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
 ) #largest node number last
-order!(a::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
+order!(::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
 
 predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
 predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
@@ -447,36 +447,25 @@ function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
     return Dict{T,T}([(sub_nodes[i], sub_nodes[compressed_doms[i]]) for i in eachindex(sub_nodes)])
 end
 
-function sum_count(subgraph::FactorableSubgraph{T}) where {T}
-    visited = Set{T}()
+
+function compute_vertex_counts(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where{T}
     counts = Dict{T,T}()
-
-    _sum_count!(subgraph, dominated_node(subgraph), visited, counts)
-    return counts
-end
-
-
-function _sum_count!(subgraph::FactorableSubgraph, current_node::T, visited::Set{T}, counts::Dict{T,T}) where {T<:Integer}
-    if !in(current_node, visited)
-        push!(visited, current_node)
-        if get(counts, current_node, nothing) === nothing
-            counts[current_node] = 1
-        else
-            counts[current_node] += 1
-        end
-
-        for node in predecessors(subgraph, current_node)
-            _sum_count(subgraph, node, visited, counts)
-        end
+    sub_edges,sub_nodes = deconstruct_subgraph(subgraph)
+    
+    for node in sub_nodes
+        tmp = count(x-> in(x,sub_edges) , child_edges(graph(subgraph),node)) #only count the child edges that are in the subgraph
+        counts[node] = tmp
     end
 end
 
 function evaluate_branching_subgraph(subgraph::FactorableSubgraph)
     counts = sum_count(subgraph)
     visited = Dict{T,T}()
+    _evaluate_branching_subgraph(subgraph,Node(0),dominated_node(subgraph),visited,counts)
 end
 
-function _evaluate_branching_subgraph(subgraph::FactorableSubgraph)
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T},sum::Node,current_vertex::T,visited::Set{T},counts::Dict{T,T}) where{T}
+
 end
 
 
