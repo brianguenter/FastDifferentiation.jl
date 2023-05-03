@@ -346,8 +346,6 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
     constraint = next_edge_constraint(subgraph)
     sum = Node(0.0)
     gr = graph(subgraph)
-    roots_intersect = trues(codomain_dimension(gr))
-    vars_intersect = trues(domain_dimension(gr))
 
     rel_edges = get_edge_vector()
     for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
@@ -355,8 +353,6 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
         #sort by num_uses then from largest to smallest postorder number
 
         if flag == 1 #non-branching path through subgraph
-            roots_intersect .= roots_intersect .& roots_reach
-            vars_intersect .= vars_intersect .& vars_reach
 
             sort!(pedges, lt=path_sort_order)
             sum += multiply_sequence(pedges)
@@ -368,12 +364,12 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
 
 
     reclaim_edge_vector(rel_edges)
-    return sum, roots_intersect, vars_intersect
+    return sum
 end
 export evaluate_subgraph
 
 function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    sum, _, _ = evaluate_subgraph(subgraph)
+    sum = evaluate_subgraph(subgraph)
 
     roots_reach = copy(reachable_dominance(subgraph))
     vars_reach = copy(reachable_variables(subgraph))
@@ -382,7 +378,7 @@ end
 export make_factored_edge
 
 function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-    sum, roots_reach, vars_reach = evaluate_subgraph(subgraph)
+    sum = evaluate_subgraph(subgraph)
 
     roots_reach = copy(reachable_roots(subgraph))
     vars_reach = copy(reachable_dominance(subgraph))
