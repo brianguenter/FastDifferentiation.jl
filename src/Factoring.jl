@@ -366,18 +366,14 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
 end
 export evaluate_subgraph
 
-function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    sum = evaluate_subgraph(subgraph)
-
+function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}, sum::Node) where {T}
     roots_reach = copy(reachable_dominance(subgraph))
     vars_reach = copy(reachable_variables(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
 end
 export make_factored_edge
 
-function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-    sum = evaluate_subgraph(subgraph)
-
+function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, sum::Node) where {T}
     roots_reach = copy(reachable_roots(subgraph))
     vars_reach = copy(reachable_dominance(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
@@ -415,7 +411,8 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
         if needs_factoring(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
             new_edge = process_new_subgraphs(subgraph)
         else
-            new_edge = make_factored_edge(subgraph)
+            sum = evaluate_subgraph(subgraph)
+            new_edge = make_factored_edge(subgraph, sum)
         end
         add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges earlier in the path than the first vertex with more than one child cannot be reset.
@@ -448,33 +445,49 @@ function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
 end
 
 
-function compute_vertex_counts(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where{T}
+### These functions are used to evaluate subgraphs with branches created by factorization. This is not the most efficient way to evalute these subgraphs since terms in products are not ordered by uses. But subgraphs with branching seem rare and this is much simpler than recomputing the factorable subgraphs internal to a branching subgraph. Optimize if efficieny becomes an issue.
+
+function vertex_counts(subgraph::FactorableSubgraph{T}) where {T}
     counts = Dict{T,T}()
-    sub_edges,sub_nodes = deconstruct_subgraph(subgraph)
-    
+    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
+
     for node in sub_nodes
-        tmp = count(x-> in(x,sub_edges) , child_edges(graph(subgraph),node)) #only count the child edges that are in the subgraph
+        tmp = count(x -> in(x, sub_edges), backward_edges(subgraph, node)) #only count the child edges that are in the subgraph
         counts[node] = tmp
     end
 end
 
 function evaluate_branching_subgraph(subgraph::FactorableSubgraph)
     counts = sum_count(subgraph)
-    visited = Dict{T,T}()
-    _evaluate_branching_subgraph(subgraph,Node(0),dominated_node(subgraph),visited,counts)
+    vertex_sums = Dict{T,Node}()
+
+    _evaluate_branching_subgraph(subgraph, Node(0), dominated_node(subgraph), counts, vertex_sums)
+    return vertex_sums(dominating_node(subgraph))
 end
 
-function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T},sum::Node,current_vertex::T,visited::Set{T},counts::Dict{T,T}) where{T}
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
+    counts[current_vertex] -= 1
 
+    if counts[current_vertex] != 0
+        vertex_sums[current_vertex] += sum
+    else
+        for edge in predecessors(subgraph, current_vertex)
+            sum *= value(edge)
+            _evaluate_branching_subgraph(subgraph, sum, forward_vertex(subgraph, edge), counts, vertex_sums)
+        end
+    end
 end
 
 
 """Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
 function process_new_subgraphs(subgraph::FactorableSubgraph)
     counts = sum_count(subgraph)
-    new_val = evaluate_subgraph(subgraph)
+    new_val = evaluate_branching_subgraph(subgraph)
 
 end
+
+### End of functions for evaluating subgraphs with branches.
+
 
 function print_edges(a, msg)
     println(msg)

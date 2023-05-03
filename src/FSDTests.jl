@@ -1365,10 +1365,10 @@ end
     subs = extract_all!(sub_heap)
 
     _5_3 = filter(x -> vertices(x) == (5, 3), subs)[1]
-    e_5_3 = make_factored_edge(_5_3)
+    e_5_3 = make_factored_edge(_5_3,evaluate_subgraph(_5_3))
 
     _3_5 = filter(x -> vertices(x) == (3, 5), subs)[1]
-    e_3_5 = make_factored_edge(_3_5)
+    e_3_5 = make_factored_edge(_3_5,evaluate_subgraph(_3_5))
 
     @test bit_equal(reachable_roots(e_5_3), BitVector([1, 0]))
     @test bit_equal(reachable_variables(e_5_3), BitVector([1, 1]))
