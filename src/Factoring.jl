@@ -382,7 +382,7 @@ export make_factored_edge
 
 
 """Returns true if a new factorable subgraph was created inside `subgraph` during the factorization process. If true then must compute factorable subgraphs for the edges inside `subgraph`. `subgraph_exists` should be called before executing this function otherwise it may return false when no new subgraphs have been created."""
-function needs_factoring(subgraph)
+function is_branching(subgraph)
     fedges = forward_edges(subgraph, dominated_node(subgraph))
 
     sub_edges = Set{PathEdge}()
@@ -408,8 +408,9 @@ end
 function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
     local new_edge::PathEdge{T}
     if subgraph_exists(subgraph)
-        if needs_factoring(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
-            new_edge = process_new_subgraphs(subgraph)
+        if is_branching(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
+            sum = evaluate_branching_subgraph(subgraph)
+            new_edge = make_factored_edge(subgraph, sum)
         else
             sum = evaluate_subgraph(subgraph)
             new_edge = make_factored_edge(subgraph, sum)
@@ -455,10 +456,11 @@ function vertex_counts(subgraph::FactorableSubgraph{T}) where {T}
         tmp = count(x -> in(x, sub_edges), backward_edges(subgraph, node)) #only count the child edges that are in the subgraph
         counts[node] = tmp
     end
+    return counts
 end
 
-function evaluate_branching_subgraph(subgraph::FactorableSubgraph)
-    counts = sum_count(subgraph)
+function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
+    counts = vertex_counts(subgraph)
     vertex_sums = Dict{T,Node}()
 
     _evaluate_branching_subgraph(subgraph, Node(0), dominated_node(subgraph), counts, vertex_sums)
@@ -476,14 +478,6 @@ function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node
             _evaluate_branching_subgraph(subgraph, sum, forward_vertex(subgraph, edge), counts, vertex_sums)
         end
     end
-end
-
-
-"""Processes new subgraphs that have been created by factorization. These new factorable subgraphs are always contained in an existing subgraph except perhaps at the very end of factorization when they must be processed in a cleanup step performed by follow_path"""
-function process_new_subgraphs(subgraph::FactorableSubgraph)
-    counts = sum_count(subgraph)
-    new_val = evaluate_branching_subgraph(subgraph)
-
 end
 
 ### End of functions for evaluating subgraphs with branches.

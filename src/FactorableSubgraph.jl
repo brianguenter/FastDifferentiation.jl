@@ -348,7 +348,7 @@ function deconstruct_subgraph(subgraph::FactorableSubgraph)
 end
 export deconstruct_subgraph
 
-"""Returns true if the subgraph is still a factorable dominance subgraph, false otherwise"""
+"""Returns true if the subgraph is still a factorable subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
     #Do fast tests that guarantee subgraph has been destroyed by factorization: no edges connected to dominated node, dominated_node or dominator node has < 2 subgraph edges
     #This is inefficient since many tests require just the number of edges but this code creates temp arrays containing the edges and then measures the length. Optimize later by having separate children and parents fields in edges structure of RnToRmGraph. Then num_parents and num_children become fast and allocation free.
@@ -372,21 +372,21 @@ function subgraph_exists(subgraph::FactorableSubgraph)
                 count += 1
             end
 
-            @invariant begin
-                good_edges, tmp = edges_on_path(subgraph, edge)
-                good_subgraph = true
+            # @invariant begin
+            #     good_edges, tmp = edges_on_path(subgraph, edge)
+            #     good_subgraph = true
 
-                if good_edges
-                    for pedge in tmp
-                        if in(pedge, sub_edges)
-                            good_subgraph = false
-                            break
-                        end
-                        push!(sub_edges, pedge)
-                    end
-                end
-                good_subgraph
-            end "Visited edge $(vertices(pedge)) more than once in subgraph $(vertices(subgraph)). Edges in factorable subgraph should only be visited once. "
+            #     if good_edges
+            #         for pedge in tmp
+            #             if in(pedge, sub_edges)
+            #                 good_subgraph = false
+            #                 break
+            #             end
+            #             push!(sub_edges, pedge)
+            #         end
+            #     end
+            #     good_subgraph
+            # end "Visited edge $(vertices(pedge)) more than once in subgraph $(vertices(subgraph)). Edges in factorable subgraph should only be visited once. "
         end
         if count >= 2
             return true
