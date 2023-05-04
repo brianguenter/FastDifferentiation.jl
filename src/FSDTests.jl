@@ -1618,7 +1618,8 @@ end
     using FiniteDifferences
     using FastSymbolicDifferentiation.FSDTests
 
-    fsd_graph = chebyshev_graph(1)
+    chebyshev_order = 20
+    fsd_graph = chebyshev_graph(chebyshev_order)
     fsd_func = make_function(fsd_graph)
 
     func_wrap(x) = fsd_func(x)[1]
@@ -1634,7 +1635,7 @@ end
     end
 
     tmp = Matrix{Float64}(undef, 1, 1)
-    fsd_graph = chebyshev_graph(1)
+    fsd_graph = chebyshev_graph(chebyshev_order)
     sym_func = jacobian_function!(fsd_graph)
 
     #the in place form of jacobian function
