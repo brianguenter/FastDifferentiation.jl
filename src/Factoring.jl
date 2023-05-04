@@ -490,8 +490,7 @@ function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node
             if !in(edge, sub_edges)
                 continue
             else
-                sum *= value(edge)
-                _evaluate_branching_subgraph(subgraph, sum, forward_vertex(subgraph, edge), sub_edges, counts, vertex_sums)
+                _evaluate_branching_subgraph(subgraph, vertex_sums[current_vertex] * value(edge), forward_vertex(subgraph, edge), sub_edges, counts, vertex_sums)
             end
         end
     end

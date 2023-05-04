@@ -7,23 +7,28 @@ using .FSDTests
 
 
 function test()
-    fsd_graph = chebyshev_graph(5)
-    fsd_func = make_function(fsd_graph)
+    @variables x
+    nx = Node(x)
+    println(Chebyshev(2, nx))
+    fsd_graph = chebyshev_graph(2)
+    Vis.draw_dot(fsd_graph)
 
-    func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = jacobian_function!(fsd_graph)
-
-    for xr in -1.0:0.214:1.0
-        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
-
-        symbolic = sym_func(xr)
-
-        @assert isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
-    end
-
-    tmp = Matrix{Float64}(undef, 1, 1)
-    fsd_graph = chebyshev_graph(20)
-    sym_func = jacobian_function!(fsd_graph)
+    sym_func = symbolic_jacobian!(fsd_graph)
 end
 export test
+
+function test2()
+    @variables x
+
+    nx = Node(x)
+    n2 = cos(nx)
+    n3 = n2 * n2
+
+    gr = DerivativeGraph(n3)
+    Vis.draw_dot(gr)
+    sub = postdominator_subgraph(gr, 1, 3, BitVector([1]), BitVector([1]), BitVector([1]))
+    evaluate_branching_subgraph(sub)
+end
+export test2
+
