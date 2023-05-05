@@ -138,7 +138,7 @@ function benchmark_FSD(model_function::Function, min_model_size, max_model_size,
     for model_size in min_model_size:max_model_size
         symbolic_time = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($model_size) evals = 1
 
-        # make_function_time = @benchmark jacobian_function!(graph, vars, in_place=true) setup = (graph=$model_function($model_size), vars=FastSymbolicDifferentiation.variables(graph)) evals = 1
+        make_function_time = @benchmark jacobian_function!(graph) setup = (graph = $model_function($model_size)) evals = 1
 
         graph = model_function(model_size)
         exe = jacobian_function!(graph, FSD.variables(graph), in_place=true)
@@ -149,7 +149,7 @@ function benchmark_FSD(model_function::Function, min_model_size, max_model_size,
 
         push!(symbolic_data, extract_info(model_size, symbolic_time))
         push!(exe_data, extract_info(model_size, exe_time))
-        # push!(make_function_data, extract_info(model_size, make_function_time))
+        push!(make_function_data, extract_info(model_size, make_function_time))
     end
     write_data.([symbolic_data, exe_data, make_function_data], model_function, [SYMBOLIC, EXE, MAKE_FUNCTION], min_model_size, max_model_size, simplify)
 end
