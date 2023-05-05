@@ -20,7 +20,7 @@ import LinearAlgebra
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
 include("Transformations.jl")
-include("LagrangianDynamics.jl")
+# include("LagrangianDynamics.jl")
 include("SimpsonHermite.jl")
 
 
@@ -211,5 +211,6 @@ function plot_SH_make_function_time(min_order, max_order, simplify)
     plot!(xticks=min_order:2:max_order)
 end
 export plot_SH_make_function_time
+
 
 end # module Benchmarks
