@@ -507,15 +507,10 @@ function print_edges(a, msg)
 end
 
 function factor!(a::DerivativeGraph{T}) where {T}
-    @timeit TIMER "compute factorable subgraphs" subgraph_list = compute_factorable_subgraphs(a)
+    subgraph_list = compute_factorable_subgraphs(a)
 
-    count = 0
-    total = length(subgraph_list)
-    @info "$total factorable subgraphs"
-    @timeit TIMER "factor_subgraph total" while !isempty(subgraph_list)
+    while !isempty(subgraph_list)
         # @info "Processed $count subgraphs out of $total"
-        count += 1
-
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)

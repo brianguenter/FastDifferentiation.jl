@@ -15,7 +15,7 @@ using LaTeXStrings
 import LinearAlgebra
 
 
-
+const FSD = FastSymbolicDifferentiation
 
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
@@ -211,6 +211,28 @@ function plot_SH_make_function_time(min_order, max_order, simplify)
     plot!(xticks=min_order:2:max_order)
 end
 export plot_SH_make_function_time
+
+
+function plot_vs_symbolics(model_function::Function, min_model_size, max_model_size)
+    # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
+    symbolic_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+    for model_size in min_model_size:max_model_size
+        symbolic_time = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($model_size) evals = 1
+
+
+        # make_function_time = @benchmark jacobian_function!(gr, vars, in_place=true) setup = (gr=$model_function($model_size), vars=$FastSymbolicDifferentiation.glob(gr)) evals = 1
+        # graph = model_function(model_size)
+        # exe = jacobian_function!(graph, FSD.variables(gr), in_place=true)
+        # input = rand(domain_dimension(graph))
+        # output = rand(codomain_dimension(graph), domain_dimension(graph))
+        # exe_time = @benchmark exe(input, output)
+
+        sym_vals = [model_size, minimum(symbolic_time).time, median(symbolic_time).time, maximum(symbolic_time).time, symbolic_time.allocs, symbolic_time.memory]
+        push!(symbolic_data, sym_vals)
+    end
+    return symbolic_data
+end
+export plot_vs_symbolics
 
 
 end # module Benchmarks

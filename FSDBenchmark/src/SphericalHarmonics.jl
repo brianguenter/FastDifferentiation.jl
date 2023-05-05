@@ -81,23 +81,16 @@ end
 export SHFunctions
 
 
-to_dag(max_l, x, y, z) = expr_to_dag.(SHDerivatives(max_l, x, y, z))
-export to_dag
-function to_graph(max_l)
+function spherical_harmonics(model_size)
 
     Symbolics.@variables x, y, z
     nx = Node(x)
     ny = Node(y)
     nz = Node(z)
 
-    graph = DerivativeGraph(SHFunctions(max_l, nx, ny, nz))
-    return graph, x, y, z
+    graph = DerivativeGraph(SHFunctions(model_size, nx, ny, nz))
+    return graph
 end
-export to_graph
-
-function compute_SH_function_jacobian(gr)
-    return jacobian_function!(gr)
-end
-export compute_SH_function_jacobian
+export spherical_harmonics
 
 

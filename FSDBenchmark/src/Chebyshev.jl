@@ -26,11 +26,11 @@ export Chebyshev_exe
 
 Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
 
-function chebyshev_graph(order)
+function chebyshev(model_size)
     Symbolics.@variables x
     nx = Node(x)
     # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
-    return DerivativeGraph([Chebyshev(order, nx)])
+    return DerivativeGraph([Chebyshev(model_size, nx)])
 end
-export chebyshev_graph
+export chebyshev
 
