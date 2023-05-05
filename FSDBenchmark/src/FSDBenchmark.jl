@@ -30,12 +30,7 @@ const SH_NAME = "spherical_harmonics"
 const EXE = "exe"
 const MAKE_FUNCTION = "make_function"
 
-filename(algorithm_name, function_name, benchmark_name, min_order, max_order, simplify) = "Data/$algorithm_name-$(function_name)-$(benchmark_name)-$min_order-$max_order-simplification-$simplify.csv"
-FSD_filename(function_name, benchmark_name, min_order, max_order, simplify) = filename("FSD", function_name, benchmark_name, min_order, max_order, simplify)
-export FSD_filename
-
-Symbolics_filename(function_name, benchmark_name, min_order, max_order, simplify) = filename("Symbolics", function_name, benchmark_name, min_order, max_order, simplify)
-export Symbolics_filename
+filename(function_name, benchmark_name, min_order, max_order, simplify) = "Data/$(function_name)-$(benchmark_name)-$min_order-$max_order-simplification-$simplify.csv"
 
 function create_Symbolics_exe(max_l, simplify=true)
     @variables x, y, z
@@ -213,26 +208,41 @@ end
 export plot_SH_make_function_time
 
 
-function plot_vs_symbolics(model_function::Function, min_model_size, max_model_size)
+function benchmark_FSD(model_function::Function, min_model_size, max_model_size, simplify=false)
+    extract_info(model_size, benchmark_timing) = [model_size, minimum(benchmark_timing).time, median(benchmark_timing).time, maximum(benchmark_timing).time, benchmark_timing.allocs, benchmark_timing.memory]
+
     # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
     symbolic_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+    exe_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+    make_function_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+
+
     for model_size in min_model_size:max_model_size
         symbolic_time = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($model_size) evals = 1
 
 
-        # make_function_time = @benchmark jacobian_function!(gr, vars, in_place=true) setup = (gr=$model_function($model_size), vars=$FastSymbolicDifferentiation.glob(gr)) evals = 1
-        # graph = model_function(model_size)
-        # exe = jacobian_function!(graph, FSD.variables(gr), in_place=true)
-        # input = rand(domain_dimension(graph))
-        # output = rand(codomain_dimension(graph), domain_dimension(graph))
-        # exe_time = @benchmark exe(input, output)
+        make_function_time = @benchmark jacobian_function!(graph, vars, in_place=true) setup = (graph=$model_function($model_size), vars=FastSymbolicDifferentiation.variables(graph)) evals = 1
+        graph = model_function(model_size)
+        exe = jacobian_function!(graph, FSD.variables(graph), in_place=true)
+        input = rand(domain_dimension(graph))
+        output = rand(codomain_dimension(graph), domain_dimension(graph))
+        exe_time = @benchmark exe(input, output)
 
-        sym_vals = [model_size, minimum(symbolic_time).time, median(symbolic_time).time, maximum(symbolic_time).time, symbolic_time.allocs, symbolic_time.memory]
-        push!(symbolic_data, sym_vals)
+        push!(symbolic_data, extract_info(model_size, symbolic_time))
+        push!(exe_data, extract_info(model_size, exe_time))
+        push!(make_function_data, extract_info(model_size, make_function_time))
     end
-    return symbolic_data
+    CSV.write(
+        filename(nameof(model_function), "symbolic", min_model_size, max_model_size, simplify),
+        symbolic_data)
+    CSV.write(
+        filename(nameof(model_function), "exe", min_model_size, max_model_size, simplify),
+        exe_data)
+    CSV.write(
+        filename(nameof(model_function), "make_function", min_model_size, max_model_size, simplify),
+        make_function_data)
 end
-export plot_vs_symbolics
+export benchmark_FSD
 
 
 end # module Benchmarks
