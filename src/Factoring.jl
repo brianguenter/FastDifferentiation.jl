@@ -404,11 +404,26 @@ function is_branching(subgraph)
     return bad_subgraph
 end
 
+function reset_counts()
+    global test_count, all_count
+    test_count = 0
+    all_count = 0
+end
+export reset_counts
+
+global test_count = 0
+global all_count = 0
+
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
     local new_edge::PathEdge{T}
     if subgraph_exists(subgraph)
+        global all_count
+        all_count += 1
+
         if is_branching(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
+            global test_count
+            test_count += 1
             sum = evaluate_branching_subgraph(subgraph)
             new_edge = make_factored_edge(subgraph, sum)
         else
@@ -514,6 +529,9 @@ function factor!(a::DerivativeGraph{T}) where {T}
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
+        #test
+        # Vis.draw_dot(graph(subgraph), start_nodes=[93], graph_label="factored subgraph $(vertices(subgraph))", value_labels=false)
+        #end test
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end

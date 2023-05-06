@@ -1365,10 +1365,10 @@ end
     subs = extract_all!(sub_heap)
 
     _5_3 = filter(x -> vertices(x) == (5, 3), subs)[1]
-    e_5_3 = make_factored_edge(_5_3,evaluate_subgraph(_5_3))
+    e_5_3 = make_factored_edge(_5_3, evaluate_subgraph(_5_3))
 
     _3_5 = filter(x -> vertices(x) == (3, 5), subs)[1]
-    e_3_5 = make_factored_edge(_3_5,evaluate_subgraph(_3_5))
+    e_3_5 = make_factored_edge(_3_5, evaluate_subgraph(_3_5))
 
     @test bit_equal(reachable_roots(e_5_3), BitVector([1, 0]))
     @test bit_equal(reachable_variables(e_5_3), BitVector([1, 1]))
@@ -1582,8 +1582,8 @@ end
     using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences
 
-    fsd_graph, x, y, z = to_graph(10)
-    fsd_func = make_function(fsd_graph, Node.([x, y, z]))
+    fsd_graph = FSD_spherical_harmonics(10)
+    fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
     #hand computed derivative for order = 3
     # correct_derivatives(x, y, z) = [
@@ -1598,7 +1598,7 @@ end
     #     0.0 0.0 0.0
     # ]
 
-    sym_func = jacobian_function!(fsd_graph, [Node(x), Node(y), Node(z)])
+    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
 
 
     for xr in -1.0:0.3:1.0
@@ -1619,12 +1619,12 @@ end
     using FastSymbolicDifferentiation.FSDTests
 
     chebyshev_order = 20
-    fsd_graph = chebyshev_graph(chebyshev_order)
+    fsd_graph = FSD_chebyshev(chebyshev_order)
     fsd_func = make_function(fsd_graph)
 
     func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = jacobian_function!(fsd_graph)
+    sym_func = jacobian_function!(fsd_graph, in_place=false)
 
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
@@ -1635,8 +1635,8 @@ end
     end
 
     tmp = Matrix{Float64}(undef, 1, 1)
-    fsd_graph = chebyshev_graph(chebyshev_order)
-    sym_func = jacobian_function!(fsd_graph)
+    fsd_graph = FSD_chebyshev(chebyshev_order)
+    sym_func = jacobian_function!(fsd_graph, in_place=false)
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0

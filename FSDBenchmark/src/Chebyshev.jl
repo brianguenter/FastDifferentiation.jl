@@ -20,11 +20,12 @@ export Chebyshev
 end
 export Chebyshev
 
-"""WARNING: slow for large n"""
-Chebyshev_exe(n, x::Symbolics.Num) = make_function(DerivativeGraph([expr_to_dag(Chebyshev(n, x))]))
-export Chebyshev_exe
-
 Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
+
+function Symbolics_chebyshev(model_size)
+    Symbolics.@variables x
+    return [Chebyshev(model_size, x)], [x]
+end
 
 function FSD_chebyshev(model_size)
     Symbolics.@variables x

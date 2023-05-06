@@ -80,6 +80,10 @@ function SHFunctions(shfunc, max_l, x, y, z)
 end
 export SHFunctions
 
+function Symbolics_spherical_harmonics(model_size)
+    Symbolics.@variables x y z
+    return SHFunctions(model_size, x, y, z), [x, y, z]
+end
 
 function FSD_spherical_harmonics(model_size)
 

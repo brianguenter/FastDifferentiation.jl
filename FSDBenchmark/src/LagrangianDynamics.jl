@@ -44,8 +44,8 @@ function τᵢ(linkage::Linkage, index::Int)
 
 
     for j in index:num_links(linkage)
-       DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
-       DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
+        DWⱼ_qᵢ = derivative(W(linkage, j), qᵢ)
+        DWⱼ_qᵢ[4, 4] = Node(1.0) #hack to make sure still homogeneous transformation
         Dtt = derivative(W(linkage, j), t, t)
         J = Jⱼ(linkage, index)
         grav = mⱼ(linkage, index) * (transpose(g) * rⱼ(linkage, index))
@@ -57,13 +57,12 @@ function τᵢ(linkage::Linkage, index::Int)
 end
 export τᵢ
 
-function lagrangian_dynamics()
+function lagrangian_dynamics(n::Integer)
     result = Node[]
-    links = Linkage(3)
+    links = Linkage(n)
     for i in eachindex(links.Aᵢ)
         torque = τᵢ(links, i)
 
-        println("num ops $(number_of_operations([torque]))")
         push!(result, torque)
     end
     return result
@@ -72,26 +71,7 @@ export lagrangian_dynamics
 
 function lagtest()
 
-    Symbolics.@variables t
-    nt = Node(t)
-    q2 = function_of(:q2, nt)
-    q = function_of(:q, nt)
-    # A = [q2 q; q q]
-    # B = [1.0 q2; q 2.0]
 
-    C = [(q2+(q*q)) ((q2*q2)+(2.0*q)); (q+(q*q)) ((q*q2)+(2.0*q))]
-    # C = [Node(1.0) ((q2*q2)+(2.0*q)); (q+(q*q)) Node(1.0)]
-    # gr = DerivativeGraph([(q * q2) + (2.0 * q)])
-    # symbolic_jacobian!(gr)
-    # println("passed")
-    # r1 = (q2 * q) + (Node(2.0) * q)
-    # r2 = Node(2.0) * q
-    # tmp = DerivativeGraph([r1, r2])
-    tmp = DerivativeGraph(vec(C))
-    # FastSymbolicDifferentiation.Vis.draw(tmp, false)
-    # FastSymbolicDifferentiation.Vis.draw_dot(tmp, "test.svg")
-    # println(C)
-    # C = (2 * q) + nt
     symbolic_jacobian!(tmp)
     # FastSymbolicDifferentiation.Vis.draw_dot(tmp)
     # derivative(tmp, nt)

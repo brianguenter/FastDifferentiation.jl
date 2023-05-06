@@ -20,7 +20,7 @@ const FSD = FastSymbolicDifferentiation
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
 include("Transformations.jl")
-# include("LagrangianDynamics.jl")
+include("LagrangianDynamics.jl")
 include("SimpsonHermite.jl")
 
 
@@ -32,27 +32,6 @@ const MAKE_FUNCTION = "make_function"
 
 filename(function_name, benchmark_name, min_order, max_order, simplify) = "Data/$(function_name)-$(benchmark_name)-$min_order-$max_order-simplification-$simplify.csv"
 
-function create_Symbolics_exe(max_l, simplify=true)
-    @variables x, y, z
-
-    jac = Symbolics.jacobian(SHFunctions(max_l, x, y, z), [x, y, z]; simplify=simplify)
-    fn1, fn2 = eval.(build_function(jac, [x, y, z]))
-    return fn1, fn2
-end
-export create_Symbolics_exe
-
-
-function Symbolics_spherical_harmonics(min_order, max_order, simplify=true)
-    output = DataFrame()
-
-    for n in min_order:1:max_order
-        trial = @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = fn = SHFunctions($n, $x, $y, $z) evals = 1
-        push!(output, preprocess_trial(trial, "$n"))
-    end
-    CSV.write(Symbolics_filename(SH_NAME, "symbolic", min_order, max_order, simplify), output)
-    return output
-end
-export Symbolics_spherical_harmonics
 
 function plot_data(bench1, bench2, graph_title, simplify)
     data1 = CSV.read(bench1, DataFrame)
@@ -121,39 +100,72 @@ export plot_SH_make_function_time
 
 extract_info(model_size, benchmark_timing) = [model_size, minimum(benchmark_timing).time, median(benchmark_timing).time, maximum(benchmark_timing).time, benchmark_timing.allocs, benchmark_timing.memory]
 
-function write_data(data, model_function, benchmark_name, min_model_size, max_model_size, simplify)
-    println(benchmark_name)
+function write_data(data, model_function, benchmark_function, min_model_size, max_model_size, simplify)
     CSV.write(
-        filename(nameof(model_function), benchmark_name, min_model_size, max_model_size, simplify),
+        filename(nameof(model_function), nameof(benchmark_function), min_model_size, max_model_size, simplify),
         data)
 end
 
-function benchmark_FSD(model_function::Function, min_model_size, max_model_size, simplify=false)
-    # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
-    symbolic_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
-    exe_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
-    make_function_data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+#For FSD functions model_function returns a DerivativeGraph. For Symbolics functions model_function returns a function (may be an array in the function has multiple outputs) as well as a vector of input variables.
 
+fsd_symbolic_benchmark(model_function::Function, model_size; simplify=false) = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($model_size) evals = 1
+fsd_make_benchmark(model_function::Function, model_size; simplify=false) = @benchmark jacobian_function!(graph) setup = (graph = $model_function($model_size)) evals = 1
+function fsd_exe_benchmark(model_function::Function, model_size, simplify=false)
+    graph = model_function(model_size)
+    exe = jacobian_function!(graph, FSD.variables(graph), in_place=true)
 
-    for model_size in min_model_size:max_model_size
-        symbolic_time = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($model_size) evals = 1
-
-        make_function_time = @benchmark jacobian_function!(graph) setup = (graph = $model_function($model_size)) evals = 1
-
-        graph = model_function(model_size)
-        exe = jacobian_function!(graph, FSD.variables(graph), in_place=true)
-
-        input = rand(domain_dimension(graph))
-        output = rand(codomain_dimension(graph), domain_dimension(graph))
-        exe_time = @benchmark $exe($input..., $output)
-
-        push!(symbolic_data, extract_info(model_size, symbolic_time))
-        push!(exe_data, extract_info(model_size, exe_time))
-        push!(make_function_data, extract_info(model_size, make_function_time))
-    end
-    write_data.([symbolic_data, exe_data, make_function_data], model_function, [SYMBOLIC, EXE, MAKE_FUNCTION], min_model_size, max_model_size, simplify)
+    input = rand(domain_dimension(graph))
+    output = rand(codomain_dimension(graph), domain_dimension(graph))
+    return @benchmark $exe($input..., $output)
 end
-export benchmark_FSD
 
+
+function symbolics_symbolic_benchmark(model_function, model_size; simplify=false)
+    tmp = model_function(model_size)
+    println(Symbolics.jacobian(tmp[1], tmp[2]; simplify=simplify))
+    @benchmark Symbolics.jacobian(tmp[1], tmp[2]; simplify=$simplify) setup = (tmp = $model_function($model_size))
+end
+
+function symbolics_exe_benchmark(model_function, model_size; simplify=false)
+    model, vars = model_function(model_size)
+    jac = Symbolics.jacobian(model, vars; simplify=simplify)
+    out_of_place, in_place = build_function(jac, vars; expression=Val{false})
+    tmp_matrix = out_of_place(rand(length(vars)))
+
+    return @benchmark $in_place($tmp_matrix, rand(length($vars)))
+end
+
+function symbolics_make_benchmark(model_function, model_size; simplify=false)
+    model, vars = model_function(model_size)
+    jac = Symbolics.jacobian(model, vars; simplify=simplify)
+    return @benchmark build_function($jac, $vars; expression=Val{false})
+end
+
+function single_benchmark(model_function::Function, benchmark_function::Function, model_range, simplify=false)
+    # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
+    data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+
+    for model_size in model_range
+        time = benchmark_function(model_function, model_size)
+        push!(data, extract_info(model_size, time))
+    end
+    write_data.([data], model_function, benchmark_function, minimum(model_range), maximum(model_range), simplify)
+end
+export single_benchmark
+
+function benchmark(models, sizes, benchmarks; simplify::Bool=false)
+    for (model, size_range) in zip(models, sizes)
+        for bench in benchmarks
+            single_benchmark(model, bench, size_range, simplify)
+        end
+    end
+end
+export benchmark
+
+benchmark_sizes = [5:1:25, 5:5:40]
+FSD_params() = ([FSD_spherical_harmonics, FSD_chebyshev], benchmark_sizes, [fsd_symbolic_benchmark, fsd_make_benchmark, fsd_exe_benchmark])
+export FSD_params
+Symbolics_params() = ([Symbolics_spherical_harmonics, Symbolics_chebyshev], benchmark_sizes, [symbolics_symbolic_benchmark, symbolics_make_benchmark, symbolics_exe_benchmark])
+export Symbolics_params
 
 end # module Benchmarks
