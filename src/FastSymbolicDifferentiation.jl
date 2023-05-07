@@ -11,7 +11,6 @@ using Statistics
 using RuntimeGeneratedFunctions
 using Logging
 import Base: iterate
-using TimerOutputs
 using UUIDs
 module AutomaticDifferentiation
 struct NoDeriv
@@ -19,8 +18,6 @@ end
 export NoDeriv
 end #module
 export AutomaticDifferentiation
-
-const TIMER = TimerOutput()
 
 const INVARIANTS = true
 

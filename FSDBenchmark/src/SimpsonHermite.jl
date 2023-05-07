@@ -4,7 +4,6 @@ using DifferentialEquations
 using Interpolations
 using Plots
 using FastSymbolicDifferentiation
-using TimerOutputs
 
 struct VarAssimVectorField
     vf::Function #out-of-place vector field with type signature vf(u,oc,p,sc) where u is state, oc are optimized controls, p are parameters, sc are static controls (e.g. driving current, observed data)
@@ -160,8 +159,11 @@ gtp = (
 function SiH_test()
     ## Generate lorenz data
 
-    lor_tmax = 160.0
-    lor_dt = 0.5
+    # lor_tmax = 160.0
+    # lor_dt = 0.5
+
+    lor_tmax = 16.0
+    lor_dt = 10
 
     lor_u0 = [-1.31; 0.8; 19.77]
     lor_tspan = (0.0, lor_tmax)
@@ -178,8 +180,11 @@ function SiH_test()
         hhvf_assim_controlled(x, [0.0], pvec, [lorfunc(t), 0.0])
     end
 
-    hh_tmax = 200.0
-    hh_saveat = 0.1
+    # hh_tmax = 200.0
+    # hh_saveat = 0.1
+
+    hh_tmax = 40.0
+    hh_saveat = 20
 
     hh_u0 = [-68.24221681836171
         0.056029230048653705
@@ -227,6 +232,7 @@ export SiH_test
 
 function time_test(gr)
     graph_statistics(gr)
+    Vis.draw_dot(gr, value_labels=false, reachability_labels=false, start_nodes=[54])
 
     factor!(gr)
 end

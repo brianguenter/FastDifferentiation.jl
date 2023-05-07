@@ -346,9 +346,9 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
         for _ in 1:curr_level
 
             curr_node = pop!(work_heap)
-            @timeit TIMER "relation_node_indices" parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
+            parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
-            @timeit TIMER "fill_idom_table" fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
+            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
 
             if next_vertices_relation(graph, curr_node) !== nothing
                 #get next set of vertices

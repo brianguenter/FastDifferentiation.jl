@@ -70,7 +70,7 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
         gr *= "label = \"$label\"\n"
     end
     gr *= "ratio=\"fill\"\n"
-    gr *= "size = 12 12\n"
+    # gr *= "size = 12 12\n"
     gr_copy = deepcopy(graph)
 
     nodes_to_draw = Set{Node}()
@@ -133,7 +133,8 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
         start_nodes=start_nodes,
         graph_label=graph_label,
         reachability_labels=reachability_labels,
-        value_labels=value_labels)
+        value_labels=value_labels,
+        no_path_edges=true)
     svg = read(name * ".svg", String)
     display("image/svg+xml", svg)
 end
