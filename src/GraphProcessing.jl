@@ -269,39 +269,55 @@ function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelatio
 end
 export compute_edge_paths!
 
-"""convenience function to avoid calling messier low level function"""
+"""convenience function to avoid calling messier low level function. `order_test` is one of `<,>`."""
 compute_edge_paths!(graph::DerivativeGraph) = compute_edge_paths!(length(nodes(graph)), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
-
-function intersection(order_test, node1::Integer, node2::Integer, idoms::Dict{T,T}) where {T<:Integer}
+""""`start_index` argument is the index of the root or leaf node of the graph. Not strictly necessary. Only used so can assertion check this function and `intersection`."""
+function intersection(order_test, node1::Integer, node2::Integer, idoms::Dict{T,T}, start_index::T) where {T<:Integer}
     count = 0
     max_count = length(idoms)
     while true
         #added this assertion because several simple errors in other code made this code loop forever. Hard to track the error down without a thrown exception.
         @assert count <= max_count "intersection has taken more steps than necessary. This should never happen."
+
         if node1 == node2
             return node1
         else
             if order_test(node1, node2)
                 node1 = idoms[node1]
+
+                @assert order_test(node1, start_index) || node1 == start_index
             else
                 node2 = idoms[node2]
+
+                @assert order_test(node2, start_index) || node2 == start_index "order_test $order_test node2 $node2 start_index $start_index"
             end
         end
         count += 1
     end
 end
 
-function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_table::Dict{T,T}, current_node::T, order_test::Function) where {T<:Integer}
+"""`start_index` argument is not strictly necessary. Only used so can assertion check this function and `intersection`."""
+function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_table::Dict{T,T}, current_node::T, order_test::Function, start_index::T) where {T<:Integer}
+
+    #test
+    if start_index == 54
+        println(sort(pairs(dom_table), by=first))
+    end
+    #end test
+
     if next_vertices === nothing
         dom_table[current_node] = current_node
     elseif length(next_vertices) == 1
         dom_table[current_node] = next_vertices[1]
     else
         br1 = next_vertices[1]
+        @assert order_test(br1, start_index) || br1 == start_index "br1 ($br1) > start_index ($start_index). Violated assertion before intersection."
+
         for relation_vertex in view(next_vertices, 2:length(next_vertices))
-            br1 = intersection(order_test, br1, relation_vertex, dom_table)
+            br1 = intersection(order_test, br1, relation_vertex, dom_table, start_index)
         end
+        @assert order_test(br1, start_index) || br1 == start_index "br1 violated assertion after intersection."
         dom_table[current_node] = br1
     end
 end
@@ -346,9 +362,16 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
         for _ in 1:curr_level
 
             curr_node = pop!(work_heap)
+
             parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
 
-            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test)
+            if compute_dominators
+                start_node = root_index_to_postorder_number(graph, start_index)
+            else
+                start_node = variable_index_to_postorder_number(graph, start_index)
+            end
+
+            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test, start_node)
 
             if next_vertices_relation(graph, curr_node) !== nothing
                 #get next set of vertices

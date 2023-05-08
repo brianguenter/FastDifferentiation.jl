@@ -231,8 +231,8 @@ end
 export SiH_test
 
 function time_test(gr)
-    graph_statistics(gr)
-    Vis.draw_dot(gr, value_labels=false, reachability_labels=false, start_nodes=[54])
+    graph_statistics(gr) #graph_statistics is modifiying graph.
+    Vis.draw_dot(gr, value_labels=false, reachability_labels=true, start_nodes=[54])
 
     factor!(gr)
 end
