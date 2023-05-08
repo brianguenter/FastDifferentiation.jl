@@ -577,6 +577,7 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
 end
 export make_function
 
+
 function graph_statistics(graph::DerivativeGraph)
     @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
 
@@ -603,7 +604,7 @@ function graph_statistics(graph::DerivativeGraph)
                 if length(parents(edges)) == 0 || length(parents(edges)) == 1
                     shared_roots .= 0
                 else
-                    shared_roots = reachable_roots(parents(edges)[1])
+                    shared_roots = copy(reachable_roots(parents(edges)[1]))
 
                     for pedge in parents(edges) #poetntially redundant computation but efficiency not important
                         shared_roots .&= reachable_roots(pedge)
@@ -613,7 +614,7 @@ function graph_statistics(graph::DerivativeGraph)
                 if length(children(edges)) == 0 || length(children(edges)) == 1
                     shared_variables .= 0
                 else
-                    shared_variables = reachable_variables(children(edges)[1])
+                    shared_variables = copy(reachable_variables(children(edges)[1]))
                     for cedge in children(edges)
                         shared_variables .&= reachable_variables(cedge)
                     end

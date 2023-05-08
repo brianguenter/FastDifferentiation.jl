@@ -52,10 +52,12 @@ export vertices
 
 times_used(a::PathEdge) = sum(reachable_roots(a)) * sum(reachable_variables(a))
 
+"""This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_roots(e::PathEdge) = e.reachable_roots
 export reachable_roots
 is_root_reachable(e::PathEdge, root_index::Integer) = reachable_roots(e)[root_index]
 
+"""This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_variables(e::PathEdge) = e.reachable_variables
 export reachable_variables
 is_variable_reachable(e::PathEdge, variable_index::Integer) = reachable_variables(e)[variable_index]
