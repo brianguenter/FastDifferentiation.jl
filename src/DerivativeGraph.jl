@@ -579,6 +579,7 @@ export make_function
 
 
 function graph_statistics(graph::DerivativeGraph)
+    # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
     @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
 
     avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
