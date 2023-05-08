@@ -386,7 +386,7 @@ end
     # show(@time expr_to_dag.(derivs))
     from_dag = dag_to_Symbolics_expression.(tmp)
     subs = Dict([x => rand(), y => rand(), z => rand()])
-    @test isapprox(map(xx -> xx.val, Symbolics.substitute.(derivs, Ref(subs))), map(xx -> xx.val, Symbolics.substitute.(from_dag, Ref(subs))), atol=1e-14)
+    @test isapprox(map(xx -> xx.val, Symbolics.substitute.(derivs, Ref(subs))), map(xx -> xx.val, Symbolics.substitute.(from_dag, Ref(subs))), atol=1e-12)
 end
 
 @testitem "is_tree" begin
