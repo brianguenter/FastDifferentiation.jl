@@ -584,25 +584,25 @@ end
 """verifies that there is a single path from each root to each variable, if a path exists. Used for diagnostics and debugging. Not used in normal use of FSD."""
 function _verify_paths(graph::DerivativeGraph, a::Int)
     branches = child_edges(graph, a)
+    valid_graph = true
 
     if length(branches) > 1
         intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
         if !is_zero(intersection)
-            throw(ErrorException("more than one path to variable for node $a"))
-            @info "More than one path to variable for node $a. Non-zero intersection of reachable variables $intersection"
-            for branch in branches
-                @info "reachable variables $(reachable_variables(branch))"
-            end
-            return false
-        end
-        for child in children(graph, a)
-            if !(_verify_paths(graph, child))
-                return false
-            end
+            # throw(ErrorException("more than one path to variable for node $a"))
+            @info "More than one path to variable for node $a. Non-zero intersection of reachable variables."
+            # for branch in branches
+            #     @info "reachable variables $(reachable_variables(branch))"
+            # end
+            valid_graph = false
         end
     end
 
-    return true
+    for child in children(graph, a)
+        valid_graph &= _verify_paths(graph, child)
+    end
+
+    return valid_graph
 end
 
 """verifies that there is a single path from each root to each variable, if such a path exists."""
