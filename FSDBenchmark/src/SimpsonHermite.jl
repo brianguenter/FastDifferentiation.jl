@@ -162,8 +162,8 @@ function SiH_test()
     # lor_tmax = 160.0
     # lor_dt = 0.5
 
-    lor_tmax = 16.0
-    lor_dt = 2.0
+    lor_tmax = 160.0
+    lor_dt = 0.5
 
     lor_u0 = [-1.31; 0.8; 19.77]
     lor_tspan = (0.0, lor_tmax)
@@ -183,8 +183,8 @@ function SiH_test()
     # hh_tmax = 200.0
     # hh_saveat = 0.1
 
-    hh_tmax = 20.0
-    hh_saveat = 2.0
+    hh_tmax = 200.0
+    hh_saveat = 0.01
 
     hh_u0 = [-68.24221681836171
         0.056029230048653705
@@ -235,7 +235,8 @@ function time_test(gr)
     # Vis.draw_dot(gr, value_labels=false, reachability_labels=true, start_nodes=[54])
 
     # factor!(gr)
-    symbolic_jacobian!(gr)
+    # symbolic_jacobian!(gr)
+    return gr
     return nothing
 end
 export time_test

@@ -593,7 +593,7 @@ function _verify_paths(graph::DerivativeGraph, a::Int)
                 if !is_zero(roots_intersect) #if any shared roots then can't have any shared variables
                     if any(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))
                         valid_graph = false
-                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(findall(var_intersection))"
+                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))"
                         #could break on first bad path but prefer to list all of them. Better for debugging.
                     end
                 end
@@ -641,6 +641,27 @@ export symbolic_jacobian!
 symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
 
 
+"""Factors the graph then computes sparse Jacobian matrix. Destructive."""
+function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+    row_indices = Int64[]
+    col_indices = Int64[]
+    values = Node[]
+
+    factor!(graph)
+
+    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
+
+    for root in 1:codomain_dimension(graph)
+        for var in findall(reachable_variables(graph, root_index_to_postorder_number(graph, root)))
+            push!(row_indices, root)
+            push!(col_indices, var)
+            push!(values, evaluate_path(graph, root, var))
+        end
+    end
+
+    return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
+end
+export sparse_symbolic_jacobian!
 
 
 function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
@@ -657,7 +678,8 @@ function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S
 
     body = Expr(:block)
     if !in_place
-        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian.
+        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian. 
+        #TODO: Unfortunately this fixes the type of the result to be Float64. Should write code so the type is picked up from the runtime arguments to the generated function. Add this feature later.
     end
 
     for (i, node) in pairs(tmp)
@@ -742,6 +764,5 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
         return Node.(result)
     end
 end
-
 
 

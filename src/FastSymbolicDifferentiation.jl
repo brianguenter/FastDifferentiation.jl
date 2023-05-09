@@ -12,6 +12,7 @@ using RuntimeGeneratedFunctions
 using Logging
 import Base: iterate
 using UUIDs
+using SparseArrays
 module AutomaticDifferentiation
 struct NoDeriv
 end

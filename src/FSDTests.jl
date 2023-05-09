@@ -1578,6 +1578,14 @@ end
     end
 end
 
+@testitem "sparse_symbolic_jacobian!" begin
+    fsd_graph = FSD_spherical_harmonics(10)
+    sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    fsd_graph = FSD_spherical_harmonics(10)
+    dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+
+end
+
 @testitem "spherical harmonics jacobian evaluation test" begin
     using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences

@@ -304,30 +304,38 @@ export node_edges
 # #version that doesn't require having the entire graph constructed
 
 function reachable_variables(a::DerivativeGraph, node_index::Integer)
-    node_edges = children(edges(a)[node_index])
-    path_mask = falses(domain_dimension(a))
-    for edge in node_edges
-        path_mask .= path_mask .| reachable_variables(edge)
-    end
+    if get(edges(a), node_index, nothing) === nothing
+        return falses(domain_dimension(a))
+    else
+        node_edges = children(edges(a)[node_index])
+        path_mask = falses(domain_dimension(a))
+        for edge in node_edges
+            path_mask .= path_mask .| reachable_variables(edge)
+        end
 
-    if is_variable(a, node_index) #if node index is a variable then need to set its variable bit. No edge will have node_index as the top_vertex so the bit won't be set in the previous code.
-        path_mask[variable_postorder_to_index(a, node_index)] = 1
+        if is_variable(a, node_index) #if node index is a variable then need to set its variable bit. No edge will have node_index as the top_vertex so the bit won't be set in the previous code.
+            path_mask[variable_postorder_to_index(a, node_index)] = 1
+        end
+        return path_mask
     end
-    return path_mask
 end
 
 function reachable_roots(a::DerivativeGraph, node_index::Integer)
-    node_edges = parents(edges(a)[node_index])
-    path_mask = falses(codomain_dimension(a))
-    for edge in node_edges
-        path_mask .= path_mask .| reachable_roots(edge)
-    end
+    if get(edges(a), node_index, nothing) === nothing
+        return falses_codomain_dimension(a)
+    else
+        node_edges = parents(edges(a)[node_index])
+        path_mask = falses(codomain_dimension(a))
+        for edge in node_edges
+            path_mask .= path_mask .| reachable_roots(edge)
+        end
 
-    #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
-    if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
-        path_mask[root_postorder_to_index(a, node_index)] = 1
+        #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
+        if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
+            path_mask[root_postorder_to_index(a, node_index)] = 1
+        end
+        return path_mask
     end
-    return path_mask
 end
 
 
@@ -577,6 +585,16 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
 end
 export make_function
 
+"""Computes sparsity of Jacobian matrix = non_zero_entries/total_entries"""
+function sparsity(graph::DerivativeGraph)
+    total_entries = codomain_dimension(graph) * domain_dimension(graph)
+    non_zero = 0
+    for i in eachindex(roots(graph))
+        non_zero += sum(reachable_variables(graph, root_index_to_postorder_number(graph, i)))
+    end
+    return non_zero / total_entries
+end
+export sparsity
 
 function graph_statistics(graph::DerivativeGraph)
     # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
@@ -627,6 +645,9 @@ function graph_statistics(graph::DerivativeGraph)
         end
     end
     @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
+    @info "sparsity of Jacobian $(sparsity(graph))"
 end
 export graph_statistics
+
+
 
