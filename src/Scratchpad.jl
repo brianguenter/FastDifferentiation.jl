@@ -7,21 +7,23 @@ using .FSDTests
 
 
 function test()
-    chebyshev_order = 20
-    fsd_graph = FSD_chebyshev(chebyshev_order)
-    fsd_func = make_function(fsd_graph)
+    fsd_graph = FSD_spherical_harmonics(10)
+    fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-    func_wrap(x) = fsd_func(x)[1]
+    #hand computed derivative for order = 3
+    # correct_derivatives(x, y, z) = [
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     0.0 0.0 1.422074017360395
+    #     0.0 0.0 0.0
+    #     0.0 0.0 0.0
+    #     (-0.3642161365141257*3*z) 0.0 (-0.3642161365141257*3*x)
+    #     0.0 0.0 (2.0197963935867267*3*z)
+    #     0.0 (-0.3642161365141257*3*z) (-0.3642161365141257*3*y)
+    #     0.0 0.0 0.0
+    # ]
 
-    sym_func = jacobian_function!(fsd_graph, in_place=false)
-
-    for xr in -1.0:0.214:1.0
-        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
-
-        symbolic = sym_func(xr)
-
-        @assert isapprox(symbolic[1, 1], finite_diff[1], rtol=1e-8)
-    end
+    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
 end
 export test
 

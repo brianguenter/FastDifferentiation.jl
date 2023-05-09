@@ -581,27 +581,29 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
 end
 
 
-"""verifies that there is a single path from each root to each variable, if a path exists. Used for diagnostics and debugging. Not used in normal use of FSD."""
+"""verifies that there is a single path from each root to each variable, if a path exists. Defensive programming to detect errors that may crop up in the future."""
 function _verify_paths(graph::DerivativeGraph, a::Int)
     branches = child_edges(graph, a)
     valid_graph = true
 
     if length(branches) > 1
-        intersection::BitVector = mapreduce(reachable_variables, .&, branches, init=trues(domain_dimension(graph)))
-        if !is_zero(intersection)
-            # throw(ErrorException("more than one path to variable for node $a"))
-            @info "More than one path to variable for node $a. Non-zero intersection of reachable variables."
-            # for branch in branches
-            #     @info "reachable variables $(reachable_variables(branch))"
-            # end
-            valid_graph = false
+        for br1 in 1:length(branches)
+            for br2 in br1+1:length(branches)
+                roots_intersect = reachable_roots(branches[br1]) .& reachable_roots(branches[br2])
+                if !is_zero(roots_intersect) #if any shared roots then can't have any shared variables
+                    if any(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))
+                        valid_graph = false
+                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(findall(var_intersection))"
+                        #could break on first bad path but prefer to list all of them. Better for debugging.
+                    end
+                end
+            end
+        end
+
+        for child in children(graph, a)
+            valid_graph &= _verify_paths(graph, child)
         end
     end
-
-    for child in children(graph, a)
-        valid_graph &= _verify_paths(graph, child)
-    end
-
     return valid_graph
 end
 
