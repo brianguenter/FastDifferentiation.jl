@@ -581,7 +581,7 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
 end
 
 
-"""verifies that there is a single path from each root to each variable, if a path exists. Defensive programming to detect errors that may crop up in the future."""
+"""Verifies that there is a single path from each root to each variable, if a path exists. This should be an invariant of the factored graph so it should always be true. But the algorithm is complex enough that it is easy to accidentally introduce errors when adding features. `verify_paths` has negligible runtime cost compared to factorization."""
 function _verify_paths(graph::DerivativeGraph, a::Int)
     branches = child_edges(graph, a)
     valid_graph = true
@@ -625,7 +625,7 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
     result = Matrix{Node}(undef, outdim, indim)
     factor!(graph)
 
-    verify_paths(graph)
+    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
     for (i, var) in pairs(variable_ordering)
         var_index = variable_node_to_index(graph, var)
