@@ -85,15 +85,19 @@ function Symbolics_spherical_harmonics(model_size)
     return SHFunctions(model_size, x, y, z), [x, y, z]
 end
 
-function FSD_spherical_harmonics(model_size)
-
-    Symbolics.@variables x, y, z
+function FSD_spherical_harmonics(model_size, x, y, z)
     nx = Node(x)
     ny = Node(y)
     nz = Node(z)
 
     graph = DerivativeGraph(SHFunctions(model_size, nx, ny, nz))
     return graph
+end
+
+function FSD_spherical_harmonics(model_size)
+
+    Symbolics.@variables x, y, z
+    return FSD_spherical_harmonics(model_size, x, y, z)
 end
 export FSD_spherical_harmonics
 

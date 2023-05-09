@@ -1579,11 +1579,27 @@ end
 end
 
 @testitem "sparse_symbolic_jacobian!" begin
-    fsd_graph = FSD_spherical_harmonics(10)
+    using FastSymbolicDifferentiation.FSDTests
+    using Symbolics
+
+    @variables x, y, z
+
+    fsd_graph = FSD_spherical_harmonics(5, x, y, z)
     sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
-    fsd_graph = FSD_spherical_harmonics(10)
+    fsd_graph = FSD_spherical_harmonics(5, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
     dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
 
+    # for index in CartesianIndices(sprse)
+    #     @test sprse[index] == dense[index]
+    # end
+
+    for index in CartesianIndices(dense)
+        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} wherease zero elements in dense get value Node{Float64,0}. These are not == so need special case.
+            @assert value(sprse[index]) == value(dense[index])
+        else
+            @assert sprse[index] == dense[index]
+        end
+    end
 end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
