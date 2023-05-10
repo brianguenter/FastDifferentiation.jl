@@ -184,7 +184,7 @@ function SiH_test()
     # hh_saveat = 0.1
 
     hh_tmax = 200.0
-    hh_saveat = 0.01
+    hh_saveat = 0.5
 
     hh_u0 = [-68.24221681836171
         0.056029230048653705

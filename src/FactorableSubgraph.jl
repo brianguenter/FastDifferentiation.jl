@@ -288,7 +288,7 @@ end
 export reset_edge_masks!
 
 
-function check_edges(subgraph::FactorableSubgraph, edge_list::Vector{PathEdge{T}}) where {T}
+function check_edges(subgraph::FactorableSubgraph{T,S}, edge_list::Vector{PathEdge{T}}) where {T,S}
     #make sure have at least two edges that are on a valid path from dominated to dominating node
     count = 0
     for edge in edge_list

@@ -80,12 +80,12 @@ function SHFunctions(shfunc, max_l, x, y, z)
 end
 export SHFunctions
 
-function Symbolics_spherical_harmonics(model_size)
+function spherical_harmonics(::JuliaSymbolics, model_size)
     Symbolics.@variables x y z
     return SHFunctions(model_size, x, y, z), [x, y, z]
 end
 
-function FSD_spherical_harmonics(model_size, x, y, z)
+function spherical_harmonics(::FastSymbolic, model_size, x, y, z)
     nx = Node(x)
     ny = Node(y)
     nz = Node(z)
@@ -94,11 +94,10 @@ function FSD_spherical_harmonics(model_size, x, y, z)
     return graph
 end
 
-function FSD_spherical_harmonics(model_size)
-
+function spherical_harmonics(package::FastSymbolic, model_size)
     Symbolics.@variables x, y, z
-    return FSD_spherical_harmonics(model_size, x, y, z)
+    return spherical_harmonics(package, model_size, x, y, z)
 end
-export FSD_spherical_harmonics
+export spherical_harmonics
 
 

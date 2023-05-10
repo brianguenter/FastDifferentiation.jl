@@ -14,6 +14,7 @@ export FSD
 
 using TestItems
 
+include("../FSDBenchmark/src/Types.jl")
 include("../FSDBenchmark/src/Chebyshev.jl")
 include("../FSDBenchmark/src/SphericalHarmonics.jl")
 include("../FSDBenchmark/src/LagrangianDynamics.jl")
@@ -1584,9 +1585,9 @@ end
 
     @variables x, y, z
 
-    fsd_graph = FSD_spherical_harmonics(5, x, y, z)
+    fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
     sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
-    fsd_graph = FSD_spherical_harmonics(5, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
+    fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
     dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
 
     # for index in CartesianIndices(sprse)
@@ -1606,7 +1607,7 @@ end
     using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences
 
-    fsd_graph = FSD_spherical_harmonics(10)
+    fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
     #hand computed derivative for order = 3
@@ -1643,7 +1644,7 @@ end
     using FastSymbolicDifferentiation.FSDTests
 
     chebyshev_order = 20
-    fsd_graph = FSD_chebyshev(chebyshev_order)
+    fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
     fsd_func = make_function(fsd_graph)
 
     func_wrap(x) = fsd_func(x)[1]
@@ -1659,7 +1660,7 @@ end
     end
 
     tmp = Matrix{Float64}(undef, 1, 1)
-    fsd_graph = FSD_chebyshev(chebyshev_order)
+    fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
     sym_func = jacobian_function!(fsd_graph, in_place=false)
 
     #the in place form of jacobian function
