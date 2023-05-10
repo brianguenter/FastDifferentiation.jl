@@ -92,7 +92,7 @@ end
 
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
     # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
-    data = DataFrame(model_size=Int64, minimum=Float64, median=Float64, maximum=Float64, allocations=Int64, memory_estimate=Int64)
+    data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
 
     for model_size in model_range
         time = run_benchmark(model_function, model_size, package, benchmark)
