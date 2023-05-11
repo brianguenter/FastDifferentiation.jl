@@ -13,20 +13,18 @@ using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jaco
 using LaTeXStrings
 import LinearAlgebra
 
-module ProtectDataFrames
 using DataFrames
 using CSV
 
 filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = "Data/" * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
 export filename
 
-function write_data(data, model_function, package, benchmark, min_model_size, max_model_size, simplify)
+function write_data(data::DataFrame, model_function, package, benchmark, min_model_size, max_model_size, simplify)
     CSV.write(
         filename(model_function, package, benchmark, min_model_size, max_model_size, simplify),
         data)
 end
 export write_data
-end #module
 
 const FSD = FastSymbolicDifferentiation
 
@@ -100,18 +98,17 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Ma
 end
 export run_benchmark
 
+make_data() = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
-    # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
-    data = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
+    data = make_data()
 
     for model_size in model_range
-        time = run_benchmark(model_function, model_size, package, benchmark)
-        println(extract_info(model_size, time))
-        push!(data, extract_info(model_size, time))
+        timing = run_benchmark(model_function, model_size, package, benchmark)
+        push!(data, extract_info(model_size, timing))
     end
 
-    display(data)
-    ProtectDataFrames.write_data([data], model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
+    write_data(data, model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
 end
 export single_benchmark
 
@@ -122,19 +119,20 @@ function benchmark(models, sizes, package::AbstractPackage, benchmarks::Abstract
         end
     end
 end
-export benchmark
 
-params() = ([spherical_harmonics, chebyshev], [5:1:6, 5:1:5])
+benchmark_sizes() = [5:1:25, 5:5:50]
+model_functions() = [spherical_harmonics, chebyshev]
+benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
+params() = (model_functions(), benchmark_sizes())
 export params
 
-benchmark_FSD() = benchmark(params()..., FastSymbolic(), [Symbolic(), Exe(), MakeFunction()])
-export benchmark_FSD
-benchmark_Symbolics() = benchmark(params()..., JuliaSymbolics(), [Symbolic(), Exe(), MakeFunction()])
-export benchmark_Symbolics
+benchmark_package(package, range, model_function) = benchmark(range, model_function, package, benchmark_types())
+benchmark_package(package) = benchmark(model_functions(), benchmark_sizes(), package, benchmark_types)
+export benchmark_package
 
 function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
-    fname1 = ProtectDataFrames.filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
-    fname2 = ProtectDataFrames.filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
+    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
+    fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
 
@@ -142,9 +140,10 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     println("here")
     # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
     # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
-    p = plot(data1[:, :model_size], data2[:, :minimum] ./ data1[:, :minimum], xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false)
+    p = plot(data1[:, :model_size], data2[:, :minimum] ./ data1[:, :minimum], xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
 
     return p
 end
 export plot_data
+
 end # module Benchmarks
