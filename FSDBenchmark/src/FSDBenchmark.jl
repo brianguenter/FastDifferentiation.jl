@@ -3,8 +3,7 @@ using Symbolics
 using FileIO
 using BenchmarkTools
 using Statistics
-using DataFrames
-using CSV
+
 using CurveFit
 using Plots
 using Memoize
@@ -14,6 +13,20 @@ using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jaco
 using LaTeXStrings
 import LinearAlgebra
 
+module ProtectDataFrames
+using DataFrames
+using CSV
+
+filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = "Data/" * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
+export filename
+
+function write_data(data, model_function, package, benchmark, min_model_size, max_model_size, simplify)
+    CSV.write(
+        filename(model_function, package, benchmark, min_model_size, max_model_size, simplify),
+        data)
+end
+export write_data
+end #module
 
 const FSD = FastSymbolicDifferentiation
 
@@ -33,7 +46,7 @@ const SYMBOLIC = "symbolic"
 const EXE = "exe"
 const MAKE_FUNCTION = "make_function"
 
-filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = "Data/" * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
+
 
 extract_info(model_size, benchmark_timing) = Any[Int64(model_size), Float64(minimum(benchmark_timing).time), Float64(median(benchmark_timing).time), Float64(maximum(benchmark_timing).time), Int64(benchmark_timing.allocs), Int64(benchmark_timing.memory)]
 export extract_info
@@ -47,13 +60,7 @@ function plot_SH_FSD_graph_vs_jacobian_size(min_order, max_order)
 end
 export plot_SH_FSD_graph_vs_jacobian_size
 
-function write_data(data, model_function, package, benchmark, min_model_size, max_model_size, simplify)
-    println(data)
-    CSV.write(
-        filename(model_function, package, benchmark, min_model_size, max_model_size, simplify),
-        data)
-end
-export write_data
+
 
 #Benchmark code for FSD
 
@@ -104,7 +111,7 @@ function single_benchmark(model_function::Function, model_range, package::Abstra
     end
 
     display(data)
-    write_data([data], model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
+    ProtectDataFrames.write_data([data], model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
 end
 export single_benchmark
 
@@ -126,8 +133,8 @@ benchmark_Symbolics() = benchmark(params()..., JuliaSymbolics(), [Symbolic(), Ex
 export benchmark_Symbolics
 
 function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
-    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
-    fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
+    fname1 = ProtectDataFrames.filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
+    fname2 = ProtectDataFrames.filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
 
