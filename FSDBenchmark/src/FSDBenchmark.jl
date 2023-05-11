@@ -35,7 +35,8 @@ const MAKE_FUNCTION = "make_function"
 
 filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = "Data/" * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
 
-extract_info(model_size, benchmark_timing) = [model_size, minimum(benchmark_timing).time, median(benchmark_timing).time, maximum(benchmark_timing).time, benchmark_timing.allocs, benchmark_timing.memory]
+extract_info(model_size, benchmark_timing) = Any[Int64(model_size), Float64(minimum(benchmark_timing).time), Float64(median(benchmark_timing).time), Float64(maximum(benchmark_timing).time), Int64(benchmark_timing.allocs), Int64(benchmark_timing.memory)]
+export extract_info
 
 """plot that shows how FSD jacobian is close to optimal for SH because number of operations of Jacobian is a fixed constant (roughly 2.5) times the number of operations in the original function"""
 function plot_SH_FSD_graph_vs_jacobian_size(min_order, max_order)
@@ -52,6 +53,7 @@ function write_data(data, model_function, package, benchmark, min_model_size, ma
         filename(model_function, package, benchmark, min_model_size, max_model_size, simplify),
         data)
 end
+export write_data
 
 #Benchmark code for FSD
 
@@ -89,6 +91,7 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Ma
     jac = Symbolics.jacobian(model, vars; simplify=simplify)
     return @benchmark build_function($jac, $vars; expression=Val{false})
 end
+export run_benchmark
 
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
     # @benchmark Symbolics.jacobian(fn, [$x, $y, $z], simplify=$simplify) setup = gr = evals = 1
@@ -114,9 +117,7 @@ function benchmark(models, sizes, package::AbstractPackage, benchmarks::Abstract
 end
 export benchmark
 
-benchmark_sizes = [5:1:6, 5:1:5]
-model_functions = [spherical_harmonics, chebyshev]
-params() = (model_functions, benchmark_sizes)
+params() = ([spherical_harmonics, chebyshev], [5:1:6, 5:1:5])
 export params
 
 benchmark_FSD() = benchmark(params()..., FastSymbolic(), [Symbolic(), Exe(), MakeFunction()])
@@ -125,7 +126,6 @@ benchmark_Symbolics() = benchmark(params()..., JuliaSymbolics(), [Symbolic(), Ex
 export benchmark_Symbolics
 
 function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
-
     fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
     fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes[findfirst(x -> x == model_function, model_functions)])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
