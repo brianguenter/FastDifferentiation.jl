@@ -16,9 +16,9 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 * x×1=>x
 * x/1=>x
 * x+0=>x
-* c1×c2=>c3 for c₁,c₂,c₃ constants
-* c1+c2=>c3 for c₁,c₂,c₃ constants
-* c1×(c2×x) => (c1×c2)×x
+* c₁×c₂=>c₃ for c₁,c₂,c₃ constants
+* c₁+c₂=>c₃ for c₁,c₂,c₃ constants
+* c₁×(c₂×x) => (c₁×c₂)×x  for c₁,c₂ constants
 
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
