@@ -114,7 +114,7 @@ export single_benchmark
 #     end
 # end
 
-benchmark_sizes() = [5:1:6, 5:1:6]
+benchmark_sizes() = [5:1:25, 5:1:30]
 model_functions() = [spherical_harmonics, chebyshev]
 benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
 export benchmark_types
