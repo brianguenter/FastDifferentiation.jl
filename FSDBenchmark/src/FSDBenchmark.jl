@@ -16,7 +16,7 @@ import LinearAlgebra
 using DataFrames
 using CSV
 
-filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = "Data/" * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
+filename(model_function, package, benchmark, min_model_size, max_model_size, simplify) = DATA_DIR * join([nameof(model_function), nameof(typeof(package)), nameof(typeof(benchmark))], "_") * "_$(min_model_size)_$(max_model_size)_simplify_$simplify.csv"
 export filename
 
 function write_data(data::DataFrame, model_function, package, benchmark, min_model_size, max_model_size, simplify)
@@ -39,13 +39,7 @@ include("SimpsonHermite.jl")
 @variables x, y, z
 
 
-
-const SYMBOLIC = "symbolic"
-const EXE = "exe"
-const MAKE_FUNCTION = "make_function"
-
-
-
+const DATA_DIR = "Data/"
 extract_info(model_size, benchmark_timing) = Any[Int64(model_size), Float64(minimum(benchmark_timing).time), Float64(median(benchmark_timing).time), Float64(maximum(benchmark_timing).time), Int64(benchmark_timing.allocs), Int64(benchmark_timing.memory)]
 export extract_info
 
@@ -120,7 +114,7 @@ export single_benchmark
 #     end
 # end
 
-benchmark_sizes() = [5:1:25, 5:5:50]
+benchmark_sizes() = [5:1:6, 5:1:6]
 model_functions() = [spherical_harmonics, chebyshev]
 benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
 export benchmark_types
@@ -132,6 +126,8 @@ benchmark_package(package, range, model_function; simplify=false) = single_bench
 
 benchmark_package(package; simplify=false) = benchmark_package.(Ref(package), benchmark_sizes(), model_functions(), simplify=simplify)
 
+benchmark_all(simplify::Bool) = benchmark_package.([FastSymbolic(), JuliaSymbolics()]; simplify=simplify)
+export benchmark_all
 
 function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
     fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
@@ -139,22 +135,38 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
 
-    graph_title = "Ratio of times, Symbolics/FSD: $graph_title"
-    println("here")
-    # plot(data1[:, :SHOrder], data1[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
-    # plot!(data2[:, :SHOrder], data2[:, :minimum] / 1e6, ylabel="ms", xlabel="Spherical Harmonic Order")
+    graph_title = "Time ratio, Symbolics/FSD: $graph_title"
+
     p = plot(data1[:, :model_size], data2[:, :minimum] ./ data1[:, :minimum], xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
 
     return p
 end
 export plot_data
 
+function publication_benchmarks(simplify::Bool, run_benchmarks=true)
+    if run_benchmarks
+        benchmark_all(simplify)
+    end
+
+    for bench in benchmark_types()
+        println(typeof(bench))
+        for model in model_functions()
+            bench_type = typeof(bench)
+            savefig(plot_data(model, bench, "$bench_type\n$model", "$model order", simplify),
+                "$(DATA_DIR)figure_$(model)_$(bench_type).svg"
+            )
+        end
+    end
+end
+export publication_benchmarks
+
 function test_Symbolics_limit()
-    for i in 20:25
+    for i in 5:1:50
         try
-            model, vars = spherical_harmonics(JuliaSymbolics(), i)
+            model, vars = chebyshev(JuliaSymbolics(), i)
             jac = Symbolics.jacobian(model, vars; simplify=false)
-            out_of_place, in_place = build_function(jac, vars; expression=Val{false})
+            build_function(jac, vars; expression=Val{false})
+            # out_of_place, in_place = build_function(jac, vars; expression=Val{false})
             println("finished size $i")
         catch exc
             println("failed at size $i $exc")

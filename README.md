@@ -12,15 +12,16 @@ If your function is small or tree like (where each node in the expression graph 
 
 
 Unlike forward and reverse automatic differentiation you don't have to choose which differentiation algorithm to use based on the graph structure. **FSD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. Its efficiency comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FSD** applies only these algebraic simplications[^2] to expressions:
-* x*0=>0
-* x*1=>x
+* x×0=>0
+* x×1=>x
 * x/1=>x
 * x+0=>x
-* c1*c2=>c3 for c₁,c₂,c₃ constants
+* c1×c2=>c3 for c₁,c₂,c₃ constants
 * c1+c2=>c3 for c₁,c₂,c₃ constants
+* c1×(c2×x) => (c1×c2)×x
 
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
-[^1]: O(m²+n²)|E| for FSD versus O(mn)|E^2| for D* where n is the domain dimension of the ℝⁿ->ℝᵐ function being differentiated, m is the codomain dimension, and |E| is the number of edges in the expression graph. Except for trivial graphs m,n are both typically much smaller than |E|.
+[^1]: O(m²+n²)|E| for FSD versus O(mn)|E^2| for D* where n is the domain dimension of the ℝⁿ->ℝᵐ function being differentiated, m is the codomain dimension, and |E| is the number of edges in the expression graph. Except for trivial graphs m,n are both typically much smaller than |E|. 
 [^2]: More rules may be added in future versions of FSD to improve efficiency.
