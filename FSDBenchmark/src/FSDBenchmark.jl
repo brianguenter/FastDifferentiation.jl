@@ -112,23 +112,26 @@ function single_benchmark(model_function::Function, model_range, package::Abstra
 end
 export single_benchmark
 
-function benchmark(models, sizes, package::AbstractPackage, benchmarks::AbstractVector{AbstractBenchmark}; simplify::Bool=false)
-    for (model, size_range) in zip(models, sizes)
-        for bench in benchmarks
-            single_benchmark(model, size_range, package, bench, simplify)
-        end
-    end
-end
+# function benchmark(models, sizes, package::AbstractPackage, benchmarks::AbstractVector{AbstractBenchmark}; simplify::Bool=false)
+#     for (model, size_range) in zip(models, sizes)
+#         for bench in benchmarks
+#             single_benchmark(model, size_range, package, bench, simplify)
+#         end
+#     end
+# end
 
 benchmark_sizes() = [5:1:25, 5:5:50]
 model_functions() = [spherical_harmonics, chebyshev]
 benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
+export benchmark_types
 params() = (model_functions(), benchmark_sizes())
 export params
 
-benchmark_package(package, range, model_function) = benchmark(range, model_function, package, benchmark_types())
-benchmark_package(package) = benchmark(model_functions(), benchmark_sizes(), package, benchmark_types)
-export benchmark_package
+benchmark_package(package, range, model_function; simplify=false) = single_benchmark.(Ref(model_function), Ref(range), Ref(package), benchmark_types(), simplify)
+
+
+benchmark_package(package; simplify=false) = benchmark_package.(Ref(package), benchmark_sizes(), model_functions(), simplify=simplify)
+
 
 function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
     fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
@@ -145,5 +148,21 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     return p
 end
 export plot_data
+
+function test_Symbolics_limit()
+    for i in 20:25
+        try
+            model, vars = spherical_harmonics(JuliaSymbolics(), i)
+            jac = Symbolics.jacobian(model, vars; simplify=false)
+            out_of_place, in_place = build_function(jac, vars; expression=Val{false})
+            println("finished size $i")
+        catch exc
+            println("failed at size $i $exc")
+            break
+        end
+    end
+end
+export test_Symbolics_limit
+
 
 end # module Benchmarks
