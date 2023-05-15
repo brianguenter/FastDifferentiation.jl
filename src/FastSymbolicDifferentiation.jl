@@ -13,6 +13,7 @@ using Logging
 import Base: iterate
 using UUIDs
 using SparseArrays
+using DataStructures
 module AutomaticDifferentiation
 struct NoDeriv
 end
@@ -47,7 +48,6 @@ macro safe_infiltrate()
         end
     )
 end
-export safe_infiltrate
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 

@@ -96,10 +96,12 @@ make_data() = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[],
 
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
     data = make_data()
-
+    FSD.clear_cache() #clear cache otherwise memory usage keeps rising monotonically. Wouldn't expect this to be a problem until functions become gigantic, billions of nodes.
     for model_size in model_range
-        timing = run_benchmark(model_function, model_size, package, benchmark)
+        @info "Starting model size $model_size"
+        timing = run_benchmark(model_function, model_size, package, benchmark, simplify=simplify)
         push!(data, extract_info(model_size, timing))
+        @info "Finished for model size $model_size"
     end
 
     write_data(data, model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
@@ -115,6 +117,7 @@ export single_benchmark
 # end
 
 benchmark_sizes() = [5:1:25, 5:1:30]
+export benchmark_sizes
 model_functions() = [spherical_harmonics, chebyshev]
 benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
 export benchmark_types
@@ -125,6 +128,7 @@ benchmark_package(package, range, model_function; simplify=false) = single_bench
 
 
 benchmark_package(package; simplify=false) = benchmark_package.(Ref(package), benchmark_sizes(), model_functions(), simplify=simplify)
+export benchmark_package
 
 benchmark_all(simplify::Bool) = benchmark_package.([FastSymbolic(), JuliaSymbolics()]; simplify=simplify)
 export benchmark_all
@@ -134,10 +138,19 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
-
+    println(data2)
     graph_title = "Time ratio, Symbolics/FSD: $graph_title"
 
-    p = plot(data1[:, :model_size], data2[:, :minimum] ./ data1[:, :minimum], xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
+    #find first missing value
+    last_good = findfirst(x -> x === missing, data2[:, :minimum])
+    if last_good === nothing
+        last_good = size(data2)[1]
+    end
+
+    println("lastgood $last_good")
+    ratio = [data2[i, :minimum] === missing ? missing : data2[i, :minimum] / data1[i, :minimum] for i in 1:size(data2)[1]]
+    println("ratio $ratio")
+    p = plot(data1[1:last_good, :model_size], ratio, xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
 
     return p
 end
@@ -149,7 +162,6 @@ function publication_benchmarks(simplify::Bool, run_benchmarks=true)
     end
 
     for bench in benchmark_types()
-        println(typeof(bench))
         for model in model_functions()
             bench_type = typeof(bench)
             savefig(plot_data(model, bench, "$bench_type\n$model", "$model order", simplify),
@@ -161,18 +173,25 @@ end
 export publication_benchmarks
 
 function test_Symbolics_limit()
-    for i in 5:1:50
-        try
-            model, vars = chebyshev(JuliaSymbolics(), i)
-            jac = Symbolics.jacobian(model, vars; simplify=false)
-            build_function(jac, vars; expression=Val{false})
-            # out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-            println("finished size $i")
-        catch exc
-            println("failed at size $i $exc")
-            break
-        end
-    end
+    model, vars = spherical_harmonics(JuliaSymbolics(), 20)
+    jac = Symbolics.jacobian(model, vars; simplify=false)
+    out_of_place, in_place = build_function(jac, vars; expression=Val{false})
+    tmp_matrix = out_of_place(rand(length(vars))) #generate a matrix of the correct size
+
+    in_place(tmp_matrix, rand(length(vars)))
+
+    # for i in 5:1:50
+    #     try
+    #         model, vars = chebyshev(JuliaSymbolics(), i)
+    #         jac = Symbolics.jacobian(model, vars; simplify=false)
+    #         build_function(jac, vars; expression=Val{false})
+    #         # out_of_place, in_place = build_function(jac, vars; expression=Val{false})
+    #         println("finished size $i")
+    #     catch exc
+    #         println("failed at size $i $exc")
+    #         break
+    #     end
+    # end
 end
 export test_Symbolics_limit
 

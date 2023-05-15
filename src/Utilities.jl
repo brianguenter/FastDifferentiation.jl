@@ -1,16 +1,3 @@
-function _reverse_mapping(a, ::Type{N}, ::Type{T}) where {T,N}
-    result = Dict{N,T}()
-
-    for mapping in pairs(a)
-        result[mapping[2]] = mapping[1]
-    end
-
-    return result
-end
-
-reverse_mapping(a::AbstractVector{T}, index_type=DefaultNodeIndexType) where {T} = _reverse_mapping(a, T, index_type)
-export reverse_mapping
-
 """Tests for == of each of the fields of item1,item2. If a field is an array then == will return true if the elements of the two arrays match, false otherwise."""
 function value_equal(item1::T, item2::S, fields_to_ignore::Union{Nothing,Vector{Symbol}}=Symbol[]) where {T,S}
     fields = fieldnames(T)
@@ -28,16 +15,4 @@ function value_equal(item1::T, item2::S, fields_to_ignore::Union{Nothing,Vector{
     # edge1.bott_vertex == edge2.bott_vertex && 
     # node_value(edge_value(edge1)) == node_value(edge_value(edge2))
 end
-export value_equal
 
-show_all(a::AbstractArray) = show(stdout, "text/plain", a)
-export show_all
-
-"""creates exemplar `FactorableSubgraph`. Useful for testing."""
-function exemplar_factorable_subgraph()
-    @variables x
-
-    gr = DerivativeGraph(Node(x) * Node(x))
-    return FactorableSubgraph{Int64,DominatorSubgraph}(gr, 2, 1, BitVector([1]), BitVector([1]), BitVector([1]))
-end
-export exemplar_factorable_subgraph

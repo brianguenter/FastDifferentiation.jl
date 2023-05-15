@@ -78,12 +78,11 @@ struct EdgeRelations{T}
 
     EdgeRelations(T::Type=Int64) = new{T}(PathEdge{T}[], PathEdge{T}[])
 end
-export EdgeRelations
 
 parents(a::EdgeRelations) = a.parents
-export parents
+
 children(a::EdgeRelations) = a.children
-export children
+
 
 """ Creates an ℝⁿ->ℝᵐ expression graph from `m` input DAGs. At creation time a new graph, called the derivative graph, is constructed based on the input DAG's. The derivative graph is destructively modified to compute the Jacobian of the function. The input DAG's are not modified.
 
@@ -174,13 +173,9 @@ export DerivativeGraph
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
 
 nodes(a::DerivativeGraph) = a.nodes
-export nodes
-
 node(a::DerivativeGraph, node_index) = nodes(a)[node_index]
-export node
 
 num_vertices(a::DerivativeGraph) = length(nodes(a))
-export num_vertices
 
 function parents(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
     nedges = get(a, node_index, nothing)
@@ -191,7 +186,6 @@ function children(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
     nedges = get(a, node_index, nothing)
     return nedges === nothing ? nothing : UnconstrainedPathIterator(node_index, nedges.children, false)
 end
-export children
 
 """returns iterator of indices of parents of node"""
 parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a), node_index)
@@ -199,29 +193,22 @@ parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a)
 
 """returns iterator of indices of children of node"""
 children(a::DerivativeGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
-export children
 
 root_path_masks(a::DerivativeGraph) = a.root_path_masks
 variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
 
 each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
-export each_vertex
 roots(a::DerivativeGraph) = a.roots
 export roots
 root(a::DerivativeGraph, root_index::Integer) = roots(a)[root_index]
-export root
 root_index_to_postorder_number(a::DerivativeGraph) = a.root_index_to_postorder_number
-export root_index_to_postorder_number
 root_index_to_postorder_number(a::DerivativeGraph, index::Integer) = root_index_to_postorder_number(a)[index]
 
 root_postorder_to_index(a::DerivativeGraph, index::Integer) = a.root_postorder_to_index[index]
-export root_postorder_to_index
-
-
 
 #These two functions are not efficient, primarily intended for visualization
 is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
-export is_root
+
 
 function is_root(graph::DerivativeGraph, node::Node)
     num = postorder_number(graph, node)
@@ -233,27 +220,27 @@ function is_root(graph::DerivativeGraph, node::Node)
 end
 
 is_variable(graph::DerivativeGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
-export is_variable
+
 is_variable(graph::DerivativeGraph, node::Node) = is_variable(graph, postorder_number(graph, node))
 
 is_tree(graph::DerivativeGraph, postorder_index::Integer) = length(child_edges(graph, postorder_index)) != 0
 is_tree(graph::DerivativeGraph, node::Node) = is_tree(graph, postorder_number(graph, node))
-export is_tree
+
 
 variables(a::DerivativeGraph) = a.variables
 export variables
 variable(a::DerivativeGraph, variable_index::Integer) = variables(a)[variable_index]
-export variable
+
 variable_index_to_postorder_number(a::DerivativeGraph) = a.variable_index_to_postorder_number
-export variable_index_to_postorder_number
+
 variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = get(variable_index_to_postorder_number(a), index, nothing)
 
 variable_postorder_to_index(a::DerivativeGraph, index) = get(a.variable_postorder_to_index, index, nothing)
-export variable_postorder_to_index
+
 
 
 postorder_number(a::DerivativeGraph, node::Node) = get(a.postorder_number, node, nothing)
-export postorder_number
+
 
 function variable_node_to_index(a::DerivativeGraph, vnode::Node)
     pnum = postorder_number(a, vnode)
@@ -263,10 +250,9 @@ function variable_node_to_index(a::DerivativeGraph, vnode::Node)
         return variable_postorder_to_index(a, pnum)
     end
 end
-export variable_node_to_index
 
 edges(a::DerivativeGraph) = a.edges
-export edges
+
 
 """returns edges that directly connect top_vert and bott_vert"""
 function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
@@ -292,14 +278,14 @@ function unique_edges(a::DerivativeGraph)
     end
     return edges_unique
 end
-export unique_edges
+
 
 
 _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer} = get(edge_map, node_index, nothing)
 
 node_edges(a::DerivativeGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 node_edges(a::DerivativeGraph, node_index::Integer) = _node_edges(edges(a), node_index)
-export node_edges
+
 # node_edges(a::RnToRmGraph, node_index::Integer) = get(a.edges, node_index, nothing) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 # #version that doesn't require having the entire graph constructed
 
@@ -374,7 +360,6 @@ function child_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
         return PathEdge{T}[] #seems wasteful to return an empty array but other code depends on a zero length return rather than nothing.
     end
 end
-export child_edges
 
 function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     num = postorder_number(dgraph, node)
@@ -397,7 +382,7 @@ function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
         return PathEdge{T}[] #seems wasteful to return an empty array but other code depends on a zero length return rather than nothing.
     end
 end
-export parent_edges
+
 
 parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
 
@@ -413,9 +398,9 @@ end
 
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
 is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
-export is_constant
+
 partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = value(child_edges(dgraph, parent)[child_index])
-export partial_value
+
 
 """Computes partial values for all edges in the graph"""
 function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{Node,Bool}, current_node::Node{T,N}, edges::Dict{Int64,EdgeRelations{Int64}}, expression_cache::IdDict{Any,Any}, domain_dim, codomain_dim) where {T,N}
@@ -482,9 +467,6 @@ function edge_exists(graph::DerivativeGraph, edge::PathEdge)
 
     return val1 && val2
 end
-
-export edge_exists
-
 
 
 """Adds an edge to the graph"""
@@ -555,7 +537,6 @@ function delete_edge!(graph::DerivativeGraph, edge::PathEdge, force::Bool=false)
 
     return nothing
 end
-export delete_edge!
 
 make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
 

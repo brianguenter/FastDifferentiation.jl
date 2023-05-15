@@ -3,7 +3,7 @@ module Vis
 using Colors
 using ColorTypes
 using ..FastSymbolicDifferentiation
-
+using ..FastSymbolicDifferentiation: PathEdge
 using GraphRecipes
 using Plots
 using Graphs
@@ -24,7 +24,7 @@ function edge_label(a::PathEdge)
     var_string = label_func(reachable_variables(a), "v")
     return ("$root_string : $var_string")
 end
-export edge_label
+
 
 # function draw(unique_edges::AbstractVector{PathEdge{T}}, unique_nodes::AbstractVector{Node{T,N}}, post_order_numbers::AbstractVector{T}, root_test::Function) where {T,N}
 # end
@@ -140,7 +140,7 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
 end
 export draw_dot
 
-draw_dot(subgraph::FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
+draw_dot(subgraph::FastSymbolicDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
 
 function write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)

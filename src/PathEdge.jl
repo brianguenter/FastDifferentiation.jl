@@ -38,40 +38,40 @@ struct PathEdge{T<:Integer,N,M}
         return new{T,N,M}(v1, v2, expression, reachable_variables, reachable_roots, uuid1())
     end
 end
-export PathEdge
+
 
 
 value(e::PathEdge) = e.edge_value
-export value
+
 top_vertex(e::PathEdge) = e.top_vertex
-export top_vertex
+
 bott_vertex(e::PathEdge) = e.bott_vertex
-export bott_vertex
+
 vertices(e::PathEdge) = (top_vertex(e), bott_vertex(e))
-export vertices
+
 
 times_used(a::PathEdge) = sum(reachable_roots(a)) * sum(reachable_variables(a))
 
 """This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_roots(e::PathEdge) = e.reachable_roots
-export reachable_roots
+
 is_root_reachable(e::PathEdge, root_index::Integer) = reachable_roots(e)[root_index]
 
 """This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_variables(e::PathEdge) = e.reachable_variables
-export reachable_variables
+
 is_variable_reachable(e::PathEdge, variable_index::Integer) = reachable_variables(e)[variable_index]
 
 """used for printing out a more readable version of Edge"""
 to_tuple(e::PathEdge) = (e.top_vertex, e.bott_vertex)
-export to_tuple
+
 
 num_reachable_variables(e::PathEdge) = sum(e.reachable_variables)
-export num_reachable_variables
+
 num_reachable_roots(e::PathEdge) = sum(e.reachable_roots)
-export num_reachable_roots
+
 num_uses(e::PathEdge) = num_reachable_variables(e) * num_reachable_roots(e)
-export num_uses
+
 
 can_delete(e::PathEdge) = !any(reachable_roots(e)) || !any(reachable_variables(e))
 
@@ -84,12 +84,12 @@ mask_variables!(e::PathEdge, mask::BitVector) = e.reachable_variables .= e.reach
 
 """`root_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from root `i` and a 0 otherwise. Changes the `reachable_roots` field of the edge to be 0 where `root_mask` is 1 and unchanged otherwise."""
 zero_roots!(e::PathEdge, root_mask::BitVector) = @. e.reachable_roots = e.reachable_roots & (!root_mask)
-export zero_roots!
+
 """`variable_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from variable `i` and a 0 otherwise. Changes the `reachable_variables` field of the edge to be 0 where `variable_mask` is 1 and unchanged otherwise."""
 zero_variables!(e::PathEdge, variable_mask::BitVector) = @. e.reachable_variables = e.reachable_variables & (!variable_mask)
-export zero_variables!
+
 
 roots_resettable(e::PathEdge, root_mask::BitVector) = overlap(e.reachable_roots, root_mask)
-export roots_resettable
+
 variables_resettable(e::PathEdge, variable_mask::BitVector) = overlap(e.reachable_variables, variable_mask)
-export variables_resettable
+

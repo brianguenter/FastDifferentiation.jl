@@ -1,5 +1,4 @@
 abstract type AbstractFactorableSubgraph end
-export AbstractFactorableSubgraph
 abstract type DominatorSubgraph <: AbstractFactorableSubgraph end
 abstract type PostDominatorSubgraph <: AbstractFactorableSubgraph end
 
@@ -27,25 +26,24 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
         return new{T,PostDominatorSubgraph}(graph, (dominating_node, dominated_node), sum(roots_reachable) * sum(pdom_mask), roots_reachable, variables_reachable, nothing, pdom_mask)
     end
 end
-export FactorableSubgraph
 
 FactorableSubgraph(args::Tuple) = FactorableSubgraph(args...)
 
 dominator_subgraph(args) = dominator_subgraph(args...)
 dominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,DominatorSubgraph}(graph, dominating_node, dominated_node, dom_mask, roots_reachable, variables_reachable)
 dominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = dominator_subgraph(graph, dominating_node, dominated_node, BitVector(dom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
-export dominator_subgraph
+
 
 postdominator_subgraph(args) = postdominator_subgraph(args...)
 postdominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer} = FactorableSubgraph{T,PostDominatorSubgraph}(graph, dominating_node, dominated_node, pdom_mask, roots_reachable, variables_reachable)
 postdominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, pdom_mask::S, roots_reachable::S, variables_reachable::S) where {T<:Integer,S<:Vector{Bool}} = postdominator_subgraph(graph, dominating_node, dominated_node, BitVector(pdom_mask), BitVector(roots_reachable), BitVector(variables_reachable))
-export postdominator_subgraph
+
 
 graph(a::FactorableSubgraph) = a.graph
 
 """Returns a tuple of ints (dominator vertex,dominated vertex) that are the top and bottom vertices of the subgraph"""
 vertices(subgraph::FactorableSubgraph) = subgraph.subgraph
-export vertices
+
 
 reachable_variables(a::FactorableSubgraph) = a.reachable_variables
 function mask_variables!(a::FactorableSubgraph, mask::BitVector)
@@ -61,7 +59,7 @@ end
 
 reachable(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_variables(a)
 reachable(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
-export reachable
+
 
 # """Returns reachable roots of the node at `node_index`"""
 # function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
@@ -87,15 +85,15 @@ export reachable
 
 reachable_dominance(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
 reachable_dominance(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
-export reachable_dominance
+
 
 dominating_node(a::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}} = a.subgraph[1]
-export dominating_node
+
 dominated_node(a::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}} = a.subgraph[2]
-export dominated_node
+
 
 times_used(a::FactorableSubgraph) = a.times_used
-export times_used
+
 
 node_difference(a::FactorableSubgraph) = abs(a.subgraph[1] - a.subgraph[2])
 
@@ -111,7 +109,7 @@ function summarize(a::FactorableSubgraph{T,DominatorSubgraph}) where {T}
 
     return "[" * doms * " $(times_used(a))* " * string((vertices(a))) * "]"
 end
-export summarize
+
 
 function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
     doms = ""
@@ -121,7 +119,7 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
 
     return "[" * doms * " $(times_used(a))* " * string((vertices(a))) * "]"
 end
-export summarize
+
 
 """Returns parent edges if subgraph is dominator and child edges otherwise. Parent edges correspond to the forward traversal of a dominator subgraph in graph factorization, analogously for postdominator subgraph"""
 forward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = parent_edges(graph(a), edge)
@@ -129,7 +127,7 @@ forward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) wh
 
 forward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T} = parent_edges(graph(a), node_index)
 forward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::T) where {T} = child_edges(graph(a), node_index)
-export forward_edges
+
 
 """Returns child edges if subgraph is dominator and parent edges otherwise. Child edges correspond to the backward check for paths bypassing the dominated node of a dominator subgraph, analogously for postdominator subgraph"""
 backward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T} = child_edges(graph(a), node_index)
@@ -194,7 +192,7 @@ function isa_connected_path(a::FactorableSubgraph, start_edge::PathEdge{T}) wher
         return false
     end
 end
-export isa_connected_path
+
 
 function edges_on_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
     current_edge = start_edge
@@ -214,7 +212,7 @@ function edges_on_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
         return (false, PathEdge{T}[])
     end
 end
-export edges_on_path
+
 
 """Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
@@ -247,7 +245,7 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
 
     return nothing
 end
-export add_non_dom_edges!
+
 
 """Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
 function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
@@ -285,7 +283,6 @@ function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
 
     return edges_to_delete
 end
-export reset_edge_masks!
 
 
 function check_edges(subgraph::FactorableSubgraph{T,S}, edge_list::Vector{PathEdge{T}}) where {T,S}
@@ -331,7 +328,6 @@ function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothin
 
     return sub_edges
 end
-export subgraph_edges
 
 
 """returns subgraph edges, as a `Set`, and nodes, as a `Vector`."""
@@ -346,7 +342,6 @@ function deconstruct_subgraph(subgraph::FactorableSubgraph)
 
     return sub_edges, unique(sub_nodes)
 end
-export deconstruct_subgraph
 
 """Returns true if the subgraph is still a factorable subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
@@ -411,10 +406,10 @@ struct PathIterator{T<:Integer,S<:FactorableSubgraph}
         return new{T,S}(subgraph, start_edge)
     end
 end
-export PathIterator
+
 
 edge_path(subgraph::FactorableSubgraph, start_edge) = PathIterator(subgraph, start_edge)
-export edge_path
+
 
 """Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}

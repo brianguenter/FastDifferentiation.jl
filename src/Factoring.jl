@@ -107,12 +107,9 @@ end
 
 struct FactorOrder <: Base.Order.Ordering
 end
-export FactorOrder
 
 Base.lt(::FactorOrder, a, b) = factor_order(a, b)
 Base.isless(::FactorOrder, a, b) = factor_order(a, b)
-
-
 
 
 """returns true if a should be sorted before b"""
@@ -132,10 +129,10 @@ function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
         end
     end
 end
-export factor_order
+
 
 sort_in_factor_order!(a::AbstractVector{T}) where {T<:FactorableSubgraph} = sort!(a, lt=factor_order)
-export sort_in_factor_order!
+
 
 
 """
@@ -223,7 +220,7 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
     return result
 end
-export compute_factorable_subgraphs
+
 
 function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
     if length(path) == 1
@@ -260,7 +257,7 @@ function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
     end
     return prod
 end
-export multiply_sequence
+
 
 
 function path_sort_order(x, y)
@@ -272,7 +269,7 @@ function path_sort_order(x, y)
         return top_vertex(x) > top_vertex(y)
     end
 end
-export path_sort_order
+
 
 const EDGE_CACHE = Vector{PathEdge{Int64}}[]
 peak_cache_size = 0
@@ -338,8 +335,6 @@ function old_edge_path(next_node_constraint, dominating::T, is_dominator::Bool, 
 
     return flag_value, result, roots_reach, vars_reach
 end
-export old_edge_path
-
 
 function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
     constraint = next_edge_constraint(subgraph)
@@ -364,21 +359,18 @@ function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{
     reclaim_edge_vector(rel_edges)
     return sum
 end
-export evaluate_subgraph
 
 function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}, sum::Node) where {T}
     roots_reach = copy(reachable_dominance(subgraph))
     vars_reach = copy(reachable_variables(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
 end
-export make_factored_edge
 
 function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, sum::Node) where {T}
     roots_reach = copy(reachable_roots(subgraph))
     vars_reach = copy(reachable_dominance(subgraph))
     return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
 end
-export make_factored_edge
 
 
 """Returns true if a new factorable subgraph was created inside `subgraph` during the factorization process. If true then must compute factorable subgraphs for the edges inside `subgraph`. `subgraph_exists` should be called before executing this function otherwise it may return false when no new subgraphs have been created."""
@@ -404,26 +396,12 @@ function is_branching(subgraph)
     return bad_subgraph
 end
 
-function reset_counts()
-    global test_count, all_count
-    test_count = 0
-    all_count = 0
-end
-export reset_counts
-
-global test_count = 0
-global all_count = 0
-
 """reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
 function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
     local new_edge::PathEdge{T}
     if subgraph_exists(subgraph)
-        global all_count
-        all_count += 1
 
         if is_branching(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
-            global test_count
-            test_count += 1
             sum = evaluate_branching_subgraph(subgraph)
             new_edge = make_factored_edge(subgraph, sum)
         else
@@ -440,7 +418,6 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
         add_edge!(graph(subgraph), new_edge)
     end
 end
-export factor_subgraph!
 
 order!(::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
 ) #largest node number last
@@ -535,7 +512,6 @@ function factor!(a::DerivativeGraph{T}) where {T}
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
-export factor!
 
 function follow_path(a::DerivativeGraph{T}, root_index::Integer, var_index::Integer) where {T}
     current_node_index = root_index_to_postorder_number(a, root_index)

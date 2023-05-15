@@ -82,15 +82,15 @@ Base.one(::Node) = Node(1)
 Broadcast.broadcastable(a::Node) = (a,)
 
 value(a::Node) = a.node_value
-export value
+
 arity(::Node{T,N}) where {T,N} = N
-export arity
+
 
 is_leaf(::Node{T,0}) where {T} = true
 is_leaf(::Node{T,N}) where {T,N} = false
-export is_leaf
+
 is_tree(::Node{T,N}) where {T,N} = N >= 1
-export is_tree
+
 
 function is_unspecified_function(a::Node)
     node_val = value(a)
@@ -110,12 +110,11 @@ function is_unspecified_function(a::Node)
     # end
 end
 export is_unspecified_function
-
 is_variable(a::Node) = SymbolicUtils.issym(value(a))
-export is_variable
+
 
 is_constant(a::Node) = !is_variable(a) && !is_tree(a) #pretty confident this is correct but there may be edges cases in Symbolics I am not aware of.
-export is_constant
+
 
 function constant_value(a::Node)
     if is_constant(a)
@@ -124,7 +123,7 @@ function constant_value(a::Node)
         return nothing
     end
 end
-export constant_value
+
 
 function is_zero(a::Node)
     if is_tree(a) || is_variable(a)
@@ -135,7 +134,7 @@ function is_zero(a::Node)
         return false
     end
 end
-export is_zero
+
 
 function is_one(a::Node)
     if is_tree(a) || is_variable(a)
@@ -146,7 +145,7 @@ function is_one(a::Node)
         return false
     end
 end
-export is_one
+
 
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
@@ -154,10 +153,8 @@ simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
 
 is_nary(a::Node{T,N}) where {T,N} = N > 2
 is_times(a::Node) = value(a) == *
-export is_times
 
 is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
-export is_nary_times
 
 function simplify_check_cache(::typeof(^), a, b, cache)
     na = Node(a)
@@ -204,7 +201,6 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
         return check_cache((*, a, b), cache)
     end
 end
-export simplify_check_cache
 
 function simplify_check_cache(::typeof(+), na, nb, cache)
     a = Node(na)
@@ -351,7 +347,7 @@ end
 
 """returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
 variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node)) #SymbolicUtils changed, used to use SymbolicUtils.Sym for this test.
-export variables
+
 
 # isvariable(a::Node) = SymbolicUtils.issym(node_value(a))
 # # isvariable(::Node{T,0}) where {T<:SymbolicUtils.Sym} = true
@@ -359,7 +355,7 @@ export variables
 # # isvariable(::Node) = false
 
 children(a::Node) = a.children
-export children
+
 
 function Base.show(io::IO, a::Node)
     print(io, to_string(a))
@@ -385,7 +381,6 @@ function to_string(a::Node)
         end
     end
 end
-export to_string
 
 expr_to_dag(x::NoDeriv, cache, substitions) = Node(NaN) #when taking the derivative with respect to the first element of 1.0*x Symbolics.derivative will return Symbolics.NoDeriv. These derivative values will never be used (or should never be used) in my derivative computation so set to NaN so error will show up if this ever happens.
 
@@ -582,8 +577,6 @@ function postorder(roots::AbstractVector{T}) where {T<:Node}
     end
     return node_to_index, nodes, variables
 end
-export postorder
-
 
 """returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
 function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {T,N,S<:Node}
@@ -613,7 +606,6 @@ function all_nodes(a::Node, index_type=DefaultNodeIndexType)
     _all_nodes!(a, visited, nodes)
     return nodes
 end
-export all_nodes
 
 function _all_nodes!(node::Node, visited::Dict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
     tmp = get(visited, node, nothing)
@@ -643,7 +635,6 @@ function graph_leaves(node::Node)
 
     return result
 end
-export graph_leaves
 
 function make_variables(name::Symbol, how_many::Int64)
     result = Vector{Node}(undef, how_many)
@@ -671,27 +662,3 @@ export make_variables
 #     eval(:())
 # end
 
-# """inefficient exponential time algorithm to compute derivative. Only used for testing small examples"""
-# function all_paths_derivative(graph::DerivativeGraph)
-#     graph_root = root_index(graph)
-
-#     return sum(_all_paths_derivative.(Ref(graph), child_edges(graph, graph_root), Ref(Node(1))))
-# end
-# export all_paths_derivative
-
-# function _all_paths_derivative(graph::DerivativeGraph, edge::Edge{Int64}, prod)
-#     curr_node = edge.bott_vertex
-#     if isleaf(graph, curr_node)
-#         if function_variable_index(graph) == curr_node
-#             @assert typeof(node_value(edge_value(edge))) != AutomaticDifferentiation.NoDeriv
-#             prod *= edge_value(edge) #this may seem redundant have two `prod *= edge_value(edge)` statements. But the edge value of an edge to a constant has value NoDeriv. Only want to do the multiplication when certain the edge value won't be NoDeriv.
-#             return prod
-#         else
-#             return 0.0 #if leaf node is not the function variable then this path adds nothing to derivative sum
-#         end
-#     else
-#         @assert typeof(node_value(edge_value(edge))) != AutomaticDifferentiation.NoDeriv
-#         prod *= edge_value(edge) #this may seem redundant have two `prod *= edge_value(edge)` statements. But the edge value of an edge to a constant has value NoDeriv. Only want to do the multiplication when certain the edge value won't be NoDeriv.
-#         return sum(_all_paths_derivative.(Ref(graph), child_edges(graph, curr_node), Ref(prod)))
-#     end
-# end

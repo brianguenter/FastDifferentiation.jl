@@ -31,14 +31,14 @@ function subset(a::BitVector, b::BitVector)
     result = sum(temp) == sum(a)
     return result
 end
-export subset
+
 
 """returns the set that has all the elements of b removed from a. This allocates"""
 function set_diff(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     return @. !(a & b) & a
 end
-export set_diff
+
 
 """removes elements of b from a"""
 function set_diff!(a::BitVector, b::BitVector)
@@ -46,7 +46,7 @@ function set_diff!(a::BitVector, b::BitVector)
     @. a = !(a & b) & a
     return nothing
 end
-export set_diff!
+
 
 """returns true if a ∩ b is not empty"""
 function overlap(a::BitVector, b::BitVector)
@@ -61,10 +61,9 @@ function bit_equal(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     return !any(a .⊻ b)
 end
-export bit_equal
 
 is_zero(a::BitVector) = !any(a)
-export is_zero
+
 
 function to_string(a::BitVector, b::String)
     doms = ""

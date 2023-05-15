@@ -1,7 +1,4 @@
-# module GraphProcessing
-# using FastSymbolicDifferentiation: RnToRmGraph, roots, variables, nodes, _node_edges, children, parents, root_index_to_postorder_number, variable_index_to_postorder_number, each_vertex, top_vertex, bott_vertex, PathEdge, edges, reachable_roots, reachable_variables, codomain_dimension, domain_dimension, subset, is_zero, to_string, EdgeRelations
-using StaticArrays
-using DataStructures
+
 
 
 """This and PathConstraint are highly redundant. There is one function, compute_dominance_tables, which used PathConstraint in a slightly different way than all the other code. This caused endless bugs. For now make a new constraint struct just for compute_dominance_tables, since that code is complicated and don't want to rewrite it now. Later get rid of DomPathConstraint struct, since it is only used by one function."""
@@ -20,7 +17,6 @@ struct DomPathConstraint{T<:Integer}
         return new{T}(graph, iterate_parents, roots_mask, variables_mask, relations)
     end
 end
-export DomPathConstraint
 
 function DomPathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
@@ -58,7 +54,7 @@ struct PathConstraint{T<:Integer}
         return new{T}(dominating_node::T, graph, iterate_parents, roots_mask, variables_mask, relations)
     end
 end
-export PathConstraint
+
 
 function PathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
     if iterate_parents
@@ -81,7 +77,7 @@ variables_mask(a::PathConstraint) = a.variables_mask
 # path_mask(a::PathConstraint) = a.roots_mask
 # export path_mask
 graph(a::PathConstraint) = a.graph
-export graph
+
 
 
 is_dominator_constraint(a::PathConstraint) = a.iterate_parents
@@ -123,30 +119,7 @@ function relation_node_indices(a::DomPathConstraint{T}, node_index::T) where {T<
         return node_relations #this is kind of bad because functions can mess with relations instance variable. But ConstrainedPathIterator doesn't need it to remain unchanged between calls to relations. 
     end
 end
-export relation_node_indices
 
-
-# struct RelationIterator{T<:Integer}
-#     constraint::PathConstraint{T}
-#     edges_of_node::EdgeRelations{T}
-# end
-
-# function iterate(a::RelationIterator) 
-#     tmp_edges = _node_edges(graph_edges(a), node_index)
-#     if a.iterate_parents
-#         for edge in parents(tmp_edges)
-#             if subset(roots_mask(a), reachable_roots(edge)) && any(variables_mask(a) .& reachable_variables(edge))
-#                 push!(result, edge)
-#             end
-#         end
-#     else
-#         for edge in children(tmp_edges)
-#             if subset(variables_mask(a), reachable_variables(edge)) && any(roots_mask(a) .& reachable_roots(edge))
-#                 push!(result, edge)
-#             end
-#         end
-#     end
-# end
 
 """returns edges emanating from a vertex which satisfy the PathConstraint"""
 function relation_edges!(a::PathConstraint{T}, node_index::Integer, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
@@ -217,7 +190,7 @@ function relation_edges!(a::PathConstraint{T}, edge::PathEdge, result::Union{Not
     end
     return result
 end
-export relation_edges!
+
 
 function _compute_paths!(path_masks, graph_edges::Dict{T,EdgeRelations{T}}, current_node_index, origin_index, relation_function) where {T}
     @assert current_node_index <= length(path_masks)
@@ -248,9 +221,9 @@ function compute_paths(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}
 end
 
 compute_paths_to_variables(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, var_indices) where {T} = compute_paths(num_nodes, graph_edges, var_indices, parents) #TODO: don't want to be converting to an array of integers everytime.
-export compute_paths_to_variables
+
 compute_paths_to_roots(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, indices_of_roots) where {T} = compute_paths(num_nodes, graph_edges, indices_of_roots, children)
-export compute_paths_to_roots
+
 
 """This function computes reachable roots and reachable variable masks for each edge in the graph. It is called before the DerivativeGraph has been constructed. If you have a DerivativeGraph you can use compute_edge_paths!(a::DerivativeGraph) instead"""
 function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{S}}, var_indices, indices_of_roots) where {T,S<:Integer}
@@ -267,7 +240,7 @@ function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelatio
         end
     end
 end
-export compute_edge_paths!
+
 
 """convenience function to avoid calling messier low level function. `order_test` is one of `<,>`."""
 compute_edge_paths!(graph::DerivativeGraph) = compute_edge_paths!(length(nodes(graph)), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
@@ -419,5 +392,3 @@ function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{
 
     return idoms
 end
-export simple_dominance
-
