@@ -25,6 +25,14 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
+The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmars:Symbolic,MakeFunction, and Exe. 
+
+The Symbolic benchmark compares the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
+
+The MakeFunction benchmark generates a Julia Expr but does not compile it. This separates the time required to create the function from the time LLVM takes to compile it. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relative small problem sizes.
+
+The Exe function measures just the time required to execute the compiled function using an in-place matrix.
+
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg">
 
 [^1]: O(m²+n²)|E| for FSD versus O(mn)|E^2| for D* where n is the domain dimension of the ℝⁿ->ℝᵐ function being differentiated, m is the codomain dimension, and |E| is the number of edges in the expression graph. Except for trivial graphs m,n are both typically much smaller than |E|. 
