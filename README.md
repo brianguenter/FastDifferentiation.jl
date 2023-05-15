@@ -30,7 +30,7 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 
 ## Benchmarks
 
-The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmars:Symbolic,MakeFunction, and Exe. 
+The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
 
 The Symbolic benchmark compares the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
