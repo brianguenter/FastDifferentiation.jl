@@ -19,7 +19,6 @@ struct NoDeriv
 end
 export NoDeriv
 end #module
-export AutomaticDifferentiation
 
 const INVARIANTS = true
 

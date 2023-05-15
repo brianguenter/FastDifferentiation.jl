@@ -687,8 +687,9 @@ function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     return nodes
 end
 
+"""Count of number of operations in graph."""
 number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
-export number_of_operations
+
 
 """computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
 

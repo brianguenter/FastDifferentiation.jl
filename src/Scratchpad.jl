@@ -26,6 +26,5 @@ function test()
         end
     end
 end
-export test
 
 

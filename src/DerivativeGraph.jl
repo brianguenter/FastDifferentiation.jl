@@ -333,6 +333,7 @@ export domain_dimension
 dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
 export dimensions
 
+"""Computes the average number of reachable variables across all the edges in the graph. Primarily useful for development."""
 function mean_reachable_variables(a::DerivativeGraph)
     total = 0
     num_edges = 0
@@ -343,12 +344,11 @@ function mean_reachable_variables(a::DerivativeGraph)
     end
     return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
 end
-export mean_reachable_variables
 
 function fraction_reachable_variables(a::DerivativeGraph)
     return mean_reachable_variables(a) / domain_dimension(a)
 end
-export fraction_reachable_variables
+
 
 #these functions implicitly assume the nodes are postorder numbered. Parent nodes will have higher numbers than children nodes. Vertices in PathEdge are sorted with highest number first. These are inefficient since the filtering happens at every access. Change to fixed parent, child fields if this is too slow.
 """Returns a vector of edges which satisfy `edge.top_vertex == node_index`. These edges lead to the children of `node_index`."""
@@ -566,7 +566,7 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
 end
 export make_function
 
-"""Computes sparsity of Jacobian matrix = non_zero_entries/total_entries"""
+"""Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
 function sparsity(graph::DerivativeGraph)
     total_entries = codomain_dimension(graph) * domain_dimension(graph)
     non_zero = 0
@@ -577,6 +577,7 @@ function sparsity(graph::DerivativeGraph)
 end
 export sparsity
 
+"""Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
 function graph_statistics(graph::DerivativeGraph)
     # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
     @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
@@ -628,7 +629,7 @@ function graph_statistics(graph::DerivativeGraph)
     @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
     @info "sparsity of Jacobian $(sparsity(graph))"
 end
-export graph_statistics
+
 
 
 

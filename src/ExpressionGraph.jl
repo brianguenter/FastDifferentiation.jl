@@ -109,7 +109,8 @@ function is_unspecified_function(a::Node)
     #     return false
     # end
 end
-export is_unspecified_function
+
+
 is_variable(a::Node) = SymbolicUtils.issym(value(a))
 
 
