@@ -237,7 +237,7 @@ end
     e3_4 = edges(graph, 3, 4)[1]
     vars = reachable_variables(e3_4)
     @. vars &= !vars
-    @assert !isa_connected_path(_2_4, e3_4)
+    @test !isa_connected_path(_2_4, e3_4)
 end
 
 @testitem "add_non_dom_edges" begin
@@ -266,31 +266,31 @@ end
     subs_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
     _5_3 = subs[1]
-    @assert (5, 3) == vertices(_5_3)
+    @test (5, 3) == vertices(_5_3)
 
     add_non_dom_edges!(_5_3)
     #single edge 3,4 should be split into two: ([r1,r2],[v1,v2]) -> ([r1],[v1,v2]),([r2],[v1,v2])
     edges3_4 = edges(graph, 4, 3)
-    @assert length(edges3_4) == 2
+    @test length(edges3_4) == 2
     test_edge = PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([0, 1]))
-    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
+    @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
     test_edge = (PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([1, 0])))
-    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
+    @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 
     graph = DerivativeGraph([n4, n5])
     sub_heap = compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
     _2_4 = subs[2]
-    @assert (2, 4) == vertices(_2_4)
+    @test (2, 4) == vertices(_2_4)
 
     add_non_dom_edges!(_2_4)
     #single edge 3,4 should be split in two: ([r1,r2],[v1,v2])->([r1,r2],[v1]),([r1,r2],[v2])
     edges3_4 = edges(graph, 4, 3)
-    @assert length(edges3_4) == 2
+    @test length(edges3_4) == 2
     test_edge = PathEdge(4, 3, ny, BitVector([1, 0]), BitVector([1, 1]))
-    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
+    @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
     test_edge = (PathEdge(4, 3, ny, BitVector([0, 1]), BitVector([1, 1])))
-    @assert count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
+    @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 end
 
 @testitem "iteration" begin
@@ -1134,17 +1134,17 @@ end
     _8_1_sub = subs[findfirst(x -> vertices(x) == (8, 1), subs)]
     _1_8_sub = subs[findfirst(x -> vertices(x) == (1, 8), subs)]
 
-    @assert issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
+    @test issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
     factor_subgraph!(_1_4_sub)
     _1_7_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
 
 
-    @assert issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
-    @assert issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
+    @test issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
+    @test issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
     factor_subgraph!(_8_4_sub)
     _8_1_sub_ref = Set(map(x -> x[1], edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
-    @assert issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
-    @assert issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
+    @test issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
+    @test issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
 
 end
 
@@ -1192,12 +1192,12 @@ end
     _3_1 = all_edges[findfirst(x -> vertices(x) == (3, 1), all_edges)]
 
     ed, nod = deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
-    @assert issetequal([4, 2, 3], nod)
-    @assert issetequal((_4_2, _4_3, _3_2), ed)
+    @test issetequal([4, 2, 3], nod)
+    @test issetequal((_4_2, _4_3, _3_2), ed)
 
     ed, nod = deconstruct_subgraph(subs[2])
-    @assert issetequal((_3_2, _3_1, _2_1), ed)
-    @assert issetequal([1, 2, 3], nod)
+    @test issetequal((_3_2, _3_1, _2_1), ed)
+    @test issetequal([1, 2, 3], nod)
 
     factor_subgraph!(subs[1]) #now can test larger subgraphs
 
@@ -1212,11 +1212,11 @@ end
     ed, nod = deconstruct_subgraph(subs[3])
     println(ed)
     sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
-    @assert issetequal(sub_4_1, ed)
-    @assert issetequal([1, 2, 3, 4], nod)
+    @test issetequal(sub_4_1, ed)
+    @test issetequal([1, 2, 3, 4], nod)
     ed, nod = deconstruct_subgraph(subs[4])
-    @assert issetequal(sub_4_1, ed)
-    @assert issetequal([1, 2, 3, 4], nod)
+    @test issetequal(sub_4_1, ed)
+    @test issetequal([1, 2, 3, 4], nod)
 end
 
 
@@ -1286,7 +1286,7 @@ end
 
     #first verify all nodes have the postorder numbers we expect
     for (i, nd) in pairs(gnodes)
-        @assert node(graph, i) == nd
+        @test node(graph, i) == nd
     end
 
     sub_heap = compute_factorable_subgraphs(graph)
@@ -1306,18 +1306,18 @@ end
     start_edges = forward_edges(sub_5_3, dominated_node(sub_5_3))
     temp_edges = collect(edge_path(sub_5_3, start_edges[1]))
 
-    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
     temp_edges = collect(edge_path(sub_5_3, start_edges[2]))
-    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
     #for postdominator subgraph (3,5)
 
     start_edges = forward_edges(sub_3_5, dominated_node(sub_3_5))
 
     temp_edges = collect(edge_path(sub_3_5, start_edges[1]))
-    @assert all(x -> x[1] == x[2], zip(reverse(path_edges1), temp_edges))
+    @test all(x -> x[1] == x[2], zip(reverse(path_edges1), temp_edges))
     temp_edges = collect(edge_path(sub_3_5, start_edges[2]))
-    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
 
     path_edges1 = [edges(graph, 4, 1)[1]]
@@ -1330,18 +1330,18 @@ end
     #for dominator subgraph (4,1)
 
     temp_edges = collect(edge_path(sub_4_1, start_edges[1]))
-    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
     temp_edges = collect(edge_path(sub_4_1, start_edges[2]))
-    @assert all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
 
 
     #for postdominator subgraph (1,4)
     start_edges = forward_edges(sub_1_4, dominated_node(sub_1_4))
     temp_edges = collect(edge_path(sub_1_4, start_edges[1]))
 
-    @assert all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
+    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
     temp_edges = collect(edge_path(sub_1_4, start_edges[2]))
-    @assert all(x -> x[1] == x[2], zip(reverse(path_edges2), temp_edges))
+    @test all(x -> x[1] == x[2], zip(reverse(path_edges2), temp_edges))
 end
 
 @testitem "set_diff" begin
@@ -1484,7 +1484,7 @@ end
 end
 
 
-@testitem "constants and variable roots" begin
+@testitem "constant and variable roots" begin
     using Symbolics
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1493,12 +1493,10 @@ end
     zr = Node(0.0)
 
     graph = DerivativeGraph([nx, zr])
-    jac = symbolic_jacobian!(graph,[nx,zr])
+    jac = symbolic_jacobian!(graph, [nx])
 
-    @test jac[1,1] == 1
-    @test jac[1,2] == 0
-    @test jac[2,1] == 1
-    @test jac[2,2] == 0
+    @test value(jac[1, 1]) == 1
+    @test value(jac[2, 1]) == 0
 end
 
 @testitem "times_used PathEdge" begin
@@ -1624,9 +1622,9 @@ end
 
     for index in CartesianIndices(dense)
         if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} wherease zero elements in dense get value Node{Float64,0}. These are not == so need special case.
-            @assert value(sprse[index]) == value(dense[index])
+            @test value(sprse[index]) == value(dense[index])
         else
-            @assert sprse[index] == dense[index]
+            @test sprse[index] == dense[index]
         end
     end
 end
@@ -1638,7 +1636,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-     sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
+    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0

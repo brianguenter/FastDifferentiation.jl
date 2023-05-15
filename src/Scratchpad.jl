@@ -7,24 +7,13 @@ using .FSDTests
 
 
 function test()
-    @variables x, y, z
+    @variables x
+    nx = Node(x)
+    zr = Node(1.0)
 
-    fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
-    sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
-    fsd_graph = spherical_harmonics(FastSymbolic(), 5, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    graph = DerivativeGraph([nx, zr])
+    jac = symbolic_jacobian!(graph, [nx])
 
-    # for index in CartesianIndices(sprse)
-    #     @test sprse[index] == dense[index]
-    # end
-
-    for index in CartesianIndices(dense)
-        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} wherease zero elements in dense get value Node{Float64,0}. These are not == so need special case.
-            @assert value(sprse[index]) == value(dense[index])
-        else
-            @assert sprse[index] == dense[index]
-        end
-    end
 end
 
 
