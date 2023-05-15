@@ -617,7 +617,7 @@ export symbolic_jacobian!
 symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
 
 
-"""Factors the graph then computes sparse Jacobian matrix. Destructive."""
+"""Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression tree which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
 function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     row_indices = Int64[]
     col_indices = Int64[]
@@ -674,11 +674,54 @@ function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S
 end
 export jacobian_Expr!
 
+"""Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
+
+        ∂f₁/∂v₁  ...  ∂f₁/∂vₙ 
+
+        ∂fₘ/∂v₁  ...  ∂fₘ/∂vₙ 
+
+Destroys `graph` in the process. Example returning a new matrix with every call to the generated Jacobian function:
+
+```
+julia> @variables x 
+
+julia> nx = Node(x);ny = Node(y);
+
+julia> gr = DerivativeGraph([nx^2*ny^2,nx^3*ny^3]);
+
+julia> func = jacobian_function!(gr, [nx,ny]);
+
+julia> func(2,3)
+2×2 Matrix{Float64}:
+  36.0   24.0
+ 324.0  216.0
+```
+
+Example of in_place Jacobian generation:
+```
+julia> func_in_place = jacobian_function!(gr, [nx,ny],in_place=true)
+
+julia> a = Matrix{Float64}(undef,2,2);
+
+julia> func_in_place(2,3,a)
+2×2 Matrix{Float64}:
+  36.0   24.0
+ 324.0  216.0
+
+julia> a
+2×2 Matrix{Float64}:
+  36.0   24.0
+ 324.0  216.0
+
+ ```
+
+"""
 jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
 export jacobian_function!
-
 jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(graph, variables(graph), in_place=in_place)
 
+"""Non-destructive form of jacobian_function!"""
+jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place)
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
     for oned in all_nodes.(jacobian)
