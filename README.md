@@ -54,12 +54,12 @@ The function is memoized for efficiency. Symbolics.jl can simplify the resulting
 
 All benchmarks show the ratio of time taken by Symbolics.jl to FastSymbolicDifferentiation.jl. Numbers greater than 1 mean FastSymbolicDifferentiation is faster.
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg">
-<img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg">
+<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
+<img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg">
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
 
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
