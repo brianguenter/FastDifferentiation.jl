@@ -53,17 +53,24 @@ end
 ```
 The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time.
 
-<img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
-
 The Chebyshev expression graph does not have many nodes even at the largest size tested. Here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
 
+<img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
+<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
+<img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
+
+For the Symbolics.jl derivative LLVM ran out of memory on a machine with 32GB RAM for order 20 and higher Chebyshev functions.
+
+### Spherical Harmonics
+
+The second example is spherical harmonics functions.
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
+For the Symbolics.jl derivative LLVM ran out of memory for order 16 or higher.
 
+In general you can expect better performance than Symbolics.jl derivatives if the number of paths through your graph is substantially larger than the number of nodes. If the average number of parents of each node is close to 2 the number of paths will increase exponentially with the number of nodes.
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
