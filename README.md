@@ -57,8 +57,10 @@ The function is memoized for efficiency. Symbolics.jl can simplify the resulting
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-Although the Chebyshev expression graph is not that large 
+The Chebyshev expression graph does not have many nodes even at the largest size tested. Here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
+The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
+
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
