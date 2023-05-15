@@ -35,6 +35,21 @@ The MakeFunction benchmark generates a Julia Expr but does not compile it. This 
 
 The Exe function measures just the time required to execute the compiled function using an in-place matrix.
 
+### Chebyshev polynomial
+The first example is a recursive function for evaluation the Chebyshev polynomial of order n:
+
+```
+function Chebyshev(n, x)
+    if n == 0
+        return 1
+    elseif n == 1
+        return x
+    else
+        return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
+    end
+end
+```
+
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg">
