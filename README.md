@@ -36,7 +36,8 @@ The MakeFunction benchmark generates a Julia Expr but does not compile it. This 
 The Exe function measures just the time required to execute the compiled function using an in-place matrix.
 
 ### Chebyshev polynomial
-The first example is a recursive function for evaluation the Chebyshev polynomial of order n:
+The first example is a recursive function for 
+the Chebyshev polynomial of order n:
 
 ```
 @memoize function Chebyshev(n, x)
@@ -55,5 +56,10 @@ All of the benchmark show the ratio of time taken by Symbolics.jl to FastSymboli
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg">
+
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg">
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg">
+<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg">
+
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
