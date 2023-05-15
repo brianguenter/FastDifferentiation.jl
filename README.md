@@ -39,7 +39,7 @@ The Exe function measures just the time required to execute the compiled functio
 The first example is a recursive function for evaluation the Chebyshev polynomial of order n:
 
 ```
-function Chebyshev(n, x)
+@memoize function Chebyshev(n, x)
     if n == 0
         return 1
     elseif n == 1
@@ -49,7 +49,9 @@ function Chebyshev(n, x)
     end
 end
 ```
+The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time.
 
+All of the benchmark show the ratio of time taken by Symbolics.jl to FastSymbolicDifferentiation.jl. Numbers greater than 1 mean FastSymbolicDifferentiation is faster.
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg">
