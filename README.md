@@ -56,7 +56,7 @@ end
 ```
 The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time.
 
-The Chebyshev expression graph does not have many nodes even at the largest size tested. Here is the graph of the 10th order expression: 
+The Chebyshev expression graph does not have many nodes even at the largest size tested. For example, here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
 
