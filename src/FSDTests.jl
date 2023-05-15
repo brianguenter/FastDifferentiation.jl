@@ -1493,7 +1493,12 @@ end
     zr = Node(0.0)
 
     graph = DerivativeGraph([nx, zr])
-    factor!(graph)
+    jac = symbolic_jacobian!(graph,[nx,zr])
+
+    @test jac[1,1] == 1
+    @test jac[1,2] == 0
+    @test jac[2,1] == 1
+    @test jac[2,2] == 0
 end
 
 @testitem "times_used PathEdge" begin
@@ -1633,21 +1638,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-    #hand computed derivative for order = 3
-    # correct_derivatives(x, y, z) = [
-    #     0.0 0.0 0.0
-    #     0.0 0.0 0.0
-    #     0.0 0.0 1.422074017360395
-    #     0.0 0.0 0.0
-    #     0.0 0.0 0.0
-    #     (-0.3642161365141257*3*z) 0.0 (-0.3642161365141257*3*x)
-    #     0.0 0.0 (2.0197963935867267*3*z)
-    #     0.0 (-0.3642161365141257*3*z) (-0.3642161365141257*3*y)
-    #     0.0 0.0 0.0
-    # ]
-
-    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
-
+     sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
