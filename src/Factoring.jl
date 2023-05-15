@@ -617,7 +617,7 @@ export symbolic_jacobian!
 symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
 
 
-"""Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression tree which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
+"""Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
 function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     row_indices = Int64[]
     col_indices = Int64[]
@@ -639,7 +639,7 @@ function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::Ab
 end
 export sparse_symbolic_jacobian!
 
-
+"""Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = symbolic_jacobian!(graph, variable_order)
     node_to_var = Dict{Node,Union{Symbol,Real}}()
@@ -672,7 +672,6 @@ function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S
         return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
     end
 end
-export jacobian_Expr!
 
 """Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
 
