@@ -2,6 +2,7 @@
 
 using FastSymbolicDifferentiation
 using FastSymbolicDifferentiation.FSDTests
+using StaticArrays
 
 using Symbolics
 

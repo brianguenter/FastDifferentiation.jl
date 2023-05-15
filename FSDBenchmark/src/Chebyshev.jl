@@ -20,17 +20,18 @@ export Chebyshev
 end
 export Chebyshev
 
-"""WARNING: slow for large n"""
-Chebyshev_exe(n, x::Symbolics.Num) = make_function(DerivativeGraph([expr_to_dag(Chebyshev(n, x))]))
-export Chebyshev_exe
-
 Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
 
-function chebyshev_graph(order)
+function chebyshev(::JuliaSymbolics, model_size)
+    Symbolics.@variables x
+    return [Chebyshev(model_size, x)], [x]
+end
+
+function chebyshev(::FastSymbolic, model_size)
     Symbolics.@variables x
     nx = Node(x)
     # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
-    return DerivativeGraph([Chebyshev(order, nx)])
+    return DerivativeGraph([Chebyshev(model_size, nx)])
 end
-export chebyshev_graph
+export chebyshev
 

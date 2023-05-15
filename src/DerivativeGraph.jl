@@ -78,13 +78,35 @@ struct EdgeRelations{T}
 
     EdgeRelations(T::Type=Int64) = new{T}(PathEdge{T}[], PathEdge{T}[])
 end
-export EdgeRelations
 
 parents(a::EdgeRelations) = a.parents
-export parents
-children(a::EdgeRelations) = a.children
-export children
 
+children(a::EdgeRelations) = a.children
+
+
+""" Creates an ℝⁿ->ℝᵐ expression graph from `m` input DAGs. At creation time a new graph, called the derivative graph, is constructed based on the input DAG's. The derivative graph is destructively modified to compute the Jacobian of the function. The input DAG's are not modified.
+
+## Example:
+
+````
+julia> @variables x y
+2-element Vector{Num}:
+ x
+ y
+
+julia> nx = Node(x); ny = Node(y);
+
+julia>  h = [cos(nx)*sin(ny), exp(ny)*nx^2];
+
+julia> g = DerivativeGraph(h);
+
+julia> symbolic_jacobian!(g)
+[ Info: 0 factorable subgraphs
+2×2 Matrix{Node}:
+ (sin(y) * -(sin(x)))  (cos(x) * cos(y))
+ (exp(y) * (2 * x))    ((x ^ 2) * exp(y))
+```
+"""
 struct DerivativeGraph{T<:Integer}
     postorder_number::Dict{Node,T}
     nodes::Vector{Node}
@@ -130,6 +152,8 @@ struct DerivativeGraph{T<:Integer}
         num_nodes = length(postorder_number)
         compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
 
+
+
         return new{index_type}(
             postorder_number,
             nodes,
@@ -149,13 +173,9 @@ export DerivativeGraph
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
 
 nodes(a::DerivativeGraph) = a.nodes
-export nodes
-
 node(a::DerivativeGraph, node_index) = nodes(a)[node_index]
-export node
 
 num_vertices(a::DerivativeGraph) = length(nodes(a))
-export num_vertices
 
 function parents(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
     nedges = get(a, node_index, nothing)
@@ -166,9 +186,6 @@ function children(a::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer}
     nedges = get(a, node_index, nothing)
     return nedges === nothing ? nothing : UnconstrainedPathIterator(node_index, nedges.children, false)
 end
-export children
-
-# parents(constraint_function, a::RnToRmGraph, node_index::T)
 
 """returns iterator of indices of parents of node"""
 parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a), node_index)
@@ -176,47 +193,54 @@ parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a)
 
 """returns iterator of indices of children of node"""
 children(a::DerivativeGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
-export children
 
 root_path_masks(a::DerivativeGraph) = a.root_path_masks
 variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
 
 each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
-export each_vertex
 roots(a::DerivativeGraph) = a.roots
 export roots
 root(a::DerivativeGraph, root_index::Integer) = roots(a)[root_index]
-export root
 root_index_to_postorder_number(a::DerivativeGraph) = a.root_index_to_postorder_number
-export root_index_to_postorder_number
 root_index_to_postorder_number(a::DerivativeGraph, index::Integer) = root_index_to_postorder_number(a)[index]
 
 root_postorder_to_index(a::DerivativeGraph, index::Integer) = a.root_postorder_to_index[index]
-export root_postorder_to_index
-
-
 
 #These two functions are not efficient, primarily intended for visualization
 is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_postorder_to_index, postorder_index, nothing) !== nothing
-export is_root
+
+
+function is_root(graph::DerivativeGraph, node::Node)
+    num = postorder_number(graph, node)
+    if num === nothing
+        return false
+    else
+        return is_root(graph, num)
+    end
+end
+
 is_variable(graph::DerivativeGraph, postorder_index::Integer) = postorder_index in keys(graph.variable_postorder_to_index)
-export is_root
+
+is_variable(graph::DerivativeGraph, node::Node) = is_variable(graph, postorder_number(graph, node))
+
+is_tree(graph::DerivativeGraph, postorder_index::Integer) = length(child_edges(graph, postorder_index)) != 0
+is_tree(graph::DerivativeGraph, node::Node) = is_tree(graph, postorder_number(graph, node))
 
 
 variables(a::DerivativeGraph) = a.variables
 export variables
 variable(a::DerivativeGraph, variable_index::Integer) = variables(a)[variable_index]
-export variable
+
 variable_index_to_postorder_number(a::DerivativeGraph) = a.variable_index_to_postorder_number
-export variable_index_to_postorder_number
+
 variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = get(variable_index_to_postorder_number(a), index, nothing)
 
 variable_postorder_to_index(a::DerivativeGraph, index) = get(a.variable_postorder_to_index, index, nothing)
-export variable_postorder_to_index
+
 
 
 postorder_number(a::DerivativeGraph, node::Node) = get(a.postorder_number, node, nothing)
-export postorder_number
+
 
 function variable_node_to_index(a::DerivativeGraph, vnode::Node)
     pnum = postorder_number(a, vnode)
@@ -226,10 +250,9 @@ function variable_node_to_index(a::DerivativeGraph, vnode::Node)
         return variable_postorder_to_index(a, pnum)
     end
 end
-export variable_node_to_index
 
 edges(a::DerivativeGraph) = a.edges
-export edges
+
 
 """returns edges that directly connect top_vert and bott_vert"""
 function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
@@ -239,6 +262,8 @@ function edges(a::DerivativeGraph, vert1::Integer, vert2::Integer)
     (bott, top) = (extrema((vert1, vert2)))
     return filter(x -> bott_vertex(x) == bott, child_edges(a, top))
 end
+
+edges(a::DerivativeGraph, verts::Tuple{Integer,Integer}) = edges(a, verts[1], verts[2])
 
 """This is not an especially fast function. Currently only used for testing and diagnostics so this isn't a problem."""
 function unique_edges(a::DerivativeGraph)
@@ -253,47 +278,50 @@ function unique_edges(a::DerivativeGraph)
     end
     return edges_unique
 end
-export unique_edges
+
 
 
 _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer} = get(edge_map, node_index, nothing)
 
 node_edges(a::DerivativeGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 node_edges(a::DerivativeGraph, node_index::Integer) = _node_edges(edges(a), node_index)
-export node_edges
+
 # node_edges(a::RnToRmGraph, node_index::Integer) = get(a.edges, node_index, nothing) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 # #version that doesn't require having the entire graph constructed
 
 function reachable_variables(a::DerivativeGraph, node_index::Integer)
-    node_edges = children(edges(a)[node_index])
-    path_mask = falses(domain_dimension(a))
-    for edge in node_edges
-        if top_vertex(edge) == node_index
-            tmp = reachable_variables(edge)
-            path_mask .= path_mask .| tmp
+    if get(edges(a), node_index, nothing) === nothing
+        return falses(domain_dimension(a))
+    else
+        node_edges = children(edges(a)[node_index])
+        path_mask = falses(domain_dimension(a))
+        for edge in node_edges
+            path_mask .= path_mask .| reachable_variables(edge)
         end
-    end
 
-    if is_variable(a, node_index) #if node index is a variable then need to set its variable bit. No edge will have node_index as the top_vertex so the bit won't be set in the previous code.
-        path_mask[variable_postorder_to_index(a, node_index)] = 1
+        if is_variable(a, node_index) #if node index is a variable then need to set its variable bit. No edge will have node_index as the top_vertex so the bit won't be set in the previous code.
+            path_mask[variable_postorder_to_index(a, node_index)] = 1
+        end
+        return path_mask
     end
-    return path_mask
 end
 
 function reachable_roots(a::DerivativeGraph, node_index::Integer)
-    node_edges = parents(edges(a)[node_index])
-    path_mask = falses(codomain_dimension(a))
-    for edge in node_edges
-        if bott_vertex(edge) == node_index
+    if get(edges(a), node_index, nothing) === nothing
+        return falses_codomain_dimension(a)
+    else
+        node_edges = parents(edges(a)[node_index])
+        path_mask = falses(codomain_dimension(a))
+        for edge in node_edges
             path_mask .= path_mask .| reachable_roots(edge)
         end
-    end
 
-    #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
-    if is_root(a, node_index) #if node_index is a root then need to set it's reachable bit
-        path_mask[root_postorder_to_index(a, node_index)] = 1
+        #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
+        if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
+            path_mask[root_postorder_to_index(a, node_index)] = 1
+        end
+        return path_mask
     end
-    return path_mask
 end
 
 
@@ -305,6 +333,7 @@ export domain_dimension
 dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
 export dimensions
 
+"""Computes the average number of reachable variables across all the edges in the graph. Primarily useful for development."""
 function mean_reachable_variables(a::DerivativeGraph)
     total = 0
     num_edges = 0
@@ -315,12 +344,11 @@ function mean_reachable_variables(a::DerivativeGraph)
     end
     return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
 end
-export mean_reachable_variables
 
 function fraction_reachable_variables(a::DerivativeGraph)
     return mean_reachable_variables(a) / domain_dimension(a)
 end
-export fraction_reachable_variables
+
 
 #these functions implicitly assume the nodes are postorder numbered. Parent nodes will have higher numbers than children nodes. Vertices in PathEdge are sorted with highest number first. These are inefficient since the filtering happens at every access. Change to fixed parent, child fields if this is too slow.
 """Returns a vector of edges which satisfy `edge.top_vertex == node_index`. These edges lead to the children of `node_index`."""
@@ -332,30 +360,47 @@ function child_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
         return PathEdge{T}[] #seems wasteful to return an empty array but other code depends on a zero length return rather than nothing.
     end
 end
-export child_edges
 
-child_edges(dgraph::DerivativeGraph, node::Node) = child_edges(dgraph, postorder_number(dgraph, node))
+function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
+    num = postorder_number(dgraph, node)
+
+    if num === nothing
+        return PathEdge{T}[]
+    else
+        return child_edges(dgraph, num)
+    end
+end
 
 child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
 
 """The way `parent_edges` works is somewhat subtle. Assume we have a root node `nᵢ` with no parents but some children. No edge in `node_edges(nᵢ)` will pass the test `edge.bott_vertex == node` so `parent_edges` will return T[]. But this empty vector is not explicitly stored in the edge list."""
-function parent_edges(dgraph::DerivativeGraph, node::T) where {T<:Integer}
-    nedges = _node_edges(edges(dgraph), node)
+function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
+    nedges = _node_edges(edges(dgraph), node_index)
     if nedges !== nothing
         return parents(nedges)
     else
         return PathEdge{T}[] #seems wasteful to return an empty array but other code depends on a zero length return rather than nothing.
     end
 end
-export parent_edges
 
-parent_edges(dgraph::DerivativeGraph, node::Node) = parent_edges(dgraph, postorder_number(dgraph, node))
+
+parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
+
+function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
+    num = postorder_number(dgraph, node)
+
+    if num === nothing
+        return PathEdge{T}[]
+    else
+        return parent_edges(dgraph, num)
+    end
+end
 
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
 is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
-export is_constant
-partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = edge_value(child_edges(dgraph, parent)[child_index])
-export partial_value
+
+partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = value(child_edges(dgraph, parent)[child_index])
+
 
 """Computes partial values for all edges in the graph"""
 function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{Node,Bool}, current_node::Node{T,N}, edges::Dict{Int64,EdgeRelations{Int64}}, expression_cache::IdDict{Any,Any}, domain_dim, codomain_dim) where {T,N}
@@ -366,7 +411,7 @@ function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{No
 
 
         current_index = postorder_number[current_node]
-        for (i, child) in pairs(node_children(current_node))
+        for (i, child) in pairs(children(current_node))
             child_index = postorder_number[child]
 
             edge = PathEdge(current_index, child_index, derivative(current_node, Val(i)), domain_dim, codomain_dim) #Val can be very slow. TODO see if this is affecting speed.
@@ -374,12 +419,15 @@ function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{No
             if get(edges, current_index, nothing) === nothing
                 edges[current_index] = EdgeRelations()
             end
+
+            @assert !in(edge, edges[current_index].children) #should never be possible to add an edge that is already there but make sure this won't happen.
             push!(edges[current_index].children, edge)
 
 
             if get(edges, child_index, nothing) === nothing
                 edges[child_index] = EdgeRelations()
             end
+            @assert !in(edge, edges[child_index].parents) #should never be possible to add an edge that is already there but make sure this won't happen.
             push!(edges[child_index].parents, edge)
 
 
@@ -405,23 +453,20 @@ function edge_exists(graph::DerivativeGraph, edge::PathEdge)
     if edges === nothing
         val1 = false
     else
-        val1 = any(value_equal(x, edge) for x in parents(edges))
+        val1 = any(x == edge for x in parents(edges))
     end
 
     edges = node_edges(graph, top_vertex(edge))
     if edges === nothing
         val2 = false
     else
-        val2 = any(value_equal(x, edge) for x in children(edges))
+        val2 = any(x == edge for x in children(edges))
     end
 
     @assert val1 == val2
 
     return val1 && val2
 end
-
-export edge_exists
-
 
 
 """Adds an edge to the graph"""
@@ -492,7 +537,6 @@ function delete_edge!(graph::DerivativeGraph, edge::PathEdge, force::Bool=false)
 
     return nothing
 end
-export delete_edge!
 
 make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
 
@@ -521,3 +565,71 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
     return @RuntimeGeneratedFunction(Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body))
 end
 export make_function
+
+"""Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
+function sparsity(graph::DerivativeGraph)
+    total_entries = codomain_dimension(graph) * domain_dimension(graph)
+    non_zero = 0
+    for i in eachindex(roots(graph))
+        non_zero += sum(reachable_variables(graph, root_index_to_postorder_number(graph, i)))
+    end
+    return non_zero / total_entries
+end
+export sparsity
+
+"""Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
+function graph_statistics(graph::DerivativeGraph)
+    # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
+    @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
+
+    avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
+    @info "average reachable roots $avg_reach_roots"
+    n_relations(relation_func, graph) = length.(relation_func.(values(edges(graph))))
+    pnums = n_relations(parents, graph)
+    cnums = n_relations(children, graph)
+    f(relation_func, nums) = @info "$(nameof(relation_func)): total edges $(sum(nums)) mean $(mean(nums)) max and min $(extrema(nums)) median $(median(nums)) variance $(var(nums)) quantile $(quantile(nums,.1:.1:1.0))"
+
+    f(parents, pnums)
+    f(children, cnums)
+
+    shared_roots = BitVector(undef, codomain_dimension(graph))
+    shared_variables = BitVector(undef, domain_dimension(graph))
+
+    #compute nodes with branches.
+    branch_nodes = 0
+
+    for node in nodes(graph)
+        if !is_variable(graph, node) && !is_root(graph, node)
+            edges = node_edges(graph, node)
+            if edges !== nothing
+                if length(parents(edges)) == 0 || length(parents(edges)) == 1
+                    shared_roots .= 0
+                else
+                    shared_roots = copy(reachable_roots(parents(edges)[1]))
+
+                    for pedge in parents(edges) #poetntially redundant computation but efficiency not important
+                        shared_roots .&= reachable_roots(pedge)
+                    end
+                end
+
+                if length(children(edges)) == 0 || length(children(edges)) == 1
+                    shared_variables .= 0
+                else
+                    shared_variables = copy(reachable_variables(children(edges)[1]))
+                    for cedge in children(edges)
+                        shared_variables .&= reachable_variables(cedge)
+                    end
+                end
+                if any(shared_roots) || any(shared_variables)
+                    branch_nodes += 1
+                end
+            end
+        end
+    end
+    @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
+    @info "sparsity of Jacobian $(sparsity(graph))"
+end
+
+
+
+

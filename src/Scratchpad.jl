@@ -5,30 +5,15 @@ using StaticArrays
 using FiniteDifferences
 using .FSDTests
 
+
 function test()
-    @variables q1 q2
-    nq1 = Node(q1)
-    nq2 = Node(q2)
+    @variables x
+    nx = Node(x)
+    zr = Node(1.0)
 
-    A = [
-        cos(nq1) -cos(nq1)
-        sin(nq1) sin(nq1)
-    ]
-
-    DA = [
-        -sin(nq1) sin(nq1)
-        cos(nq1) cos(nq1)
-    ]
-
-    @assert isapprox(zeros(2, 2), node_value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
-    println(derivative(A, nq1))
-    @assert DA == derivative(A, nq1)
-
-
+    graph = DerivativeGraph([nx, zr])
+    jac = symbolic_jacobian!(graph, [nx])
 
 end
-export test
 
-#changed
-#change
-export test
+
