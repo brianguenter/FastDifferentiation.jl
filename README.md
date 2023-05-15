@@ -68,14 +68,16 @@ For the Symbolics.jl derivative LLVM ran out of memory on a machine with 32GB RA
 
 ### Spherical Harmonics
 
-The second example is spherical harmonics functions.
+The second example is spherical harmonics functions. Here is the expression graph for the spherical harmonic function of order 8:
+<img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
 
+As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
 
 For the Symbolics.jl derivative LLVM ran out of memory for order 16 or higher.
-<img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
+
 
 In general you can expect better performance than Symbolics.jl derivatives if the number of paths through your graph is substantially larger than the number of nodes. If the average number of parents of each node is close to 2 the number of paths will increase exponentially with the number of nodes.
 </details>
