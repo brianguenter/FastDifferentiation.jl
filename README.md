@@ -25,6 +25,9 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
+<details>
+    <summary> Benchmarks </summary>
+
 ## Benchmarks
 
 The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmars:Symbolic,MakeFunction, and Exe. 
@@ -72,5 +75,6 @@ The second example is spherical harmonics functions.
 For the Symbolics.jl derivative LLVM ran out of memory for order 16 or higher.
 
 In general you can expect better performance than Symbolics.jl derivatives if the number of paths through your graph is substantially larger than the number of nodes. If the average number of parents of each node is close to 2 the number of paths will increase exponentially with the number of nodes.
+</details>
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
