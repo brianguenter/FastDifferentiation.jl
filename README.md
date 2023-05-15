@@ -58,7 +58,7 @@ The function is memoized for efficiency. Symbolics.jl can simplify the resulting
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
 Although the Chebyshev expression graph is not that large 
-<img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="300">
+<img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
