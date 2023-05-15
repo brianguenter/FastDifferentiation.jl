@@ -1,0 +1,2 @@
+model_size,minimum,median,maximum,allocations,memory_estimate
+16,14900.0,15200.0,50000.0,1,64
