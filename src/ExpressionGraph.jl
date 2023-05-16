@@ -314,8 +314,7 @@ end
 
 #need to define because derivative functions can return inv
 Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
-Base.inv(a::Node{SymbolicUtils.BasicSymbolic{Real},0}) = 1 / a
-Base.inv(a::Node{typeof(*),2}) = 1 / a
+Base.inv(a::Node) = 1 / a
 
 #efficient explicit methods for most common cases
 derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1],), index)
