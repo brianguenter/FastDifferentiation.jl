@@ -34,12 +34,6 @@ using Symbolics
 
 nx, ny, nz = Node.((x, y, z))
 
-hessian(nx^2 + ny^2 + nz^2, [nx, ny, nz])
-
-hessian(nx * ny * nz, [nx, ny, nz])
-
-"""
-```
 julia> nx,ny,nz = Node.((x,y,z))
 (x, y, z)
 
@@ -57,7 +51,7 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
   z    0.0  x
   y    x    0.0
 ```
-"""
+
 
 <details>
     <summary> Benchmarks </summary>
