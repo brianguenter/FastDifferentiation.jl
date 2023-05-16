@@ -1575,8 +1575,11 @@ end
     df12(x, y) = 2 * x * y
 
     correct_jacobian = [df11 df12; df21 df22]
-
+    copy_jac = symbolic_jacobian(graph, [nx, ny])
     jac = symbolic_jacobian!(graph, [nx, ny])
+
+    @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
+
     computed_jacobian = make_function.(jac, Ref([x, y]))
 
     #verify the computed and hand caluclated jacobians agree.

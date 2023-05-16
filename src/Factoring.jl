@@ -728,8 +728,13 @@ jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = jacobian_funct
 export jacobian_function!
 
 """Non-destructive form of jacobian_function!"""
-jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place)
+jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place) #here it is okay to use deepcopy because user will never be accessing the new variables that will be created. See symbolic_jacobian for expanded discussion about this problem.
 export jacobian_function
+
+function jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+    tmp = DerivativeGraph(roots(graph)) #need to recreate derivative graph with the same variables as were passed in the variable_order parameter.
+     return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
+end
 
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
