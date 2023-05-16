@@ -56,18 +56,18 @@ the Chebyshev polynomial of order n:
     end
 end
 ```
-The Chebyshev expression graph does not have many nodes even at the largest size tested. For example, here is the graph of the 10th order expression: 
+The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order). For example, here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
 
-The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl.
+The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
 
 #### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-For the Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher Chebyshev functions. LLVM ran out of memory while compiling these large Expr on a machine with 32GB RAM.
+For the Chebyshev Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these large Expr on a machine with 32GB RAM.
 
 #### Chebyshev benchmarks with simplification on
 
@@ -84,10 +84,7 @@ These benchmarks took significantly longer to run than the Chebyshev benchmarks.
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
 
-For the Symbolics.jl derivative LLVM ran out of memory for order 16 or higher.
-
-
-In general you can expect better performance than Symbolics.jl derivatives if the number of paths through your graph is substantially larger than the number of nodes. If the average number of parents of each node is close to 2 the number of paths will increase exponentially with the number of nodes.
+For the Symbolics.jl Exe benchmark LLVM ran out of memory for order 16 or higher.
 </details>
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
