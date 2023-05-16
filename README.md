@@ -32,9 +32,9 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 
 The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
 
-The Symbolic benchmark compares the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
+The Symbolic benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
-The MakeFunction benchmark generates a Julia Expr but does not compile it. This separates the time required to create the function from the time LLVM takes to compile it. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
+The MakeFunction benchmark is the time to generate a Julia Expr from an already computed symbolic derivative. It does not include  the time for LLVM to compile the Expr. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
 
 The Exe function measures just the time required to execute the compiled function using an in-place matrix.
 
@@ -64,7 +64,7 @@ The complexity arises from the number of different paths from the root to the le
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-For the Symbolics.jl derivative LLVM ran out of memory on a machine with 32GB RAM for order 20 and higher Chebyshev functions.
+For the Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher Chebyshev functions. LLVM ran out of memory while compiling these large Expr on a machine with 32GB RAM.
 
 ### Spherical Harmonics
 
