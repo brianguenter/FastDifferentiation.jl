@@ -26,19 +26,26 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
 ## Basic use
+There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to FastSymbolicDifferentiation graph form. Or you can create FastSymbolicDifferentiation variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form.
+
+Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
+
+If speed is your primary concern then it is faster to evaluate expressions directly in FastSymbolicDifferentiation form than it is to evalute in Symbolic form and then convert them.
+
+Set up variables:
 ```
 using FastSymbolicDifferentiation
 using Symbolics
 
 @variables x y z
 
-nx, ny, nz = Node.((x, y, z))
+nx, ny, nz = Node.((x, y, z)) #create FastSymbolicDifferentiation variables.
 
 julia> nx,ny,nz = Node.((x,y,z))
 (x, y, z)
-
-julia> 
-
+```
+compute Hessian:
+```
 julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
 3×3 Matrix{Node}:
  2    0.0  0.0
@@ -50,14 +57,15 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
   0.0  z    y
   z    0.0  x
   y    x    0.0
-
+```
+compute Jacobian:
+```
 julia> f1 = cos(nx) * ny
 (cos(x) * y)
 
 julia> f2 = sin(ny) * nx
 (sin(y) * x)
 
-julia> 
 
 julia> gr = DerivativeGraph([f1, f2])
 DerivativeGraph{Int64}(Dict{Node, Int64}((cos(x) * y) => 4, (sin(y) * x) => 6, y => 3, x => 1, sin(y) => 5, cos(x) => 2), Node[x, cos(x), y, (cos(x) * y), sin(y), (sin(y) * x)], Node[(cos(x) * y), (sin(y) * x)], Node[x, y], [4, 6], Dict(4 => 1, 6 => 2), [1, 3], Dict(3 => 2, 1 => 1), Dict{Int64, FastSymbolicDifferentiation.EdgeRelations{Int64}}(5 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[(5 3  1 cos(y) Bool[0, 1] Bool[0, 1])]), 4 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0]), (4 3  1 cos(x) Bool[1, 0] Bool[0, 1])]), 6 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])]), 2 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0])]), 3 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 3  1 cos(x) Bool[1, 0] Bool[0, 1]), (5 3  1 cos(y) Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[]), 1 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[])), IdDict{Any, Any}())
@@ -75,7 +83,9 @@ julia> symb = symbolic_jacobian(gr,[ny,nx]) #you can change the order in which t
 2×2 Matrix{Node}:
  cos(x)        (y * -(sin(x)))
  (x * cos(y))  sin(y)
-
+```
+generate executable function that evaluates derivative function:
+```
 julia> func = jacobian_function(gr, [nx, ny]) #non-destructive form. Use this 
 #when memory is an issue and you don't want to copy the input graph.
 RuntimeGeneratedFunction(#=in FastSymbolicDifferentiation=#, #=using FastSymbolicDifferentiation=#, :((x, y)->begin
@@ -107,7 +117,26 @@ julia> func(1.0, 2.0)
  -1.68294    0.540302
   0.909297  -0.416147
 ```
+convert between FastSymbolicDifferentiation and Symbolics representations:
+```
+julia> f = x^2+y^2 #Symbolics expression
+x^2 + y^2
 
+julia> Node(f) #convert to FastSymbolicDifferentiation form
+x^2 + y^2
+
+julia> typeof(ans)
+Node{SymbolicUtils.BasicSymbolic{Real}, 0}
+
+julia> node_exp = nx^3/ny^4 #FastSymbolicDifferentiation expression
+((x ^ 3) / (y ^ 4))
+
+julia> dag_to_Symbolics_expression(node_exp)
+(x^3) / (y^4)
+
+julia> typeof(ans)
+Symbolics.Num
+```
 
 <details>
     <summary> Benchmarks </summary>
