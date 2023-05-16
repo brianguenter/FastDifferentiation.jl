@@ -733,8 +733,21 @@ export jacobian_function
 
 function jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = DerivativeGraph(roots(graph)) #need to recreate derivative graph with the same variables as were passed in the variable_order parameter.
-     return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
+    return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
 end
+
+function hessian(graph::DerivativeGraph, variable_order)
+    @assert codomain_dimension(graph) == 1
+    return hessian(roots(graph)[1], variable_order)
+end
+
+function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
+    tmp = DerivativeGraph(expression)
+    jac = symbolic_jacobian!(tmp, variable_order)
+    tmp2 = DerivativeGraph(vec(jac))
+    return symbolic_jacobian!(tmp2, variable_order)
+end
+export hessian
 
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
