@@ -10,7 +10,7 @@ end
 
 """Create an unspeficied function of one or more Symbolics variables. ex:
 ```
-julia> using Symbolics
+julia> using Symbolics:@variables
 julia> @variables x,y
 
 julia> function_of(:q,x,y)
@@ -21,7 +21,7 @@ function_of(name::Symbol, vars::T...) where {T<:Num} = function_of(name, Node.(v
 
 """Create an unspeficied function of one or more Node variables. ex:
 ```
-julia> using Symbolics
+julia> using Symbolics:@variables
 julia> @variables x,y
 julia> nx,ny = Node.(x,y)
 julia> function_of(:q,nx,ny)

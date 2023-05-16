@@ -169,7 +169,7 @@ end
 export simple_factorable_subgraphs
 
 @testitem "isa_connected_path 1" begin # case when path is one edge long
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -192,7 +192,7 @@ export simple_factorable_subgraphs
 end
 
 @testitem "isa_connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
     @variables x y
@@ -241,7 +241,7 @@ end
 end
 
 @testitem "add_non_dom_edges" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -294,7 +294,7 @@ end
 end
 
 @testitem "iteration" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -406,7 +406,7 @@ end
 end
 
 @testitem "is_tree" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x
@@ -432,7 +432,7 @@ end
 end
 
 @testitem "derivative" begin
-    using Symbolics
+    using Symbolics: @variables
     @variables x, y
 
     nx = Node(x)
@@ -465,7 +465,7 @@ end
 end
 
 @testitem "compute_factorable_subgraphs test order" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -535,7 +535,7 @@ end
 
 @testitem "make_function" begin #generation of derivative functions
     import Symbolics
-    using Symbolics: substitute
+    using Symbolics: @variables, substitute
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -576,7 +576,7 @@ end
 end
 
 @testitem "edges" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -613,7 +613,8 @@ end
 end
 
 @testitem "DerivativeGraph constructor" begin
-    using Symbolics
+    import Symbolics
+    using Symbolics:@variables,substitute
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -646,8 +647,8 @@ end
             f2 = dag_to_Symbolics_expression(one_partial)
 
             for test_point in BigFloat(-1):BigFloat(0.01):BigFloat(1) #graphs might have equivalent but different forms so evaluate at many points at high precision to verify derivatives are the same.
-                v1 = Symbolics.value(substitute(f1, Dict((x => test_point), (y => test_point))))
-                v2 = Symbolics.value(substitute(f2, Dict((x => test_point), (y => test_point))))
+                v1 = Symbolics.value(Symbolics.substitute(f1, Dict((x => test_point), (y => test_point))))
+                v2 = Symbolics.value(Symbolics.substitute(f2, Dict((x => test_point), (y => test_point))))
                 @test isapprox(v1, v2, atol=1e-50)
             end
         end
@@ -655,7 +656,7 @@ end
 end
 
 @testitem "DerivativeGraph pathmasks" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -697,7 +698,7 @@ end
 end
 
 @testitem "ConstrainedPathIterator" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -764,7 +765,7 @@ end
 end
 
 @testitem "edge_exists" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -790,7 +791,7 @@ end
 end
 
 @testitem "add_edge! for DerivativeGraph" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -829,7 +830,7 @@ end
 
     #TODO need to add a test that deletes all the edges incident on a vertex and ensures that vertex is deleted.
 
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -872,7 +873,7 @@ end
 end
 
 @testitem "compute_edge_paths" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
 
@@ -918,7 +919,7 @@ end
 end
 
 @testitem "dominators DerivativeGraph" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -988,7 +989,7 @@ end
 
 
 @testitem "dom_subgraph && pdom_subgraph" begin
-    using Symbolics
+    using Symbolics: @variables
 
     using FastSymbolicDifferentiation: dom_subgraph, pdom_subgraph
     using FastSymbolicDifferentiation.FSDTests
@@ -1031,7 +1032,7 @@ end
 
 
 @testitem "reachable" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -1149,7 +1150,7 @@ end
 end
 
 @testitem "subgraph_edges with branching" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1228,7 +1229,7 @@ end
 end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1268,7 +1269,7 @@ end
 end
 
 @testitem "Path_Iterator" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1354,7 +1355,7 @@ end
 end
 
 @testitem "make_factored_edge" begin
-    using Symbolics
+    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1387,7 +1388,7 @@ end
 
 
 @testitem "factor_subgraph simple ℝ²->ℝ²" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -1415,7 +1416,7 @@ end
 
 
 @testitem "factor_subgraph 2" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -1446,7 +1447,7 @@ end
 end
 
 @testitem "factor simple ℝ²->ℝ²" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -1485,7 +1486,7 @@ end
 
 
 @testitem "constant and variable roots" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x
@@ -1521,7 +1522,7 @@ end
 end
 
 @testitem "multiply_sequence" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y, z, w, u
@@ -1571,7 +1572,7 @@ end
 
 
 @testitem "symbolic_jacobian" begin
-    using Symbolics
+    using Symbolics: @variables
 
     @variables x y
 
@@ -1607,7 +1608,7 @@ end
 @testitem "sparse_symbolic_jacobian!" begin
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
-    using Symbolics
+    using Symbolics: @variables
 
     @variables x, y, z
 
@@ -1636,7 +1637,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
+    sym_func = build_function!(fsd_graph, variables(fsd_graph))
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
@@ -1661,7 +1662,7 @@ end
 
     func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = jacobian_function!(fsd_graph, in_place=false)
+    sym_func = build_function!(fsd_graph, in_place=false)
 
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
@@ -1673,7 +1674,7 @@ end
 
     tmp = Matrix{Float64}(undef, 1, 1)
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    sym_func = jacobian_function!(fsd_graph, in_place=false)
+    sym_func = build_function!(fsd_graph, in_place=false)
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
@@ -1686,7 +1687,7 @@ end
 end
 
 @testitem "derivative of matrix" begin
-    using Symbolics
+    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables q1 q2
@@ -1708,7 +1709,7 @@ end
 end
 
 @testitem "derivative of simple Unspecified Function" begin
-    using Symbolics
+    using Symbolics: @variables
     using StaticArrays
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1726,7 +1727,7 @@ end
 end
 
 @testitem "derivative of more complex Unspecified Function" begin
-    using Symbolics
+    using Symbolics: @variables
     @variables x y
 
     q = function_of(:q, x, y)

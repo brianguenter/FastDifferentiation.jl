@@ -9,7 +9,7 @@ using Plots
 using Memoize
 import FastSymbolicDifferentiation
 using StaticArrays
-using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, UnspecifiedFunction, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
+using FastSymbolicDifferentiation: derivative, build_function!, symbolic_jacobian!, Node, UnspecifiedFunction, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
 using LaTeXStrings
 import LinearAlgebra
 
@@ -58,11 +58,11 @@ export plot_SH_FSD_graph_vs_jacobian_size
 
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::Symbolic; simplify=false) = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($package, $model_size) evals = 1
 
-run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::MakeFunction; simplify=false) = @benchmark jacobian_function!(graph) setup = (graph = $model_function($package, $model_size)) evals = 1
+run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::MakeFunction; simplify=false) = @benchmark build_function!(graph) setup = (graph = $model_function($package, $model_size)) evals = 1
 
 function run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::Exe, simplify=false)
     graph = model_function(package, model_size)
-    exe = jacobian_function!(graph, FSD.variables(graph), in_place=true)
+    exe = build_function!(graph, FSD.variables(graph), in_place=true)
 
     input = rand(domain_dimension(graph))
     output = rand(codomain_dimension(graph), domain_dimension(graph))

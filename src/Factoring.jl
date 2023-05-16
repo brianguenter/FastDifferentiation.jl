@@ -688,7 +688,7 @@ julia> nx = Node(x);ny = Node(y);
 
 julia> gr = DerivativeGraph([nx^2*ny^2,nx^3*ny^3]);
 
-julia> func = jacobian_function!(gr, [nx,ny]);
+julia> func = build_function!(gr, [nx,ny]);
 
 julia> func(2,3)
 2×2 Matrix{Float64}:
@@ -698,7 +698,7 @@ julia> func(2,3)
 
 Example of in_place Jacobian generation:
 ```
-julia> func_in_place = jacobian_function!(gr, [nx,ny],in_place=true)
+julia> func_in_place = build_function!(gr, [nx,ny],in_place=true)
 
 julia> a = Matrix{Float64}(undef,2,2);
 
@@ -715,12 +715,15 @@ julia> a
  ```
 
 """
-jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
-export jacobian_function!
-jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(graph, variables(graph), in_place=in_place)
+build_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
+export build_function
+build_function!(graph::DerivativeGraph; in_place::Bool=true) = build_function!(graph, variables(graph), in_place=in_place)
+export build_function!
 
-"""Non-destructive form of jacobian_function!"""
-jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place)
+"""Non-destructive form of build_function!"""
+build_function(graph::DerivativeGraph; in_place::Bool=true) = build_function!(deepcopy(graph), in_place)
+export build_function
+
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
     for oned in all_nodes.(jacobian)

@@ -1,6 +1,6 @@
 using FSDBenchmark
 using FastSymbolicDifferentiation
-using Symbolics
+using Symbolics: @variables
 using StaticArrays
 using FSDBenchmark.SimpsonHermite
 
