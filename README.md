@@ -56,11 +56,13 @@ the Chebyshev polynomial of order n:
     end
 end
 ```
+The function is memoized for efficiency. 
+
 The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order). For example, here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
 
-The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
+Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
 
 #### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
@@ -75,6 +77,10 @@ For the Chebyshev Exe benchmark the Symbolics.jl derivative generated a large Ex
 
 The second example is spherical harmonics functions. This is the expression graph for the spherical harmonic function of order 8:
 <img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
+
+<details>
+    <summary> Source for spherical harmonics benchmark </summary>
+</details>
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
 
