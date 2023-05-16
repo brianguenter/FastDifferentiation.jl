@@ -39,6 +39,8 @@ The MakeFunction benchmark is the time to generate a Julia Expr from an already 
 The Exe function measures just the time required to execute the compiled function using an in-place matrix.
 
 All benchmarks show the ratio of time taken by Symbolics.jl to FastSymbolicDifferentiation.jl. Numbers greater than 1 mean FastSymbolicDifferentiation is faster.
+
+All benchmarks were run on an AMD Ryzen 9 7950X 16-Core Processor with 32GB RAM running Windows 11 OS, Julia version 1.9.0.
 ### Chebyshev polynomial
 The first example is a recursive function for 
 the Chebyshev polynomial of order n:
@@ -60,19 +62,23 @@ The complexity arises from the number of different paths from the root to the le
 
 The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl.
 
-#### Chebyshev benchmarks simplification off
+#### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
 For the Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher Chebyshev functions. LLVM ran out of memory while compiling these large Expr on a machine with 32GB RAM.
 
+#### Chebyshev benchmarks with simplification on
+
 ### Spherical Harmonics
 
-The second example is spherical harmonics functions. Here is the expression graph for the spherical harmonic function of order 8:
+The second example is spherical harmonics functions. This is the expression graph for the spherical harmonic function of order 8:
 <img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
+
+These benchmarks took significantly longer to run than the Chebyshev benchmarks. For order 25 the symbolic processing time for Symbolics.jl was 88 seconds on an 
 
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
