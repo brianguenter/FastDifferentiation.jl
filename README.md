@@ -62,7 +62,10 @@ julia>
 julia> gr = DerivativeGraph([f1, f2])
 DerivativeGraph{Int64}(Dict{Node, Int64}((cos(x) * y) => 4, (sin(y) * x) => 6, y => 3, x => 1, sin(y) => 5, cos(x) => 2), Node[x, cos(x), y, (cos(x) * y), sin(y), (sin(y) * x)], Node[(cos(x) * y), (sin(y) * x)], Node[x, y], [4, 6], Dict(4 => 1, 6 => 2), [1, 3], Dict(3 => 2, 1 => 1), Dict{Int64, FastSymbolicDifferentiation.EdgeRelations{Int64}}(5 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[(5 3  1 cos(y) Bool[0, 1] Bool[0, 1])]), 4 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0]), (4 3  1 cos(x) Bool[1, 0] Bool[0, 1])]), 6 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])]), 2 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0])]), 3 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 3  1 cos(x) Bool[1, 0] Bool[0, 1]), (5 3  1 cos(y) Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[]), 1 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[])), IdDict{Any, Any}())
 
-julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an issue and you don't want to copy the input graph. This orders the derivatives in the order they happen to appear in the variables data structure of graph. 
+julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an issue 
+# and you don't want to copy the input graph. 
+# This orders the derivatives in the order they happen to appear in the 
+# variables data structure of graph. 
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
