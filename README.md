@@ -25,9 +25,42 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
+## Basic use
+```
+using FastSymbolicDifferentiation
+using Symbolics
+
+@variables x y z
+
+nx, ny, nz = Node.((x, y, z))
+
+hessian(nx^2 + ny^2 + nz^2, [nx, ny, nz])
+
+hessian(nx * ny * nz, [nx, ny, nz])
+
+"""
+```
+julia> nx,ny,nz = Node.((x,y,z))
+(x, y, z)
+
+julia> 
+
+julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
+3×3 Matrix{Node}:
+ 2    0.0  0.0
+ 0.0  2    0.0
+ 0.0  0.0  2
+
+ julia> hessian(nx*ny*nz,[nx,ny,nz])
+ 3×3 Matrix{Node}:
+  0.0  z    y
+  z    0.0  x
+  y    x    0.0
+```
+"""
+
 <details>
     <summary> Benchmarks </summary>
-
 ## Benchmarks
 
 The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
