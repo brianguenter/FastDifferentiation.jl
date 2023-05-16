@@ -616,6 +616,13 @@ export symbolic_jacobian!
 
 symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
 
+function symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+    tmp = DerivativeGraph(roots(a)) #rebuild derivative graph. This is probably less efficient than deepcopy but deepcopy(Node(x)) != Node(x) which can lead to all kinds of trouble.
+    return symbolic_jacobian!(tmp, variable_ordering)
+end
+
+symbolic_jacobian(a::DerivativeGraph) = symbolic_jacobian(a, variables(a))
+export symbolic_jacobian
 
 """Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
 function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
