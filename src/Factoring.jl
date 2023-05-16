@@ -410,7 +410,7 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
         end
         add_non_dom_edges!(subgraph)
         #reset roots in R, if possible. All edges earlier in the path than the first vertex with more than one child cannot be reset.
-        edges_to_delete = reset_edge_masks!(subgraph) #TODO need to modify reset_edge_masks! so it handles the case where a path may have been destroyed due to factorization.
+        edges_to_delete = reset_edge_masks!(subgraph)
         for edge in edges_to_delete
             delete_edge!(graph(subgraph), edge)
         end
@@ -688,7 +688,7 @@ julia> nx = Node(x);ny = Node(y);
 
 julia> gr = DerivativeGraph([nx^2*ny^2,nx^3*ny^3]);
 
-julia> func = build_function!(gr, [nx,ny]);
+julia> func = jacobian_function!(gr, [nx,ny]);
 
 julia> func(2,3)
 2×2 Matrix{Float64}:
@@ -698,7 +698,7 @@ julia> func(2,3)
 
 Example of in_place Jacobian generation:
 ```
-julia> func_in_place = build_function!(gr, [nx,ny],in_place=true)
+julia> func_in_place = jacobian_function!(gr, [nx,ny],in_place=true)
 
 julia> a = Matrix{Float64}(undef,2,2);
 
@@ -715,14 +715,14 @@ julia> a
  ```
 
 """
-build_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
-export build_function
-build_function!(graph::DerivativeGraph; in_place::Bool=true) = build_function!(graph, variables(graph), in_place=in_place)
-export build_function!
+jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
+export jacobian_function!
+jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(graph, variables(graph), in_place=in_place)
+export jacobian_function!
 
-"""Non-destructive form of build_function!"""
-build_function(graph::DerivativeGraph; in_place::Bool=true) = build_function!(deepcopy(graph), in_place)
-export build_function
+"""Non-destructive form of jacobian_function!"""
+jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place)
+export jacobian_function
 
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()

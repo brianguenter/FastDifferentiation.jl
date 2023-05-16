@@ -365,7 +365,6 @@ end
     end
 end
 
-# #TODO turn this into a real test
 @testitem "make_function for Node" begin
     import Symbolics
 
@@ -614,7 +613,7 @@ end
 
 @testitem "DerivativeGraph constructor" begin
     import Symbolics
-    using Symbolics:@variables,substitute
+    using Symbolics: @variables, substitute
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x, y
@@ -827,9 +826,6 @@ end
 end
 
 @testitem "delete_edge! for DerivativeGraph" begin
-
-    #TODO need to add a test that deletes all the edges incident on a vertex and ensures that vertex is deleted.
-
     using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1220,14 +1216,6 @@ end
     @test issetequal([1, 2, 3, 4], nod)
 end
 
-
-@testitem "TODO simple_dominance" begin end
-
-
-@testitem "process_new_subgraphs" begin
-
-end
-
 @testitem "subgraph reachable_roots, reachable_variables" begin
     using Symbolics: @variables
     using DataStructures
@@ -1468,9 +1456,6 @@ end
     @test result[2, 2] == (-sin(nx1 * ny2)) * nx1
 end
 
-# @testitem "TODO: subgraph_exists" begin
-#     @test false
-# end
 
 @testitem "subset" begin
     using FastSymbolicDifferentiation.FSDInternals
@@ -1593,7 +1578,6 @@ end
 
     jac = symbolic_jacobian!(graph, [nx, ny])
     computed_jacobian = make_function.(jac, Ref([x, y]))
-    #TODO verify derivative with FiniteDifferences
 
     #verify the computed and hand caluclated jacobians agree.
     for x in -1.0:0.01:1.0
@@ -1637,7 +1621,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-    sym_func = build_function!(fsd_graph, variables(fsd_graph))
+    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
@@ -1662,7 +1646,7 @@ end
 
     func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = build_function!(fsd_graph, in_place=false)
+    sym_func = jacobian_function!(fsd_graph, in_place=false)
 
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
@@ -1674,7 +1658,7 @@ end
 
     tmp = Matrix{Float64}(undef, 1, 1)
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    sym_func = build_function!(fsd_graph, in_place=false)
+    sym_func = jacobian_function!(fsd_graph, in_place=false)
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
