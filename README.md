@@ -60,7 +60,7 @@ The complexity arises from the number of different paths from the root to the le
 
 The function is memoized for efficiency. Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl.
 
-####Chebyshev benchmarks simplification off
+#### Chebyshev benchmarks simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
