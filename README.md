@@ -70,12 +70,14 @@ julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
 
-julia> symb = symbolic_jacobian(gr,[ny,nx]) #you can change the order in which the partial derivatives will appear in the jacobian
+julia> symb = symbolic_jacobian(gr,[ny,nx]) #you can change the order in which the 
+#partial derivatives will appear in the jacobian
 2×2 Matrix{Node}:
  cos(x)        (y * -(sin(x)))
  (x * cos(y))  sin(y)
 
-julia> func = jacobian_function(gr, [nx, ny]) #non-destructive form. Use this when memory is an issue and you don't want to copy the input graph.
+julia> func = jacobian_function(gr, [nx, ny]) #non-destructive form. Use this 
+#when memory is an issue and you don't want to copy the input graph.
 RuntimeGeneratedFunction(#=in FastSymbolicDifferentiation=#, #=using FastSymbolicDifferentiation=#, :((x, y)->begin
           result = fill(0.0, (2, 2))
           begin
