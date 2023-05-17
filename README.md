@@ -121,7 +121,7 @@ The **FSDBenchmark** subdirectory has several benchmark functions you can use to
 
 The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
-The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative. It does not include  the time for LLVM to compile the Expr. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
+The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
 
 The **Exe** benchmark measures just the time required to execute the compiled function using an in-place matrix.
 
