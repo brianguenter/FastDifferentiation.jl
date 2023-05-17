@@ -26,9 +26,11 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
 ## Basic use
-There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to FastSymbolicDifferentiation graph form just to do the differentiation. Or you can do everything in FastSymbolicDifferentiaton: create FSD variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form. This will be faster than starting from Symbolics form and converting to FSD.
+There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation. Or you can do everything in FastSymbolicDifferentiaton: create **FSD** variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form if you need to do further symbolic processing. 
 
 Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
+
+If all you need is a derivative function then the fastest workflow will be to do everything in **FSD**. 
 
 Set up variables:
 ```
