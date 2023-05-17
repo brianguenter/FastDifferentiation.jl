@@ -2,7 +2,9 @@
 
 [![Build Status](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-This package is not yet on the Julia registry and is currently Beta software. I hope to have it registered in a few weeks. Come back then for better documentation, fewer bugs, and more features.
+This package is not yet on the Julia registry and is currently Beta software. Everything in this repo is subject to frequent change, including benchmark results. 
+
+I hope to have the package registered in a few weeks. Come back then for better documentation, fewer bugs, and more features. In the meantime experiment differentiating your favorite gnarly function but expect bugs and breaking changes.
 
 This is a package for computing symbolic derivatives quickly and for generating efficient executables to evaluate those derivatives. It uses a new algorithm, called **FSD**, which is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically  faster.  
 
