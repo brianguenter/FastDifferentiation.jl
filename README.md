@@ -23,12 +23,14 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 * c₁×(c₂×x) => (c₁×c₂)×x  for c₁,c₂ constants
 
 
-These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
+These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN. The expected IEEE result for x+0 is NaN when x is NaN. But the **FSD** result will be zero when x is NaN because the expression will have been rewritten to 0.
 
 ## Future work
-The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but the LLVM compiler has difficulty compiling the large functions that result. Compile time rises dramatically and out of memory errors are common. For these very large graphs I hope to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl). The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code.
+The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but the LLVM compiler has difficulty compiling the large functions that result. Compile time rises dramatically and out of memory errors are common. For these very large graphs I hope to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl). The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code
 
-The current code can only differentiate symbolic expressions without branches. However, the **FSD** algorithm is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. This would make it possible to differentiate a much wider range of programs. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if you are a compiler expert and want a cool project to work on.
+The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FSD** would only be practical for modest size graphs (<10⁴ nodes). Unfortunately, for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when it would make sense to switch from BitVector to Set. Then it will be possible to differentiate significantly larger graphs than is currently feasible.
+
+The current code can only differentiate symbolic expressions without branches. However, the **FSD** algorithm is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
 <details> 
  <summary> Examples and basic usage </summary>
