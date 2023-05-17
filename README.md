@@ -25,7 +25,14 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
-## Basic use
+## Future work
+The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but the LLVM compiler has difficulty compiling the large functions that result. Compile time rises dramatically and out of memory errors are common. For these very large graphs I hope to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl). The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code.
+
+The current code can only differentiate symbolic expressions without branches. However, the **FSD** algorithm is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. This would make it possible to differentiate a much wider range of programs. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if you are a compiler expert and want a cool project to work on.
+
+<details> 
+ <summary> Examples and basic usage </summary>
+ 
 There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation. Or you can do everything in FastSymbolicDifferentiaton: create **FSD** variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form if you need to do further symbolic processing. 
 
 Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
@@ -111,6 +118,7 @@ julia> dag_to_Symbolics_expression(node_exp)
 julia> typeof(ans)
 Symbolics.Num
 ```
+</details>
 
 <details>
     <summary> Benchmarks </summary>
@@ -154,15 +162,18 @@ Symbolics.jl can simplify the resulting expression graphs to a simple polynomial
 #### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
+ 
+ For the Chebyshev MakeFunction benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these. Consequently, both the MakeFunction and Exe graphs stop at order 20.
+ 
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-For the Chebyshev Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these.
+
 
 #### Chebyshev benchmarks with simplification on
 
 ### Spherical Harmonics
 
-The second example is spherical harmonics functions. This is the expression graph for the spherical harmonic function of order 8:
+The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
 <img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
 
 <details>
@@ -279,9 +290,9 @@ These benchmarks took significantly longer to run than the Chebyshev benchmarks 
 
 But, one can reasonably expect for larger problem instances that the relative advantage of FastSymbolicDifferentiation.jl vs Symbolics.jl would increase.
 
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">
+[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
+[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
+[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">)
 
 For the Symbolics.jl Exe benchmark LLVM ran out of memory for order 16 or higher.
 </details>
