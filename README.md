@@ -26,11 +26,9 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expressions x*0 and x+0 will identically return 0, because they will have been rewritten to 0 by the simplification rules. The expected IEEE result in these cases would be NaN. 
 
 ## Basic use
-There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to FastSymbolicDifferentiation graph form. Or you can create FastSymbolicDifferentiation variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form.
+There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to FastSymbolicDifferentiation graph form just to do the differentiation. Or you can do everything in FastSymbolicDifferentiaton: create FSD variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form. This will be faster than starting from Symbolics form and converting to FSD.
 
 Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
-
-If speed is your primary concern then it is faster to evaluate expressions directly in FastSymbolicDifferentiation form than it is to evalute in Symbolic form and then convert them.
 
 Set up variables:
 ```
@@ -39,12 +37,10 @@ using Symbolics
 
 @variables x y z
 
-nx, ny, nz = Node.((x, y, z)) #create FastSymbolicDifferentiation variables.
-
-julia> nx,ny,nz = Node.((x,y,z))
+julia> nx,ny,nz = Node.((x,y,z)) #create FastSymbolicDifferentiation variables.
 (x, y, z)
 ```
-compute Hessian:
+Compute Hessian:
 ```
 julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
 3×3 Matrix{Node}:
@@ -58,7 +54,7 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
   z    0.0  x
   y    x    0.0
 ```
-compute Jacobian:
+Compute Jacobian:
 ```
 julia> f1 = cos(nx) * ny
 (cos(x) * y)
@@ -66,14 +62,13 @@ julia> f1 = cos(nx) * ny
 julia> f2 = sin(ny) * nx
 (sin(y) * x)
 
-
-julia> gr = DerivativeGraph([f1, f2])
-DerivativeGraph{Int64}(Dict{Node, Int64}((cos(x) * y) => 4, (sin(y) * x) => 6, y => 3, x => 1, sin(y) => 5, cos(x) => 2), Node[x, cos(x), y, (cos(x) * y), sin(y), (sin(y) * x)], Node[(cos(x) * y), (sin(y) * x)], Node[x, y], [4, 6], Dict(4 => 1, 6 => 2), [1, 3], Dict(3 => 2, 1 => 1), Dict{Int64, FastSymbolicDifferentiation.EdgeRelations{Int64}}(5 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[(5 3  1 cos(y) Bool[0, 1] Bool[0, 1])]), 4 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0]), (4 3  1 cos(x) Bool[1, 0] Bool[0, 1])]), 6 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[], FastSymbolicDifferentiation.PathEdge{Int64}[(6 5  1 x Bool[0, 1] Bool[0, 1]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])]), 2 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 2  1 y Bool[1, 0] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0])]), 3 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(4 3  1 cos(x) Bool[1, 0] Bool[0, 1]), (5 3  1 cos(y) Bool[0, 1] Bool[0, 1])], FastSymbolicDifferentiation.PathEdge{Int64}[]), 1 => FastSymbolicDifferentiation.EdgeRelations{Int64}(FastSymbolicDifferentiation.PathEdge{Int64}[(2 1  1 -(sin(x)) Bool[1, 0] Bool[1, 0]), (6 1  1 sin(y) Bool[0, 1] Bool[1, 0])], FastSymbolicDifferentiation.PathEdge{Int64}[])), IdDict{Any, Any}())
+julia> gr = DerivativeGraph([f1, f2]);
 
 julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an issue 
 # and you don't want to copy the input graph. 
-# This orders the derivatives in the order they happen to appear in the 
-# variables data structure of graph. 
+# This version of the function orders the derivatives in the order they happen to appear in the 
+# variables data structure of graph. If you need the derivatives ordered 
+# a particular way use the following function
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
@@ -84,40 +79,17 @@ julia> symb = symbolic_jacobian(gr,[ny,nx]) #you can change the order in which t
  cos(x)        (y * -(sin(x)))
  (x * cos(y))  sin(y)
 ```
-generate executable function that evaluates derivative function:
+Generate executable function that evaluates derivative function:
 ```
-julia> func = jacobian_function(gr, [nx, ny]) #non-destructive form. Use this 
+julia> func = jacobian_function(gr, [nx, ny]); #non-destructive form. Use this 
 #when memory is an issue and you don't want to copy the input graph.
-RuntimeGeneratedFunction(#=in FastSymbolicDifferentiation=#, #=using FastSymbolicDifferentiation=#, :((x, y)->begin
-          result = fill(0.0, (2, 2))
-          begin
-              var"##295" = sin(x)
-              var"##294" = -var"##295"
-              var"##293" = y * var"##294"
-              result[CartesianIndex(1, 1)] = var"##293"
-          end
-          begin
-              var"##296" = sin(y)
-              result[CartesianIndex(2, 1)] = var"##296"
-          end
-          begin
-              var"##297" = cos(x)
-              result[CartesianIndex(1, 2)] = var"##297"
-          end
-          begin
-              var"##299" = cos(y)
-              var"##298" = x * var"##299"
-              result[CartesianIndex(2, 2)] = var"##298"
-          end
-          return result
-      end))
 
 julia> func(1.0, 2.0)
 2×2 Matrix{Float64}:
  -1.68294    0.540302
   0.909297  -0.416147
 ```
-convert between FastSymbolicDifferentiation and Symbolics representations:
+Convert between FastSymbolicDifferentiation and Symbolics representations:
 ```
 julia> f = x^2+y^2 #Symbolics expression
 x^2 + y^2
@@ -140,15 +112,16 @@ Symbolics.Num
 
 <details>
     <summary> Benchmarks </summary>
+ 
 ## Benchmarks
 
-The FSDBenchmark subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
+The **FSDBenchmark** subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
 
-The Symbolic benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
+The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
-The MakeFunction benchmark is the time to generate a Julia Expr from an already computed symbolic derivative. It does not include  the time for LLVM to compile the Expr. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
+The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative. It does not include  the time for LLVM to compile the Expr. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
 
-The Exe function measures just the time required to execute the compiled function using an in-place matrix.
+The **Exe** benchmark measures just the time required to execute the compiled function using an in-place matrix.
 
 All benchmarks show the ratio of time taken by Symbolics.jl to FastSymbolicDifferentiation.jl. Numbers greater than 1 mean FastSymbolicDifferentiation is faster.
 
@@ -172,7 +145,7 @@ The function is memoized for efficiency.
 
 The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order). For example, here is the graph of the 10th order expression: 
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
-The complexity arises from the number of different paths from the root to the leaf of the graph. Conventional symbolic differentiation will follow all of these paths leading to an exponential explosion in the size of the symbolic expresion that must be simplified.
+The complexity arises from the number of different paths from the root to the leaf of the graph.
 
 Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
 
@@ -181,7 +154,7 @@ Symbolics.jl can simplify the resulting expression graphs to a simple polynomial
 <img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
-For the Chebyshev Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these large Expr on a machine with 32GB RAM.
+For the Chebyshev Exe benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these.
 
 #### Chebyshev benchmarks with simplification on
 
