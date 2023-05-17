@@ -577,6 +577,16 @@ function sparsity(graph::DerivativeGraph)
 end
 export sparsity
 
+function number_of_operations(graph::DerivativeGraph)
+    nodes_in_graph = Set{Node}()
+    for root in roots(graph)
+        push!(nodes_in_graph, all_nodes(root)...)
+    end
+
+    return length(filter(x -> is_tree(x), nodes_in_graph))
+end
+export number_of_operations
+
 """Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
 function graph_statistics(graph::DerivativeGraph)
     # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))

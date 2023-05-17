@@ -763,7 +763,8 @@ end
 
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
-    for oned in all_nodes.(jacobian)
+    for index in eachindex(jacobian)
+        oned = all_nodes(jacobian[index])
         union!(nodes, oned)
     end
     return nodes
