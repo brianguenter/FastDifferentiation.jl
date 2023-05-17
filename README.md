@@ -65,24 +65,20 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
 ```
 Compute Jacobian:
 ```
-julia> f1 = cos(nx) * ny
-(cos(x) * y)
-
-julia> f2 = sin(ny) * nx
-(sin(y) * x)
+julia> f1,f2 = cos(nx) * ny, sin(ny) * nx
 
 julia> gr = DerivativeGraph([f1, f2]);
 
 julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an issue 
 # and you don't want to copy the input graph. 
 # This version of the function orders the derivatives in the order they happen to appear in the 
-# variables data structure of graph. If you need the derivatives ordered 
-# a particular way use the following function
+# variables data structure of graph which is unpredictable.
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
 
-julia> symb = symbolic_jacobian(gr,[ny,nx]) #you can change the order in which the 
+julia> symb = symbolic_jacobian(gr,[ny,nx]) #Adding the optional argument for variable ordering
+#allows you to precisely control where the 
 #partial derivatives will appear in the jacobian
 2×2 Matrix{Node}:
  cos(x)        (y * -(sin(x)))
