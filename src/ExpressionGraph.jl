@@ -92,25 +92,6 @@ is_leaf(::Node{T,N}) where {T,N} = false
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 
 
-function is_unspecified_function(a::Node)
-    node_val = value(a)
-    if node_val isa UnspecifiedFunction
-        return true
-    else
-        return false
-    end
-    # if node_val isa UnspecifiedFunction
-    #     if length(node_val.derivatives) > 0 #this is an UnspecifiedFunction node which has been differentiated. It is no longer a variable node.
-    #         return false
-    #     else
-    #         return true
-    #     end
-    # else
-    #     return false
-    # end
-end
-
-
 is_variable(a::Node) = SymbolicUtils.issym(value(a))
 
 
@@ -370,9 +351,7 @@ function to_string(a::Node)
     if arity(a) == 0
         return "$(node_id(a))"
     else
-        if value(a) isa UnspecifiedFunction
-            return "$(value(a))"
-        elseif arity(a) == 1
+        if arity(a) == 1
             return "$(node_id(a))($(to_string(a.children[1])))"
         elseif arity(a) == 2
             return "($(to_string(a.children[1])) $(node_id(a)) $(to_string(a.children[2])))"
@@ -582,10 +561,6 @@ end
 function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {T,N,S<:Node}
     if get(visited, a, nothing) === nothing
         if a.children !== nothing
-            if is_unspecified_function(a)
-                push!(variables, a)
-            end
-
             for child in a.children
                 _postorder_nodes!(child, nodes, variables, visited)
             end
@@ -646,19 +621,4 @@ function make_variables(name::Symbol, how_many::Int64)
     return result
 end
 export make_variables
-
-
-# macro declare_variables(a...)
-#     vars = filter(x->x isa Symbol,a)
-#     tmp = setdiff(a,vars)
-#     funcs = filter(x->x isa Expr, a)
-#     tmp = setdiff(tmp,funcs)
-#     if tmp !== () 
-#         throw(ErrorException("Arguments to declare_variables can only be symbol names, such as `a`, or unspecified functions, such as `q(t)`."))
-#     end
-
-#    eval(:(@variables $vars))
-#    for onevar in vars
-#     eval(:())
-# end
 

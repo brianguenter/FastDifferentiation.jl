@@ -27,7 +27,6 @@ using TestItems
 include("../FSDBenchmark/src/Types.jl")
 include("../FSDBenchmark/src/Chebyshev.jl")
 include("../FSDBenchmark/src/SphericalHarmonics.jl")
-include("../FSDBenchmark/src/LagrangianDynamics.jl")
 
 """If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
 function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
@@ -1711,35 +1710,5 @@ end
     @test isapprox(zeros(2, 2), value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
     @test DA == derivative(A, nq1)
 end
-
-@testitem "derivative of simple Unspecified Function" begin
-    using Symbolics: @variables
-    using StaticArrays
-    using FastSymbolicDifferentiation.FSDInternals
-
-    @variables x y
-
-    ufn = function_of(:q, x, y)
-    deriv = value(derivative(derivative(ufn, Val{1}()), Val{2}()))
-
-    @test deriv.variables == SVector(Node(x), Node(y))
-
-    fn = DerivativeGraph(x * ufn)
-    jac = symbolic_jacobian!(fn)
-    @test jac[1, 1] == ufn + x * derivative(ufn, Val{1}())
-    @test jac[1, 2] == x * derivative(ufn, Val{2}())
-end
-
-@testitem "derivative of more complex Unspecified Function" begin
-    using Symbolics: @variables
-    @variables x y
-
-    q = function_of(:q, x, y)
-    f = x * q + y * q
-    graph = DerivativeGraph([f])
-    symbolic_jacobian!(graph)
-
-end
-
 
 end #module

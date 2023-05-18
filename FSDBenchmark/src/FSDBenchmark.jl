@@ -9,7 +9,7 @@ using Plots
 using Memoize
 import FastSymbolicDifferentiation
 using StaticArrays
-using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, UnspecifiedFunction, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
+using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
 using LaTeXStrings
 import LinearAlgebra
 
@@ -32,7 +32,6 @@ include("Types.jl")
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
 include("Transformations.jl")
-include("LagrangianDynamics.jl")
 include("SimpsonHermite.jl")
 
 
