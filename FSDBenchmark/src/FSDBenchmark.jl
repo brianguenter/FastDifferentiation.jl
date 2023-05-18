@@ -31,7 +31,6 @@ const FSD = FastSymbolicDifferentiation
 include("Types.jl")
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
-include("Transformations.jl")
 include("SimpsonHermite.jl")
 
 
