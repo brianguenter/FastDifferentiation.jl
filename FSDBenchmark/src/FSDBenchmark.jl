@@ -53,8 +53,7 @@ export plot_SH_FSD_graph_vs_jacobian_size
 
 
 
-#Benchmark code for FSD
-
+## Benchmark code for FSD
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::Symbolic; simplify=false) = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($package, $model_size) evals = 1
 
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::MakeFunction; simplify=false) = @benchmark jacobian_function!(graph) setup = (graph = $model_function($package, $model_size)) evals = 1
@@ -67,9 +66,10 @@ function run_benchmark(model_function::Function, model_size, package::FastSymbol
     output = rand(codomain_dimension(graph), domain_dimension(graph))
     return @benchmark $exe($input..., $output)
 end
+## end benchmark functions for FSD
 
-#Benchmark code for Symbolics
 
+## Benchmark code for Symbolics
 function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Symbolic; simplify=false)
     tmp = model_function(package, model_size)
     @benchmark Symbolics.jacobian(tmp[1], tmp[2]; simplify=$simplify) setup = (tmp = $model_function($package, $model_size))
@@ -90,7 +90,9 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Ma
     return @benchmark build_function($jac, $vars; expression=Val{false})
 end
 export run_benchmark
+## End benchmark functions for Symbolics.jl
 
+## Generic benchmark functions
 make_data() = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
 
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
@@ -106,14 +108,6 @@ function single_benchmark(model_function::Function, model_range, package::Abstra
     write_data(data, model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
 end
 export single_benchmark
-
-# function benchmark(models, sizes, package::AbstractPackage, benchmarks::AbstractVector{AbstractBenchmark}; simplify::Bool=false)
-#     for (model, size_range) in zip(models, sizes)
-#         for bench in benchmarks
-#             single_benchmark(model, size_range, package, bench, simplify)
-#         end
-#     end
-# end
 
 benchmark_sizes() = [5:1:25, 5:1:30]
 export benchmark_sizes
@@ -170,29 +164,5 @@ function publication_benchmarks(simplify::Bool, run_benchmarks=true)
     end
 end
 export publication_benchmarks
-
-function test_Symbolics_limit()
-    model, vars = spherical_harmonics(JuliaSymbolics(), 20)
-    jac = Symbolics.jacobian(model, vars; simplify=false)
-    out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    tmp_matrix = out_of_place(rand(length(vars))) #generate a matrix of the correct size
-
-    in_place(tmp_matrix, rand(length(vars)))
-
-    # for i in 5:1:50
-    #     try
-    #         model, vars = chebyshev(JuliaSymbolics(), i)
-    #         jac = Symbolics.jacobian(model, vars; simplify=false)
-    #         build_function(jac, vars; expression=Val{false})
-    #         # out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    #         println("finished size $i")
-    #     catch exc
-    #         println("failed at size $i $exc")
-    #         break
-    #     end
-    # end
-end
-export test_Symbolics_limit
-
 
 end # module Benchmarks
