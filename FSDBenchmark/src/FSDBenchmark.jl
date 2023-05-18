@@ -103,9 +103,15 @@ function single_benchmark(model_function::Function, model_range, package::Abstra
         timing = run_benchmark(model_function, model_size, package, benchmark, simplify=simplify)
         push!(data, extract_info(model_size, timing))
         @info "Finished for model size $model_size"
-    end
 
-    write_data(data, model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
+        #incrementally write benchmarks out in case something crashes or benchmarks take too long to complete the entire run.
+        CSV.write(
+            filename(model_function, package, benchmark, minimum(model_range), model_size, simplify),
+            data)
+        if model_size != minimum(model_range)
+            rm(filename(model_function, package, benchmark, minimum(model_range), model_size - 1, simplify)) #delete the previous file to avoid cluttering the directory
+        end
+    end
 end
 export single_benchmark
 
