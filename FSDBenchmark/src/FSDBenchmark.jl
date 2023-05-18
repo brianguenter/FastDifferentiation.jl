@@ -76,10 +76,12 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Sy
 end
 
 function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Exe; simplify=false)
+    @info "creating executable"
     model, vars = model_function(package, model_size)
     jac = Symbolics.jacobian(model, vars; simplify=simplify)
     out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    tmp_matrix = out_of_place(rand(length(vars))) #generate a matrix of the correct size
+    tmp_matrix = Matrix{Float64}(undef, length(model), length(vars)) #generate a matrix of the correct size.
+    @info "done creating executable, starting Exe benchmark"
 
     return @benchmark $in_place($tmp_matrix, rand(length($vars)))
 end
