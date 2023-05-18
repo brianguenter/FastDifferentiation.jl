@@ -129,9 +129,9 @@ benchmark_package(package, range, model_function; simplify=false) = single_bench
 
 """For the package defined by `package` run all benchmarks defined by `benchmark_types()` on the functions defined by `model_functions()` for the benchmark sizes defined by `benchmark_sizes()`. The arrays returned by `benchmark_sizes()` and `model_sizes()` are aligned. For example the `spherical_harmonics` model function which is model_functions()[1] will be run with model sizes `benchmark_sizes()[1]`.
 
-If `simplify=false` then simplification will not be used in the `Symbolics.jl` benchmarks. If it is true then simplified will be used. The latter can significantly increase run time of the benchmarks.
-
 The legal package and benchmark types are defined in Types.jl. `package` can be one of `Julia_Symbolics(), FastSymbolic()`, where `JuliaSymbolics` runs the benchmarks using `Symbolics.jl`.
+
+If `simplify=false` then simplification will not be used in the `Symbolics.jl` benchmarks. If it is true then simplified will be used. The latter can significantly increase run time of the benchmarks.
 
 Example:
 ```
@@ -142,6 +142,7 @@ will run the benchmarks`[Symbolic(), Exe(), MakeFunction()]` on the model functi
 benchmark_package(package; simplify=false) = benchmark_package.(Ref(package), benchmark_sizes(), model_functions(), simplify=simplify)
 export benchmark_package
 
+"""Run all benchmarks for all packages"""
 benchmark_all(simplify::Bool) = benchmark_package.([FastSymbolic(), JuliaSymbolics()]; simplify=simplify)
 export benchmark_all
 
