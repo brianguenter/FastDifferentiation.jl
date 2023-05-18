@@ -77,18 +77,22 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Sy
 end
 
 function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Exe; simplify=false)
+    @info "creating executable"
     model, vars = model_function(package, model_size)
     jac = Symbolics.jacobian(model, vars; simplify=simplify)
     out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    tmp_matrix = out_of_place(rand(length(vars))) #generate a matrix of the correct size
+    tmp_matrix = Matrix{Float64}(undef, length(model), length(vars)) #generate a matrix of the correct size.
+    @info "done creating executable, starting Exe benchmark"
 
     return @benchmark $in_place($tmp_matrix, rand(length($vars)))
 end
 
 function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::MakeFunction; simplify=false)
+    @info "computing symbolic jacobian"
     model, vars = model_function(package, model_size)
     jac = Symbolics.jacobian(model, vars; simplify=simplify)
-    return @benchmark build_function($jac, $vars; expression=Val{false})
+    @info "done computing jacobian beginning MakeFunction benchmark"
+    return @benchmark out_of_place, in_place = build_function($jac, $vars; expression=Val{false})
 end
 export run_benchmark
 
@@ -102,24 +106,22 @@ function single_benchmark(model_function::Function, model_range, package::Abstra
         timing = run_benchmark(model_function, model_size, package, benchmark, simplify=simplify)
         push!(data, extract_info(model_size, timing))
         @info "Finished for model size $model_size"
-    end
 
-    write_data(data, model_function, package, benchmark, minimum(model_range), maximum(model_range), simplify)
+        #incrementally write benchmarks out in case something crashes or benchmarks take too long to complete the entire run.
+        CSV.write(
+            filename(model_function, package, benchmark, minimum(model_range), model_size, simplify),
+            data)
+        if model_size != minimum(model_range)
+            rm(filename(model_function, package, benchmark, minimum(model_range), model_size - 1, simplify)) #delete the previous file to avoid cluttering the directory
+        end
+    end
 end
 export single_benchmark
-
-# function benchmark(models, sizes, package::AbstractPackage, benchmarks::AbstractVector{AbstractBenchmark}; simplify::Bool=false)
-#     for (model, size_range) in zip(models, sizes)
-#         for bench in benchmarks
-#             single_benchmark(model, size_range, package, bench, simplify)
-#         end
-#     end
-# end
 
 benchmark_sizes() = [5:1:25, 5:1:30]
 export benchmark_sizes
 model_functions() = [spherical_harmonics, chebyshev]
-benchmark_types() = [Symbolic(), Exe(), MakeFunction()]
+benchmark_types() = [Symbolic(), MakeFunction(), Exe()]
 export benchmark_types
 params() = (model_functions(), benchmark_sizes())
 export params
