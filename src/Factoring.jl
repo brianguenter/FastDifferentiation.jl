@@ -749,7 +749,7 @@ function hessian(graph::DerivativeGraph, variable_order)
 end
 
 """Computes the full symbolic Hessian matrix"""
-function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
+function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
     tmp = DerivativeGraph(expression)
     jac = symbolic_jacobian!(tmp, variable_order)
     tmp2 = DerivativeGraph(vec(jac))
