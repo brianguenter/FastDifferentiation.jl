@@ -1,4 +1,3 @@
-Data/
 #want to keep track of Manifest.toml in this directory so relative path to FastSymbolicDifferentiation will be stored. Otherwise every user installing the package will have to manually reestablish the dependency in the package manager.
 !Manifest.toml
 

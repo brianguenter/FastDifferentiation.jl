@@ -92,25 +92,6 @@ is_leaf(::Node{T,N}) where {T,N} = false
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 
 
-function is_unspecified_function(a::Node)
-    node_val = value(a)
-    if node_val isa UnspecifiedFunction
-        return true
-    else
-        return false
-    end
-    # if node_val isa UnspecifiedFunction
-    #     if length(node_val.derivatives) > 0 #this is an UnspecifiedFunction node which has been differentiated. It is no longer a variable node.
-    #         return false
-    #     else
-    #         return true
-    #     end
-    # else
-    #     return false
-    # end
-end
-
-
 is_variable(a::Node) = SymbolicUtils.issym(value(a))
 
 
@@ -176,7 +157,6 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
     b = Node(nb)
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
-    #TODO add another check that moves all constants to the left and then does constant propagation
     #c1*c2 = c3, (c1*x)*(c2*x) = c3*x
     if is_zero(a) && is_zero(b)
         return Node(value(a) + value(b)) #user may have mixed types for numbers so use automatic promotion to widen the type.
@@ -209,7 +189,7 @@ function simplify_check_cache(::typeof(+), na, nb, cache)
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
     #TODO add another check that moves all contants to the left and then does constant propagation
-    #c1 + c2 = c3, (c1 + x)+(c2 + x) = c3+x
+    #c1 + c2 = c3, (c1 + x)+(c2 + x) = c3+2*x
 
     if is_zero(a)
         return b
@@ -315,7 +295,7 @@ end
 
 #need to define because derivative functions can return inv
 Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
-Base.inv(a::Node{SymbolicUtils.BasicSymbolic{Real},0}) = 1 / a
+Base.inv(a::Node) = 1 / a
 
 #efficient explicit methods for most common cases
 derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1],), index)
@@ -371,9 +351,7 @@ function to_string(a::Node)
     if arity(a) == 0
         return "$(node_id(a))"
     else
-        if value(a) isa UnspecifiedFunction
-            return "$(value(a))"
-        elseif arity(a) == 1
+        if arity(a) == 1
             return "$(node_id(a))($(to_string(a.children[1])))"
         elseif arity(a) == 2
             return "($(to_string(a.children[1])) $(node_id(a)) $(to_string(a.children[2])))"
@@ -583,10 +561,6 @@ end
 function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {T,N,S<:Node}
     if get(visited, a, nothing) === nothing
         if a.children !== nothing
-            if is_unspecified_function(a)
-                push!(variables, a)
-            end
-
             for child in a.children
                 _postorder_nodes!(child, nodes, variables, visited)
             end
@@ -647,19 +621,4 @@ function make_variables(name::Symbol, how_many::Int64)
     return result
 end
 export make_variables
-
-
-# macro declare_variables(a...)
-#     vars = filter(x->x isa Symbol,a)
-#     tmp = setdiff(a,vars)
-#     funcs = filter(x->x isa Expr, a)
-#     tmp = setdiff(tmp,funcs)
-#     if tmp !== () 
-#         throw(ErrorException("Arguments to declare_variables can only be symbol names, such as `a`, or unspecified functions, such as `q(t)`."))
-#     end
-
-#    eval(:(@variables $vars))
-#    for onevar in vars
-#     eval(:())
-# end
 

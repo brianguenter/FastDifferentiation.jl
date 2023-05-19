@@ -3,7 +3,7 @@ module Vis
 using Colors
 using ColorTypes
 using ..FastSymbolicDifferentiation
-using ..FastSymbolicDifferentiation: PathEdge
+using ..FastSymbolicDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index
 using GraphRecipes
 using Plots
 using Graphs
