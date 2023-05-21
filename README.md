@@ -127,11 +127,11 @@ Symbolics.Num
 
 The **FSDBenchmark** subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. See the README.md file in this subdirectory for a brief overview of how to run the benchmarks yourself. See the source in `FSDBenchmarks.jl` for more details. Look for the function `benchmark_package`.
  
-There are three types of benchmarks: **Symbolic**, **MakeFunction**, and **Exe**. Each benchmark roughly corresponds to a different workflow. For example, the **Symbolic** benchmark is relevant if you are just computing a symbolic derivative which then undergoes additional symbolic processing. The **MakeFunction** benchmark corresponds to a workflow where your function is changing over time so the derviative function has to be compiled many times. The **Exe** benchmark corresponds to a workflow where your function is static so the derivative function can be computed once and then reevaluated many times with different inputs. 
+There are three types of benchmarks: **Symbolic**, **MakeFunction**, and **Exe**.
 
 * The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
-* The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
+* The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it.
 
 * The **Exe** benchmark measures just the time required to execute the compiled function using an in-place matrix.
 
