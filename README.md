@@ -127,11 +127,11 @@ Symbolics.Num
 
 The **FSDBenchmark** subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. See the README.md file in this subdirectory for a brief overview of how to run the benchmarks yourself. See the source in `FSDBenchmarks.jl` for more details. Look for the function `benchmark_package`.
  
- There are three types of benchmarks: Symbolic, MakeFunction, and Exe. 
+There are three types of benchmarks: **Symbolic**, **MakeFunction**, and **Exe**.
 
 * The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
 
-* The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it. As symbolic expressions become large LLVM compile time and memory usage both increase dramatically. For both of the example benchmarks shown below LLVM ran out of memory at relatively small problem sizes.
+* The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it.
 
 * The **Exe** benchmark measures just the time required to execute the compiled function using an in-place matrix.
 
@@ -163,10 +163,7 @@ Symbolics.jl can simplify the resulting expression graphs to a simple polynomial
 
 #### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%">
- 
- For the Chebyshev MakeFunction benchmark the Symbolics.jl derivative generated a large Expr for order 20 and higher. LLVM ran out of memory while compiling these. Consequently, both the MakeFunction and Exe graphs stop at order 20.
- 
+<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%"> 
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
 
 
@@ -287,10 +284,6 @@ export spherical_harmonics
 </details>
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
-
-These benchmarks took significantly longer to run than the Chebyshev benchmarks (6 minutes to benchmark order 25 spherical harmonic for Symbolics.jl) so the problem sizes are not as large and the ratios of time taken by Symbolics.jl vs. FastSymbolicDifferentiation.jl are not as large. 
-
-But, one can reasonably expect for larger problem instances that the relative advantage of FastSymbolicDifferentiation.jl vs Symbolics.jl would increase.
 
 [comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
 [comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
