@@ -288,10 +288,6 @@ export spherical_harmonics
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
 
-These benchmarks took significantly longer to run than the Chebyshev benchmarks (6 minutes to benchmark order 25 spherical harmonic for Symbolics.jl) so the problem sizes are not as large and the ratios of time taken by Symbolics.jl vs. FastSymbolicDifferentiation.jl are not as large. 
-
-But, one can reasonably expect for larger problem instances that the relative advantage of FastSymbolicDifferentiation.jl vs Symbolics.jl would increase.
-
 [comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
 [comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
 [comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">)
