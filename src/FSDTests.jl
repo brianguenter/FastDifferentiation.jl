@@ -1,8 +1,8 @@
 #Test functions need access to non-exported names from FastSymbolicDifferentiation. 
 module FSDInternals
-using FastSymbolicDifferentiation: compute_factorable_subgraphs, edges, vertices, isa_connected_path, add_non_dom_edges!, edges, PathEdge, dominated_node, partial_value, compute_paths_to_roots, num_vertices, unique_edges, parent_edges, edge_path, all_nodes, dominator_subgraph, postdominator_subgraph, dominating_node, times_used, reachable_dominance, postorder_number, variable_index_to_postorder_number, root_index_to_postorder_number, parents, children, DomPathConstraint, edge_exists, FactorableSubgraph, each_vertex, node_edges, factor_order, subgraph_edges, node, subset, factor_subgraph!, factor!, deconstruct_subgraph, forward_edges, evaluate_subgraph, make_factored_edge, path_sort_order, multiply_sequence, root, reachable_roots, bott_vertex, top_vertex, reachable_variables, compute_paths_to_variables, compute_edge_paths!, relation_node_indices, value_equal, is_tree, is_leaf, is_variable, is_constant, set_diff, value, bit_equal
+using FastSymbolicDifferentiation: compute_factorable_subgraphs, edges, vertices, isa_connected_path, add_non_dom_edges!, edges, PathEdge, dominated_node, partial_value, compute_paths_to_roots, num_vertices, unique_edges, parent_edges, edge_path, all_nodes, dominator_subgraph, postdominator_subgraph, dominating_node, times_used, reachable_dominance, postorder_number, variable_index_to_postorder_number, root_index_to_postorder_number, parents, children, DomPathConstraint, edge_exists, FactorableSubgraph, each_vertex, node_edges, factor_order, subgraph_edges, node, subset, factor_subgraph!, factor!, deconstruct_subgraph, forward_edges, evaluate_subgraph, make_factored_edge, path_sort_order, multiply_sequence, root, reachable_roots, bott_vertex, top_vertex, reachable_variables, compute_paths_to_variables, compute_edge_paths!, relation_node_indices, value_equal, is_tree, is_leaf, is_variable, is_constant, set_diff, value, bit_equal, _symbolic_jacobian, _symbolic_jacobian!, _sparse_symbolic_jacobian!, roots, variables, domain_dimension, codomain_dimension, DerivativeGraph,_jacobian_function!
 
-export compute_factorable_subgraphs, edges, vertices, isa_connected_path, add_non_dom_edges!, edges, PathEdge, dominated_node, partial_value, compute_paths_to_roots, num_vertices, unique_edges, parent_edges, edge_path, all_nodes, dominator_subgraph, postdominator_subgraph, dominating_node, times_used, reachable_dominance, postorder_number, variable_index_to_postorder_number, root_index_to_postorder_number, parents, children, DomPathConstraint, edge_exists, FactorableSubgraph, each_vertex, node_edges, factor_order, subgraph_edges, node, subset, factor_subgraph!, factor!, deconstruct_subgraph, forward_edges, evaluate_subgraph, make_factored_edge, path_sort_order, multiply_sequence, root, reachable_roots, bott_vertex, top_vertex, reachable_variables, compute_paths_to_variables, compute_edge_paths!, relation_node_indices, value_equal, is_tree, is_leaf, is_variable, is_constant, set_diff, value, bit_equal
+export compute_factorable_subgraphs, edges, vertices, isa_connected_path, add_non_dom_edges!, edges, PathEdge, dominated_node, partial_value, compute_paths_to_roots, num_vertices, unique_edges, parent_edges, edge_path, all_nodes, dominator_subgraph, postdominator_subgraph, dominating_node, times_used, reachable_dominance, postorder_number, variable_index_to_postorder_number, root_index_to_postorder_number, parents, children, DomPathConstraint, edge_exists, FactorableSubgraph, each_vertex, node_edges, factor_order, subgraph_edges, node, subset, factor_subgraph!, factor!, deconstruct_subgraph, forward_edges, evaluate_subgraph, make_factored_edge, path_sort_order, multiply_sequence, root, reachable_roots, bott_vertex, top_vertex, reachable_variables, compute_paths_to_variables, compute_edge_paths!, relation_node_indices, value_equal, is_tree, is_leaf, is_variable, is_constant, set_diff, value, bit_equal, _symbolic_jacobian, _symbolic_jacobian!, _sparse_symbolic_jacobian!, roots, variables, domain_dimension, codomain_dimension, DerivativeGraph,_jacobian_function!
 end #module
 
 
@@ -1446,7 +1446,7 @@ end
     r2_5 = cos(n3)
 
     graph = DerivativeGraph([r1_4, r2_5])
-    result = symbolic_jacobian!(graph, [nx1, ny2])
+    result = _symbolic_jacobian!(graph, [nx1, ny2])
 
     #symbolic equality will work here because of common subexpression caching.
     @test result[1, 1] == cos(nx1 * ny2) * ny2
@@ -1478,7 +1478,7 @@ end
     zr = Node(0.0)
 
     graph = DerivativeGraph([nx, zr])
-    jac = symbolic_jacobian!(graph, [nx])
+    jac = _symbolic_jacobian!(graph, [nx])
 
     @test value(jac[1, 1]) == 1
     @test value(jac[2, 1]) == 0
@@ -1557,6 +1557,7 @@ end
 
 @testitem "symbolic_jacobian" begin
     using Symbolics: @variables
+    using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
 
@@ -1574,8 +1575,8 @@ end
     df12(x, y) = 2 * x * y
 
     correct_jacobian = [df11 df12; df21 df22]
-    copy_jac = symbolic_jacobian(graph, [nx, ny])
-    jac = symbolic_jacobian!(graph, [nx, ny])
+    copy_jac = _symbolic_jacobian(graph, [nx, ny])
+    jac = _symbolic_jacobian!(graph, [nx, ny])
 
     @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
@@ -1599,9 +1600,9 @@ end
     @variables x, y, z
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
-    sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    sprse = _sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    dense = _symbolic_jacobian!(fsd_graph, variables(fsd_graph))
 
     # for index in CartesianIndices(sprse)
     #     @test sprse[index] == dense[index]
@@ -1616,9 +1617,9 @@ end
     end
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
-    sprse = sparse_symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
+    sprse = _sparse_symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
+    dense = _symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
 
     # for index in CartesianIndices(sprse)
     #     @test sprse[index] == dense[index]
@@ -1636,11 +1637,12 @@ end
 @testitem "spherical harmonics jacobian evaluation test" begin
     using FastSymbolicDifferentiation.FSDTests
     using FiniteDifferences
+    using FastSymbolicDifferentiation.FSDInternals
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     fsd_func = make_function(fsd_graph, variables(fsd_graph))
 
-    sym_func = jacobian_function!(fsd_graph, variables(fsd_graph))
+    sym_func = _jacobian_function!(fsd_graph, variables(fsd_graph))
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
@@ -1658,6 +1660,7 @@ end
 @testitem "Chebyshev jacobian evaluation test" begin
     using FiniteDifferences
     using FastSymbolicDifferentiation.FSDTests
+    using FastSymbolicDifferentiation.FSDInternals
 
     chebyshev_order = 20
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
@@ -1665,7 +1668,7 @@ end
 
     func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = jacobian_function!(fsd_graph, in_place=false)
+    sym_func = _jacobian_function!(fsd_graph, in_place=false)
 
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
@@ -1677,7 +1680,7 @@ end
 
     tmp = Matrix{Float64}(undef, 1, 1)
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    sym_func = jacobian_function!(fsd_graph, in_place=false)
+    sym_func = _jacobian_function!(fsd_graph, in_place=false)
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
