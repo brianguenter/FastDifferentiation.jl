@@ -80,29 +80,25 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
 ```
 Compute Jacobian:
 ```
-julia> f1,f2 = cos(nx) * ny, sin(ny) * nx
+julia> nx, ny = Node.((x, y))
+(x, y)
 
-julia> gr = DerivativeGraph([f1, f2]);
+julia> f1 = cos(nx) * ny
+(cos(x) * y)
 
-julia> symb = symbolic_jacobian(gr) #non-destructive. Use this when memory is an issue 
-# and you don't want to copy the input graph. 
-# This version of the function orders the derivatives in the order they happen to appear in the 
-# variables data structure of graph which is unpredictable.
+julia> f2 = sin(ny) * nx
+(sin(y) * x)
+
+julia> 
+
+julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
-
-julia> symb = symbolic_jacobian(gr,[ny,nx]) #Adding the optional argument for variable ordering
-#allows you to precisely control where the 
-#partial derivatives will appear in the jacobian
-2×2 Matrix{Node}:
- cos(x)        (y * -(sin(x)))
- (x * cos(y))  sin(y)
 ```
 Generate executable function that evaluates derivative function:
 ```
-julia> func = jacobian_function(gr, [nx, ny]); #non-destructive form. Use this 
-#when memory is an issue and you don't want to copy the input graph.
+julia> func = jacobian_function([f1, f2], [nx, ny]);
 
 julia> func(1.0, 2.0)
 2×2 Matrix{Float64}:

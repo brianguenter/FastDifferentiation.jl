@@ -3,8 +3,7 @@ using Symbolics
 
 @variables x y
 
-nx = Node(x)
-ny = Node(y)
+nx, ny = Node.((x, y))
 f1 = cos(nx) * ny
 f2 = sin(ny) * nx
 
@@ -15,11 +14,8 @@ func(1.0, 2.0)
 
 """
 ```
-julia> nx = Node(x)
-x
-
-julia> ny = Node(y)
-y
+julia> nx, ny = Node.((x, y))
+(x, y)
 
 julia> f1 = cos(nx) * ny
 (cos(x) * y)
