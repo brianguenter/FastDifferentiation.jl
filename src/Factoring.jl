@@ -691,7 +691,7 @@ function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{
 end
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
-jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = _jacobian_Expr!(DerivativeGraph(terms), variable_order; in_place=in_place)
+jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = _jacobian_Expr!(DerivativeGraph(terms), variable_order; in_place=in_place)
 export jacobian_Expr
 
 """Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
