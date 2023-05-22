@@ -8,4 +8,5 @@ abstract type AbstractBenchmark end
 struct Symbolic <: AbstractBenchmark end
 struct Exe <: AbstractBenchmark end
 struct MakeFunction <: AbstractBenchmark end
-export Symbolic, Exe, MakeFunction
+struct AllBenchmarks <: AbstractBenchmark end
+export Symbolic, Exe, MakeFunction, AllBenchmarks
