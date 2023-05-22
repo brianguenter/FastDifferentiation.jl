@@ -288,8 +288,6 @@ As was the case for Chebyshev polynomials the number of paths from the roots to 
 (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic_simplify_false.svg" alt="drawing" width="50%">)
 (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction_simplify_false.svg" alt="drawing" width="50%">)
 (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe_simplify_false.svg" alt="drawing" width="50%">)
-
-For the Symbolics.jl Exe benchmark LLVM ran out of memory for order 16 or higher.
 </details>
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
