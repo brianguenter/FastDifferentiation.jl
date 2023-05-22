@@ -49,7 +49,6 @@ NaNMath = "1"
 Symbolics = "5"
 
 TimerOutputs = "0.5"
-julia = "1.7"
 
 TestItemRunner = "0.2"
 julia = "1.8"
