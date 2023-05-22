@@ -162,14 +162,14 @@ The complexity arises from the number of different paths from the root to the le
 Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
 
 #### Chebyshev benchmarks with simplification off
-<img src="FSDBenchmark\Data\figure_chebyshev_Symbolic.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_Exe.svg" alt="drawing" width="50%">
+<img src="FSDBenchmark\Data\figure_chebyshev_Symbolic_simplify_false.svg" alt="drawing" width="50%"> 
+<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction_simplify_false.svg" alt="drawing" width="50%"> 
+<img src="FSDBenchmark\Data\figure_chebyshev_Exe_simplify_false.svg" alt="drawing" width="50%">
 
 
 
 #### Chebyshev benchmarks with simplification on
-
+<img src="FSDBenchmark\Data\figure_chebyshev_Exe_simplify_true.svg" alt="drawing" width="50%">
 ### Spherical Harmonics
 
 The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
@@ -285,9 +285,9 @@ export spherical_harmonics
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
 
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic_simplify_false.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction_simplify_false.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe_simplify_false.svg" alt="drawing" width="50%">)
 
 For the Symbolics.jl Exe benchmark LLVM ran out of memory for order 16 or higher.
 </details>
