@@ -36,7 +36,7 @@ GraphRecipes = "0.5"
 NaNMath = "1"
 Symbolics = "5"
 TestItemRunner = "0.2"
-julia = "1.7"
+julia = "1.8"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
