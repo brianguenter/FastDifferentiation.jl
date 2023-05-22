@@ -1,15 +1,15 @@
 using FastSymbolicDifferentiation
 using Symbolics
 
-@variables st
+@variables t
 
-t = Node(t)
+nt = Node(t)
 
-A = [t t^2; 3t^2 5]
+A = [nt nt^2; 3nt^2 5]
 
-derivative(A, t)
+derivative(A, nt)
 
-derivative(A, t, t)
+derivative(A, nt, nt)
 
 
 """
