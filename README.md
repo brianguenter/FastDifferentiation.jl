@@ -285,9 +285,9 @@ export spherical_harmonics
 
 As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
 
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
-[comment]: # (<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction.svg" alt="drawing" width="50%">)
+(<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe.svg" alt="drawing" width="50%">)
 
 For the Symbolics.jl Exe benchmark LLVM ran out of memory for order 16 or higher.
 </details>
