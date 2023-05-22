@@ -168,7 +168,6 @@ struct DerivativeGraph{T<:Integer}
         )
     end
 end
-export DerivativeGraph
 
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
 
@@ -199,7 +198,6 @@ variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
 
 each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
 roots(a::DerivativeGraph) = a.roots
-export roots
 root(a::DerivativeGraph, root_index::Integer) = roots(a)[root_index]
 root_index_to_postorder_number(a::DerivativeGraph) = a.root_index_to_postorder_number
 root_index_to_postorder_number(a::DerivativeGraph, index::Integer) = root_index_to_postorder_number(a)[index]
@@ -228,7 +226,6 @@ is_tree(graph::DerivativeGraph, node::Node) = is_tree(graph, postorder_number(gr
 
 
 variables(a::DerivativeGraph) = a.variables
-export variables
 variable(a::DerivativeGraph, variable_index::Integer) = variables(a)[variable_index]
 
 variable_index_to_postorder_number(a::DerivativeGraph) = a.variable_index_to_postorder_number
@@ -327,11 +324,11 @@ end
 
 
 codomain_dimension(a::DerivativeGraph) = length(roots(a))
-export codomain_dimension
+
 domain_dimension(a::DerivativeGraph) = length(variables(a))
-export domain_dimension
+
 dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
-export dimensions
+
 
 """Computes the average number of reachable variables across all the edges in the graph. Primarily useful for development."""
 function mean_reachable_variables(a::DerivativeGraph)
