@@ -1446,7 +1446,7 @@ end
     r2_5 = cos(n3)
 
     graph = DerivativeGraph([r1_4, r2_5])
-    result = symbolic_jacobian!(graph, [nx1, ny2])
+    result = _symbolic_jacobian!(graph, [nx1, ny2])
 
     #symbolic equality will work here because of common subexpression caching.
     @test result[1, 1] == cos(nx1 * ny2) * ny2
@@ -1478,7 +1478,7 @@ end
     zr = Node(0.0)
 
     graph = DerivativeGraph([nx, zr])
-    jac = symbolic_jacobian!(graph, [nx])
+    jac = _symbolic_jacobian!(graph, [nx])
 
     @test value(jac[1, 1]) == 1
     @test value(jac[2, 1]) == 0
@@ -1574,8 +1574,8 @@ end
     df12(x, y) = 2 * x * y
 
     correct_jacobian = [df11 df12; df21 df22]
-    copy_jac = symbolic_jacobian(graph, [nx, ny])
-    jac = symbolic_jacobian!(graph, [nx, ny])
+    copy_jac = _symbolic_jacobian(graph, [nx, ny])
+    jac = _symbolic_jacobian!(graph, [nx, ny])
 
     @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
@@ -1601,7 +1601,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
     sprse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    dense = _symbolic_jacobian!(fsd_graph, variables(fsd_graph))
 
     # for index in CartesianIndices(sprse)
     #     @test sprse[index] == dense[index]
@@ -1618,7 +1618,7 @@ end
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
     sprse = sparse_symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
+    dense = _symbolic_jacobian!(fsd_graph, reverse(variables(fsd_graph)))
 
     # for index in CartesianIndices(sprse)
     #     @test sprse[index] == dense[index]

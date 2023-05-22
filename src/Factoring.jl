@@ -594,7 +594,7 @@ function verify_paths(graph::DerivativeGraph)
 end
 
 """Factors the graph then computes jacobian matrix. Destructive."""
-function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+function _symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     indim = domain_dimension(graph)
     outdim = codomain_dimension(graph)
 
@@ -612,17 +612,18 @@ function symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractV
 
     return result
 end
-export symbolic_jacobian!
+export _symbolic_jacobian!
 
-symbolic_jacobian!(a::DerivativeGraph) = symbolic_jacobian!(a, variables(a))
+_symbolic_jacobian!(a::DerivativeGraph) = _symbolic_jacobian!(a, variables(a))
 
-function symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     tmp = DerivativeGraph(roots(a)) #rebuild derivative graph. This is probably less efficient than deepcopy but deepcopy(Node(x)) != Node(x) which can lead to all kinds of trouble.
-    return symbolic_jacobian!(tmp, variable_ordering)
+    return _symbolic_jacobian!(tmp, variable_ordering)
 end
 
-symbolic_jacobian(a::DerivativeGraph) = symbolic_jacobian(a, variables(a))
-export symbolic_jacobian
+_symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
+export _symbolic_jacobian
+
 
 """Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
 function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
@@ -654,7 +655,7 @@ export sparse_symbolic_jacobian!
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
-    tmp = symbolic_jacobian!(graph, variable_order)
+    tmp = _symbolic_jacobian!(graph, variable_order)
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     all_vars = variables(graph)
 
@@ -751,9 +752,9 @@ end
 """Computes the full symbolic Hessian matrix"""
 function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
     tmp = DerivativeGraph(expression)
-    jac = symbolic_jacobian!(tmp, variable_order)
+    jac = _symbolic_jacobian!(tmp, variable_order)
     tmp2 = DerivativeGraph(vec(jac))
-    return symbolic_jacobian!(tmp2, variable_order)
+    return _symbolic_jacobian!(tmp2, variable_order)
 end
 export hessian
 
@@ -811,7 +812,7 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     vecA = vec(A)
     graph = DerivativeGraph(vecA)
 
-    temp = symbolic_jacobian!(graph)
+    temp = _symbolic_jacobian!(graph)
     #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify symbolic_jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
     if column_index === nothing

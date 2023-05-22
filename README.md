@@ -2,17 +2,26 @@
 
 [![Build Status](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-This package is not yet on the Julia registry and is currently Beta software. Everything in this repo is subject to frequent change, including benchmark results. 
 
-I hope to have the package registered in a few weeks. Come back then for better documentation, fewer bugs, and more features. In the meantime experiment differentiating your favorite gnarly function but expect bugs and breaking changes.
+This is a package for computing symbolic derivatives quickly and for generating efficient executables to evaluate those derivatives. For expression graphs with many common subexpressions (where each node in the expression graph has more than one parent on average) **FSD** may compute symbolic derivatives much more quickly than conventional computer algebra systems such as Symbolics.jl or Mathematica. The generated executables may also be significantly faster. See the benchmarks, below, for examples.
 
-This is a package for computing symbolic derivatives quickly and for generating efficient executables to evaluate those derivatives. It uses a new algorithm, called **FSD**, which is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically  faster.  
+This is beta software being modified on a daily basis. Expect bugs nd frequent, possibly breaking changes, over the next month or so. 
 
-For expression graphs with many common subexpressions (where each node in the expression graph has more than one parent on average) **FSD** may compute symbolic derivatives much more quickly than conventional computer algegra systems such as Symbolics.jl or Mathematica. The generated executables may also be significantly faster. 
+This functionality is coded and tested:
+* dense and sparse symbolic Jacobian, dense symbolic Hessian
+* compiled executable, in place and out of place, for dense Jacobian
+* higher order derivatives
 
-If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. There is no simple rule to determine whether **FSD** will do better than Symbolics.jl. Try them both and choose the faster one.
+This is not yet coded:
+* sparse symbolic Hessian
+* compiled sparse Jacobian, sparse Hessian, dense Hessian
 
-**FSD** can be used standalone if all you need is a derivative or with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** expression forms is straightforward. However, because of the tree based representation used by Symbolics.jl expression size can grow significantly when converting from **FSD** to Symbolics.jl forms.
+# How it works
+The **FSD** symbolic differentiation algorithm is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically  faster. **FSD** transforms the input expression graph into a derivative graph and then factors this derivative graph to generate an efficient expression for the derivative. **FSD** is fundamentally different from forward and reverse automatic differentiation. See the paper if you want more details.
+
+If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. For more complex functions with many common subexpressions it is likely that **FSD** will outperform Symbolics.jl, perhaps substantially (see benchmarks, below).
+
+**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** expression forms is straightforward. However, because of the tree based representation used by Symbolics.jl expression size can grow significantly when converting from **FSD** to Symbolics.jl forms.
 
 
 Unlike forward and reverse automatic differentiation you don't have to choose which differentiation algorithm to use based on the graph structure. **FSD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. Its efficiency comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FSD** applies only these algebraic simplications[^1] to expressions:
@@ -25,23 +34,23 @@ Unlike forward and reverse automatic differentiation you don't have to choose wh
 * c₁×(c₂×x) => (c₁×c₂)×x  for c₁,c₂ constants
 
 
-These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN. The expected IEEE result for x+0 is NaN when x is NaN, and Inf when x is Inf. But the **FSD** result will be identically zero because the expression will have been rewritten to 0.
+These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
 
 ## Future work
-The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but the LLVM compiler has difficulty compiling the large functions that result. Compile time rises dramatically. For these very large graphs I hope to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl). The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code
+The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but compile time can be significant for larger graphs. For these very large graphs [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. I will be experimenting with this over the coming months. The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code.
 
 The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FSD** would only be practical for modest size graphs (<10⁴ nodes). Unfortunately, for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when it would make sense to switch from BitVector to Set. Then it will be possible to differentiate significantly larger graphs than is currently feasible.
 
-The current code can only differentiate symbolic expressions without branches. However, the **FSD** algorithm is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
+**FSD** can only differentiate symbolic expressions without branches. However, **FSD** is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
 <details> 
  <summary> Examples and basic usage </summary>
  
-There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation. Or you can do everything in FastSymbolicDifferentiaton: create **FSD** variables, make an expression using those variables and then differentiate it. You can then convert this derivative to Symbolics form if you need to do further symbolic processing. 
+There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation, then convert back to Symbolics form. Or you can do everything in **FSD**: create **FSD** variables, make an expression using those variables and then differentiate it. 
 
 Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
 
-If all you need is a derivative function then the fastest workflow will be to do everything in **FSD**. 
+If all you need is an executable derivative function then the fastest workflow will be to do everything in **FSD**. 
 
 Set up variables:
 ```
