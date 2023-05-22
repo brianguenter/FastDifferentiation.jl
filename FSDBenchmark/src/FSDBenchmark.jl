@@ -9,7 +9,7 @@ using Plots
 using Memoize
 import FastSymbolicDifferentiation
 using StaticArrays
-using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, UnspecifiedFunction, codomain_dimension, domain_dimension, function_of, number_of_operations, DerivativeGraph
+using FastSymbolicDifferentiation: derivative, jacobian_function!, symbolic_jacobian!, Node, codomain_dimension, domain_dimension, number_of_operations, DerivativeGraph
 using LaTeXStrings
 import LinearAlgebra
 
@@ -31,8 +31,6 @@ const FSD = FastSymbolicDifferentiation
 include("Types.jl")
 include("Chebyshev.jl")
 include("SphericalHarmonics.jl")
-include("Transformations.jl")
-include("LagrangianDynamics.jl")
 include("SimpsonHermite.jl")
 
 
@@ -54,8 +52,7 @@ export plot_SH_FSD_graph_vs_jacobian_size
 
 
 
-#Benchmark code for FSD
-
+## Benchmark code for FSD
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::Symbolic; simplify=false) = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($package, $model_size) evals = 1
 
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::MakeFunction; simplify=false) = @benchmark jacobian_function!(graph) setup = (graph = $model_function($package, $model_size)) evals = 1
@@ -68,9 +65,10 @@ function run_benchmark(model_function::Function, model_size, package::FastSymbol
     output = rand(codomain_dimension(graph), domain_dimension(graph))
     return @benchmark $exe($input..., $output)
 end
+## end benchmark functions for FSD
 
-#Benchmark code for Symbolics
 
+## Benchmark code for Symbolics
 function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Symbolic; simplify=false)
     tmp = model_function(package, model_size)
     @benchmark Symbolics.jacobian(tmp[1], tmp[2]; simplify=$simplify) setup = (tmp = $model_function($package, $model_size))
@@ -95,7 +93,9 @@ function run_benchmark(model_function, model_size, package::JuliaSymbolics, ::Ma
     return @benchmark out_of_place, in_place = build_function($jac, $vars; expression=Val{false})
 end
 export run_benchmark
+## End benchmark functions for Symbolics.jl
 
+## Generic benchmark functions
 make_data() = DataFrame(model_size=Int64[], minimum=Float64[], median=Float64[], maximum=Float64[], allocations=Int64[], memory_estimate=Int64[])
 
 function single_benchmark(model_function::Function, model_range, package::AbstractPackage, benchmark::AbstractBenchmark, simplify=false)
@@ -126,22 +126,36 @@ export benchmark_types
 params() = (model_functions(), benchmark_sizes())
 export params
 
+"""More specialized version of `benchmark_package` that allows you to choose which range and model function to use"""
 benchmark_package(package, range, model_function; simplify=false) = single_benchmark.(Ref(model_function), Ref(range), Ref(package), benchmark_types(), simplify)
 
+"""For the package defined by `package` run all benchmarks defined by `benchmark_types()` on the functions defined by `model_functions()` for the benchmark sizes defined by `benchmark_sizes()`. The arrays returned by `benchmark_sizes()` and `model_sizes()` are aligned. For example the `spherical_harmonics` model function which is model_functions()[1] will be run with model sizes `benchmark_sizes()[1]`.
 
+The legal package and benchmark types are defined in Types.jl. `package` can be one of `Julia_Symbolics(), FastSymbolic()`, where `JuliaSymbolics` runs the benchmarks using `Symbolics.jl`.
+
+If `simplify=false` then simplification will not be used in the `Symbolics.jl` benchmarks. If it is true then simplified will be used. The latter can significantly increase run time of the benchmarks.
+
+Example:
+```
+benchmark_package(JuliaSymbolics())
+```
+will run the benchmarks`[Symbolic(), Exe(), MakeFunction()]` on the model functions `[spherical_harmonics, chebyshev]`. The `spherical_harmonics` model function will be called with model sizes 5:1:25 and the `chebyshev` model function will be called with model sizes 5:1:30.
+"""
 benchmark_package(package; simplify=false) = benchmark_package.(Ref(package), benchmark_sizes(), model_functions(), simplify=simplify)
 export benchmark_package
 
+"""Run all benchmarks for all packages"""
 benchmark_all(simplify::Bool) = benchmark_package.([FastSymbolic(), JuliaSymbolics()]; simplify=simplify)
 export benchmark_all
 
-function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
-    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
+function plot_data(model_function, bench1, simplify)
+    benchmark_name = nameof(typeof(bench1))
+    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., false)
     fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
     println(data2)
-    graph_title = "Time ratio, Symbolics/FSD: $graph_title"
+    graph_title = "Time ratio, Symbolics/FSD \n$(nameof(model_function)) \n$benchmark_name benchmark, simplify = $simplify"
 
     #find first missing value
     last_good = findfirst(x -> x === missing, data2[:, :minimum])
@@ -152,50 +166,26 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     println("lastgood $last_good")
     ratio = [data2[i, :minimum] === missing ? missing : data2[i, :minimum] / data1[i, :minimum] for i in 1:size(data2)[1]]
     println("ratio $ratio")
-    p = plot(data1[1:last_good, :model_size], ratio, xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
+    p = plot(data1[1:last_good, :model_size], ratio, xlabel="$(nameof(model_function)) model size", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle, yaxis=:log, minorticks=5)
 
     return p
 end
 export plot_data
 
-function publication_benchmarks(simplify::Bool, run_benchmarks=true)
+function publication_benchmarks(simplify::Bool, model_functions::AbstractVector=model_functions(), benchmarks::AbstractVector=benchmark_types(), run_benchmarks::Bool=true)
     if run_benchmarks
         benchmark_all(simplify)
     end
 
-    for bench in benchmark_types()
-        for model in model_functions()
+    for bench in benchmarks
+        for model in model_functions
             bench_type = typeof(bench)
-            savefig(plot_data(model, bench, "$bench_type\n$model", "$model order", simplify),
-                "$(DATA_DIR)figure_$(model)_$(bench_type).svg"
+            savefig(plot_data(model, bench, simplify),
+                "$(DATA_DIR)figure_$(model)_$(bench_type)_simplify_$(simplify).svg"
             )
         end
     end
 end
 export publication_benchmarks
-
-function test_Symbolics_limit()
-    model, vars = spherical_harmonics(JuliaSymbolics(), 20)
-    jac = Symbolics.jacobian(model, vars; simplify=false)
-    out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    tmp_matrix = out_of_place(rand(length(vars))) #generate a matrix of the correct size
-
-    in_place(tmp_matrix, rand(length(vars)))
-
-    # for i in 5:1:50
-    #     try
-    #         model, vars = chebyshev(JuliaSymbolics(), i)
-    #         jac = Symbolics.jacobian(model, vars; simplify=false)
-    #         build_function(jac, vars; expression=Val{false})
-    #         # out_of_place, in_place = build_function(jac, vars; expression=Val{false})
-    #         println("finished size $i")
-    #     catch exc
-    #         println("failed at size $i $exc")
-    #         break
-    #     end
-    # end
-end
-export test_Symbolics_limit
-
 
 end # module Benchmarks

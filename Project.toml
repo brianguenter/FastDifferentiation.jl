@@ -12,6 +12,7 @@ ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
 NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
@@ -31,7 +32,11 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
-julia = "1"
+GraphRecipes = "0.5"
+NaNMath = "1"
+Symbolics = "5"
+TestItemRunner = "0.2"
+julia = "1.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
