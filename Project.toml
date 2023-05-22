@@ -33,7 +33,11 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 GraphRecipes = "0.5"
+
+SpecialFunctions = "2"
+
 NaNMath = "1"
+
 Symbolics = "5"
 TestItemRunner = "0.2"
 julia = "1.8"
