@@ -159,7 +159,7 @@ The Chebyshev expression graph does not have many nodes even at the largest size
 <img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
 The complexity arises from the number of different paths from the root to the leaf of the graph.
 
-Symbolics.jl can simplify the resulting expression graphs to a simple polynomial form when full simplification is turned on. This yields efficient executables but the symbolic processing can take a very long time. The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on.
+The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on. Performance is somewhat better in the latter case but still slower than the FSD executable. Note that the y axis is logarithmic.
 
 #### Chebyshev benchmarks with simplification off
 <img src="FSDBenchmark\Data\figure_chebyshev_Symbolic_simplify_false.svg" alt="drawing" width="50%"> 
@@ -170,6 +170,9 @@ Symbolics.jl can simplify the resulting expression graphs to a simple polynomial
 
 #### Chebyshev benchmarks with simplification on
 <img src="FSDBenchmark\Data\figure_chebyshev_Exe_simplify_true.svg" alt="drawing" width="50%">
+
+With simplification on performance of the executable derivative function for Symbolics.jl is slightly better than with simplification off. But simplification processing time is longer.
+ 
 ### Spherical Harmonics
 
 The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
@@ -283,7 +286,7 @@ export spherical_harmonics
 ```
 </details>
 
-As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. 
+As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. Once again the y axis is logarithmic.
 
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic_simplify_false.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction_simplify_false.svg" alt="drawing" width="50%">
