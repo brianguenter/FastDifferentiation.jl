@@ -612,7 +612,6 @@ function _symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::Abstract
 
     return result
 end
-export _symbolic_jacobian!
 
 _symbolic_jacobian!(a::DerivativeGraph) = _symbolic_jacobian!(a, variables(a))
 
@@ -622,11 +621,13 @@ function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVecto
 end
 
 _symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
-export _symbolic_jacobian
+
+symbolic_jacobian(terms::AbstractVector{T}, variable_ordering::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
+export symbolic_jacobian
 
 
 """Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
-function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+function _sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
     row_indices = Int64[]
     col_indices = Int64[]
     values = Node[]
@@ -651,7 +652,9 @@ function sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::Ab
 
     return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
 end
-export sparse_symbolic_jacobian!
+
+sparse_symbolic_jacobian(terms::AbstractVector{Node}, variable_ordering::AbstractVector{Node}) = _sparse_symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
+export sparse_symbolic_jacobian
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
@@ -729,19 +732,19 @@ julia> a
  ```
 
 """
-jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
-export jacobian_function!
-jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(graph, variables(graph), in_place=in_place)
-export jacobian_function!
+_jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
 
-"""Non-destructive form of jacobian_function!"""
-jacobian_function(graph::DerivativeGraph; in_place::Bool=true) = jacobian_function!(deepcopy(graph), in_place) #here it is okay to use deepcopy because user will never be accessing the new variables that will be created. See symbolic_jacobian for expanded discussion about this problem.
-export jacobian_function
+_jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = _jacobian_function!(graph, variables(graph), in_place=in_place)
 
-function jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+
+function _jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = DerivativeGraph(roots(graph)) #need to recreate derivative graph with the same variables as were passed in the variable_order parameter.
     return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
 end
+
+jacobian_function(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place::Bool=false) where {T<:Node,S<:Node} = _jacobian_function(DerivativeGraph(terms), variable_order; in_place=in_place)
+export jacobian_function
+
 
 """Computes the full symbolic Hessian matrix"""
 function hessian(graph::DerivativeGraph, variable_order)
