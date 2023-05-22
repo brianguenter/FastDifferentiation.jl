@@ -5,7 +5,7 @@
 
 This is a package for computing symbolic derivatives quickly and for generating efficient executables to evaluate those derivatives. For expression graphs with many common subexpressions (where each node in the expression graph has more than one parent on average) **FSD** may compute symbolic derivatives much more quickly than conventional computer algebra systems such as Symbolics.jl or Mathematica. The generated executables may also be significantly faster. See the benchmarks, below, for examples.
 
-This is beta software being modified on a daily basis. Expect bugs nd frequent, possibly breaking changes, over the next month or so. 
+This is beta software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. 
 
 This functionality is coded and tested:
 * dense and sparse symbolic Jacobian, dense symbolic Hessian
