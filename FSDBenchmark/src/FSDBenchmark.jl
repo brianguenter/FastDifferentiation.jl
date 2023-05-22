@@ -170,22 +170,16 @@ function plot_data(model_function, bench1, simplify)
 end
 export plot_data
 
-function publication_benchmarks(simplify::Bool, benchmark::AbstractBenchmark, run_benchmarks::Bool=true)
+function publication_benchmarks(simplify::Bool, model_functions::AbstractVector=model_functions(), benchmarks::AbstractVector=benchmark_types(), run_benchmarks::Bool=true)
     if run_benchmarks
         benchmark_all(simplify)
     end
 
-    if benchmark == AllBenchmarks()
-        benchmarks = benchmark_types()
-    else
-        benchmarks = [benchmark]
-    end
-
     for bench in benchmarks
-        for model in model_functions()
+        for model in model_functions
             bench_type = typeof(bench)
             savefig(plot_data(model, bench, simplify),
-                "$(DATA_DIR)figure_$(model)_$(bench_type).svg"
+                "$(DATA_DIR)figure_$(model)_$(bench_type)_simplify_$(simplify).svg"
             )
         end
     end
