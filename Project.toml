@@ -39,9 +39,13 @@ DiffRules = "1"
 
 GraphRecipes = "0.5"
 
+RuntimeGeneratedFunctions = "0.5"
+
+
 SpecialFunctions = "2"
 
 NaNMath = "1"
+
 
 Symbolics = "5"
 
