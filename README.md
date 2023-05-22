@@ -51,6 +51,8 @@ There are several ways to use FastSymbolicDifferentiation. You can do all your s
 Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
 
 If all you need is an executable derivative function then the fastest workflow will be to do everything in **FSD**. 
+ 
+**FSD** uses a global cache for common subexpression elimination so **FSD** is not thread safe (yet). Under ordinary conditions you the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use all available memory. If this happens call the function `clear_cache` once you are done processing an expression.
 
 Set up variables:
 ```
