@@ -288,6 +288,7 @@ As was the case for Chebyshev polynomials the number of paths from the roots to 
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic_simplify_false.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction_simplify_false.svg" alt="drawing" width="50%">
 <img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe_simplify_false.svg" alt="drawing" width="50%">
+ The **Exe** benchmark took many hours to run and was stopped at model size 24 instead of 25 as for the **Symbolic** and **MakeFunction** benchmarks.
 
 </details>
 
