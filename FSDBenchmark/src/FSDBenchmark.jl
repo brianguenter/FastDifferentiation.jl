@@ -146,13 +146,14 @@ export benchmark_package
 benchmark_all(simplify::Bool) = benchmark_package.([FastSymbolic(), JuliaSymbolics()]; simplify=simplify)
 export benchmark_all
 
-function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::AbstractString, simplify)
-    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
+function plot_data(model_function, bench1, simplify)
+    benchmark_name = nameof(typeof(bench1))
+    fname1 = filename(model_function, FastSymbolic(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., false)
     fname2 = filename(model_function, JuliaSymbolics(), bench1, extrema(benchmark_sizes()[findfirst(x -> x == model_function, model_functions())])..., simplify)
     data1 = CSV.read(fname1, DataFrame)
     data2 = CSV.read(fname2, DataFrame)
     println(data2)
-    graph_title = "Time ratio, Symbolics/FSD: $graph_title"
+    graph_title = "Time ratio, Symbolics/FSD \n$(nameof(model_function)) \n$benchmark_name benchmark, simplify = $simplify"
 
     #find first missing value
     last_good = findfirst(x -> x === missing, data2[:, :minimum])
@@ -163,22 +164,22 @@ function plot_data(model_function, bench1, graph_title::AbstractString, xlabel::
     println("lastgood $last_good")
     ratio = [data2[i, :minimum] === missing ? missing : data2[i, :minimum] / data1[i, :minimum] for i in 1:size(data2)[1]]
     println("ratio $ratio")
-    p = plot(data1[1:last_good, :model_size], ratio, xlabel=xlabel, ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle)
+    p = plot(data1[1:last_good, :model_size], ratio, xlabel="$(nameof(model_function)) model size", ylabel="Ratio", title=graph_title, titlefontsizes=10, legend=false, marker=:circle, yaxis=:log, minorticks=5)
 
     return p
 end
 export plot_data
 
-function publication_benchmarks(simplify::Bool, run_benchmarks=true)
+function publication_benchmarks(simplify::Bool, model_functions::AbstractVector=model_functions(), benchmarks::AbstractVector=benchmark_types(), run_benchmarks::Bool=true)
     if run_benchmarks
         benchmark_all(simplify)
     end
 
-    for bench in benchmark_types()
-        for model in model_functions()
+    for bench in benchmarks
+        for model in model_functions
             bench_type = typeof(bench)
-            savefig(plot_data(model, bench, "$bench_type\n$model", "$model order", simplify),
-                "$(DATA_DIR)figure_$(model)_$(bench_type).svg"
+            savefig(plot_data(model, bench, simplify),
+                "$(DATA_DIR)figure_$(model)_$(bench_type)_simplify_$(simplify).svg"
             )
         end
     end
