@@ -89,8 +89,6 @@ julia> f1 = cos(nx) * ny
 julia> f2 = sin(ny) * nx
 (sin(y) * x)
 
-julia> 
-
 julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
