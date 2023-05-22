@@ -657,7 +657,7 @@ sparse_symbolic_jacobian(terms::AbstractVector{Node}, variable_ordering::Abstrac
 export sparse_symbolic_jacobian
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
-function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = _symbolic_jacobian!(graph, variable_order)
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     all_vars = variables(graph)
@@ -689,6 +689,10 @@ function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S
         return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
     end
 end
+
+"""Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
+jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = _jacobian_Expr!(DerivativeGraph(terms), variable_order; in_place=in_place)
+export jacobian_Expr
 
 """Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
 
@@ -732,14 +736,14 @@ julia> a
  ```
 
 """
-_jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
+_jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(_jacobian_Expr!(graph, variable_order; in_place))
 
 _jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = _jacobian_function!(graph, variables(graph), in_place=in_place)
 
 
 function _jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = DerivativeGraph(roots(graph)) #need to recreate derivative graph with the same variables as were passed in the variable_order parameter.
-    return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
+    return @RuntimeGeneratedFunction(_jacobian_Expr!(tmp, variable_order; in_place))
 end
 
 jacobian_function(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place::Bool=false) where {T<:Node,S<:Node} = _jacobian_function(DerivativeGraph(terms), variable_order; in_place=in_place)
