@@ -32,27 +32,24 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
-
 ColorTypes = "0.11"
 Colors = "0.12"
-FiniteDifferences = "0.12"
 DataStructures = "0.18"
 DiffRules = "1"
+FiniteDifferences = "0.12"
 GraphRecipes = "0.5"
-Memoize = "0.4"
-Plots = "1"
 Graphs = "1"
+Memoize = "0.4"
+NaNMath = "1"
+Plots = "1"
 RuntimeGeneratedFunctions = "0.5"
 SpecialFunctions = "2"
-NaNMath = "1"
+StaticArrays = "1"
 Symbolics = "5"
+TestItemRunner = "0.2"
 TestItems = "0.1"
 TimerOutputs = "0.5"
-
-
-TestItemRunner = "0.2"
 julia = "1.8"
-
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
