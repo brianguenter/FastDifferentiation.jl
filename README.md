@@ -85,7 +85,7 @@ julia> X = make_variables(:x,3)
 julia> X[1] === X[1]
 true
 ```
-I'm working with the SciML folks to figure out how to make FSD work seamlessly with Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path to integration.
+I'm working with the SciML folks to figure out how to make FSD work seamlessly with Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path.
  
 Compute Hessian:
 ```
