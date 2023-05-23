@@ -10,9 +10,9 @@ function test()
     println("roots $(length(roots(fsd_graph)))")
     println(number_of_operations(fsd_graph))
 
-    sparse = sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
+    sparse = _sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
     println(number_of_operations(sparse))
 end
-export test
+test
 
 
