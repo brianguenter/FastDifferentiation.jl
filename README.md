@@ -65,6 +65,28 @@ using Symbolics
 julia> nx,ny,nz = Node.((x,y,z)) #create FastSymbolicDifferentiation variables.
 (x, y, z)
 ```
+FSD requires objectid consistency of vector variable elements but the vectors created by the Symbolics @variables macro do not satisfy this property:
+ ```
+ julia> @variables k[1:3]
+1-element Vector{Symbolics.Arr{Num, 1}}:
+ k[1:3]
+
+julia> k[1] === k[1]
+false
+```
+ As a temporary workaround you can use the `make_variables` function to create a vector of variables:
+ ```
+julia> X = make_variables(:x,3)
+3-element Vector{Node}:
+ x1
+ x2
+ x3
+
+julia> X[1] === X[1]
+true
+```
+I'm working with the SciML folks to figure out how to incorporate FSD seamlessly into Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path to integration.
+ 
 Compute Hessian:
 ```
 julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
