@@ -85,7 +85,7 @@ julia> X = make_variables(:x,3)
 julia> X[1] === X[1]
 true
 ```
-I'm working with the SciML folks to figure out how to incorporate FSD seamlessly into Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path to integration.
+I'm working with the SciML folks to figure out how to make FSD work seamlessly with Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path to integration.
  
 Compute Hessian:
 ```
@@ -329,7 +329,7 @@ The **FSD** algorithm is fast enough to differentiate large expression graphs (â
 
 The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FSD** would only be practical for modest size graphs (<10â´ nodes). Unfortunately, for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when it would make sense to switch from BitVector to Set. Then it will be possible to differentiate significantly larger graphs.
 
-In its current form **FSD** can only differentiate symbolic expressions without branches. It is to possible extend the algorithm to allow branching but this causes symbolic processing time to scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable. 
+In its current form **FSD** can only differentiate symbolic expressions without branches. It is possible extend the algorithm to allow branching but this causes symbolic processing time to scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FSD might support limited nested conditionals. 
 
 However, a better approach might be to use FSD as a processing step in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
