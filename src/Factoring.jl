@@ -593,17 +593,41 @@ function verify_paths(graph::DerivativeGraph)
     return true
 end
 
-"""Factors the graph then computes jacobian matrix. Destructive."""
-function _symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    indim = domain_dimension(graph)
+"""Factors the graph then computes the Jacobian matrix. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed. Example:
+```
+julia> nx, ny = Node.((x, y))
+(x, y)
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+2×2 Matrix{Node}:
+ y  x
+ y  x
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[ny,nx])
+2×2 Matrix{Node}:
+ x  y
+ x  y
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+2×2 Matrix{Node}:
+ y  x
+ y  x
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx])
+2×1 Matrix{Node}:
+ y
+ y
+ ```
+"""
+function _symbolic_jacobian!(graph::DerivativeGraph, partial_variables::AbstractVector{T}) where {T<:Node}
     outdim = codomain_dimension(graph)
 
-    result = Matrix{Node}(undef, outdim, indim)
+    result = Matrix{Node}(undef, outdim, length(partial_variables))
     factor!(graph)
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
-    for (i, var) in pairs(variable_ordering)
+    for (i, var) in pairs(partial_variables)
         var_index = variable_node_to_index(graph, var)
         for root_index in 1:codomain_dimension(graph)
             result[root_index, i] = evaluate_path(graph, root_index, var_index)
@@ -620,40 +644,70 @@ function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVecto
     return _symbolic_jacobian!(tmp, variable_ordering)
 end
 
-_symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
+# _symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
 
-symbolic_jacobian(terms::AbstractVector{T}, variable_ordering::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
+"""Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Example:
+```
+julia> nx, ny = Node.((x, y))
+(x, y)
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+2×2 Matrix{Node}:
+ y  x
+ y  x
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[ny,nx])
+2×2 Matrix{Node}:
+ x  y
+ x  y
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+2×2 Matrix{Node}:
+ y  x
+ y  x
+
+julia> symbolic_jacobian([nx*ny,ny*nx],[nx])
+2×1 Matrix{Node}:
+ y
+ y
+ ```
+"""
+symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
 export symbolic_jacobian
 
 
 """Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
-function _sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
+function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::AbstractVector{T}) where {T<:Node}
     row_indices = Int64[]
     col_indices = Int64[]
     values = Node[]
-    @assert length(variable_ordering) == domain_dimension(graph)
+    @assert length(partial_variables) == domain_dimension(graph)
 
     factor!(graph)
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
     #input is an array of Node's representing variables. Need a mapping from the variable index matching the Node to the index in variable_ordering
-    variable_index = map(x -> variable_postorder_to_index(graph, postorder_number(graph, x)), variable_ordering)
-    var_order_to_ = similar(variable_index)
-
+    variable_index = map(x -> variable_postorder_to_index(graph, postorder_number(graph, x)), partial_variables)
 
     for root in 1:codomain_dimension(graph)
-        for var in findall(reachable_variables(graph, root_index_to_postorder_number(graph, root)))
-            #TODO this does not use variable_ordering. Need to fix.
-            push!(row_indices, root)
-            push!(col_indices, variable_index[var])
-            push!(values, evaluate_path(graph, root, var))
+        reach_vars = reachable_variables(graph, root_index_to_postorder_number(graph, root))
+        for (i, partial_var) in pairs(partial_variables)
+            partial_index = variable_node_to_index(graph, partial_var) #make sure variable is in the domain of the graph
+            if partial_index !== nothing
+                if reach_vars[partial_index] #make sure variable is reachable from this root
+                    #TODO this does not use variable_ordering. Need to fix.
+                    push!(row_indices, root)
+                    push!(col_indices, i)
+                    push!(values, evaluate_path(graph, root, partial_index))
+                end
+            end
         end
     end
 
     return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
 end
 
-sparse_symbolic_jacobian(terms::AbstractVector{Node}, variable_ordering::AbstractVector{Node}) = _sparse_symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
+sparse_symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_symbolic_jacobian
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""

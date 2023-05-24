@@ -235,7 +235,6 @@ variable_index_to_postorder_number(a::DerivativeGraph, index::Integer) = get(var
 variable_postorder_to_index(a::DerivativeGraph, index) = get(a.variable_postorder_to_index, index, nothing)
 
 
-
 postorder_number(a::DerivativeGraph, node::Node) = get(a.postorder_number, node, nothing)
 
 
