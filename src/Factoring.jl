@@ -629,9 +629,13 @@ function _symbolic_jacobian!(graph::DerivativeGraph, partial_variables::Abstract
 
     for (i, var) in pairs(partial_variables)
         var_index = variable_node_to_index(graph, var)
-        for root_index in 1:codomain_dimension(graph)
-            result[root_index, i] = evaluate_path(graph, root_index, var_index)
-        end
+            for root_index in 1:codomain_dimension(graph)
+                if var_index !== nothing
+                result[root_index, i] = evaluate_path(graph, root_index, var_index)
+                else
+                    result[root_index,i] = zero(Node) #TODO fix this so get more generic zero value
+                end
+            end
     end
 
     return result
