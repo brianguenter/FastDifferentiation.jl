@@ -667,7 +667,7 @@ function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{
     else
         ordering = Node.(variable_order)
     end
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
+    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable used in your function had a corresponding ordering variable. These variables are present in your function but not in the `variable_order` argument: $(setdiff(all_vars,ordering))"
 
     body = Expr(:block)
     if !in_place
@@ -691,7 +691,12 @@ function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{
 end
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
-jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = _jacobian_Expr!(DerivativeGraph(terms), variable_order; in_place=in_place)
+function jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}
+    dgraph = DerivativeGraph(terms)
+    display(variables(dgraph))
+    display(variable_order)
+    return _jacobian_Expr!(dgraph, variable_order; in_place=in_place)
+end
 export jacobian_Expr
 
 """Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
