@@ -551,7 +551,7 @@ function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}
     @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
 
     for (i, node) in pairs(roots(graph))
-        node_body, variable = function_body(node, node_to_var)
+        node_body, variable = function_body!(node, node_to_var)
         push!(node_body.args, :(result[$i] = $variable))
         push!(body.args, node_body)
     end

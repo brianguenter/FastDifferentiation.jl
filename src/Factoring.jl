@@ -756,28 +756,17 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
     return result, v_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
 end
 
-
-"""Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
-function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
-    tmp = _symbolic_jacobian!(graph, variable_order)
+function make_function(func_array::Matrix{Node}, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
-    all_vars = variables(graph)
-
-    if variable_order === nothing
-        ordering = all_vars
-    else
-        ordering = Node.(variable_order)
-    end
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable used in your function had a corresponding ordering variable. These variables are present in your function but not in the `variable_order` argument: $(setdiff(all_vars,ordering))"
-
     body = Expr(:block)
+
     if !in_place
-        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian. 
+        push!(body.args, :(result = fill(0.0, $(size(func_array))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian. 
         #TODO: Unfortunately this fixes the type of the result to be Float64. Should write code so the type is picked up from the runtime arguments to the generated function. Add this feature later.
     end
 
-    for (i, node) in pairs(tmp)
-        node_body, variable = function_body(node, node_to_var)
+    for (i, node) in pairs(func_array)
+        node_body, variable = function_body!(node, node_to_var)
         push!(node_body.args, :(result[$i] = $variable))
         push!(body.args, node_body)
     end
@@ -785,11 +774,18 @@ function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{
     push!(body.args, :(return result))
 
     if in_place
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)..., :result), body)
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), variable_order)..., :result), body)
     else
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), variable_order)...), body)
     end
 end
+
+"""Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
+function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+    tmp = _symbolic_jacobian!(graph, variable_order)
+    return make_function(tmp, variable_order, in_place=in_place)
+end
+
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function jacobian_Expr(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}

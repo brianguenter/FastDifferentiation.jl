@@ -454,7 +454,7 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing)
+function function_body!(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing)
     if node_to_var === nothing
         node_to_var = Dict{Node,Union{Symbol,Real}}()
     end
@@ -496,7 +496,7 @@ function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, nod
 
     @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable." #In a future version plan to eliminate this restriction to allow computation of sparse Jacobians.
 
-    body, variable = function_body(dag, node_to_var)
+    body, variable = function_body!(dag, node_to_var)
     push!(body.args, :(return $variable))
 
     return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
