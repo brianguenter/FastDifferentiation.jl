@@ -1714,4 +1714,13 @@ end
     @test DA == derivative(A, nq1)
 end
 
+@testitem "jacobian_transpose_v" begin
+    using Symbolics: @variables
+    using FastSymbolicDifferentiation.FSDInternals
+
+    fsd_graph = spherical_harmonics(FastSymbolic(), 10)
+    JTv,vars = jacobian_transpose_v(roots(fsd_graph),variables(fsd_graph))
+    make_function()
+end
+
 end #module

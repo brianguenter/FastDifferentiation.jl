@@ -629,13 +629,13 @@ function _symbolic_jacobian!(graph::DerivativeGraph, partial_variables::Abstract
 
     for (i, var) in pairs(partial_variables)
         var_index = variable_node_to_index(graph, var)
-            for root_index in 1:codomain_dimension(graph)
-                if var_index !== nothing
+        for root_index in 1:codomain_dimension(graph)
+            if var_index !== nothing
                 result[root_index, i] = evaluate_path(graph, root_index, var_index)
-                else
-                    result[root_index,i] = zero(Node) #TODO fix this so get more generic zero value
-                end
+            else
+                result[root_index, i] = zero(Node) #TODO fix this so get more generic zero value
             end
+        end
     end
 
     return result
@@ -650,7 +650,7 @@ end
 
 # _symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
 
-"""Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Example:
+"""Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Examples:
 ```
 julia> nx, ny = Node.((x, y))
 (x, y)
@@ -713,6 +713,49 @@ end
 
 sparse_symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_symbolic_jacobian
+
+"""Returns a vector of Node, where each element in the vector is the symbolic form of Jᵀv. The """
+function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    graph = DerivativeGraph(terms)
+    v_vector = make_variables(gensym, domain_dimension(graph))
+    factor!(graph)
+    for (variable, one_v) in zip(variables(graph), v_vector)
+        for parent in parent_edges(graph, variable)
+            delete_edge!(graph, parent)
+            add_edge!(
+                graph,
+                PathEdge(
+                    top_vertex(parent),
+                    bott_vertex(parent),
+                    value(parent) * one_v,
+                    reachable_variables(parent),
+                    reachable_roots(parent)
+                )
+            ) #multiply all parent edges by one_v and replace edge in graph
+        end
+    end
+
+    outdim = codomain_dimension(graph)
+
+    result = [zero(Node) for _ in 1:codomain_dimension(graph)]
+    factor!(graph)
+
+    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
+
+    for (i, var) in pairs(partial_variables)
+        var_index = variable_node_to_index(graph, var)
+        for root_index in 1:codomain_dimension(graph)
+            if var_index !== nothing
+                result[root_index] += evaluate_path(graph, root_index, var_index)
+            else
+                result[root_index, i] = zero(Node) #TODO fix this so get more generic zero value
+            end
+        end
+    end
+
+    return result, v_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
+end
+
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
