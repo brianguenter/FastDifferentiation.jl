@@ -714,16 +714,16 @@ end
 sparse_symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_symbolic_jacobian
 
-"""Returns a vector of Node, where each element in the vector is the symbolic form of Jᵀv. The """
+"""Returns a vector of Node, where each element in the vector is the symbolic form of Jᵀv. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate Jᵀv and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     graph = DerivativeGraph(terms)
-    v_vector = make_variables(gensym, domain_dimension(graph))
+    v_vector = make_variables(gensym(), domain_dimension(graph))
     factor!(graph)
     for (variable, one_v) in zip(variables(graph), v_vector)
-        for parent in parent_edges(graph, variable)
-            delete_edge!(graph, parent)
-            add_edge!(
-                graph,
+        new_edges = PathEdge[]
+        old_edges = parent_edges(graph, variable)
+        for parent in old_edges
+            push!(new_edges,
                 PathEdge(
                     top_vertex(parent),
                     bott_vertex(parent),
@@ -731,13 +731,24 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
                     reachable_variables(parent),
                     reachable_roots(parent)
                 )
-            ) #multiply all parent edges by one_v and replace edge in graph
+            )
+            #multiply all parent edges by one_v and replace edge in graph
+        end
+
+        for (old_edge, new_edge) in zip(old_edges, new_edges)
+            delete_edge!(graph, old_edge, true)
+            add_edge!(graph, new_edge)
         end
     end
 
     outdim = codomain_dimension(graph)
 
-    result = [zero(Node) for _ in 1:codomain_dimension(graph)]
+    result = Vector{Node}(undef, outdim)
+
+    for i in eachindex(result)
+        result[i] = Node(0.0)
+    end
+
     factor!(graph)
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
@@ -755,8 +766,9 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 
     return result, v_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
 end
+export jacobian_transpose_v
 
-function make_function(func_array::Matrix{Node}, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
+function make_Expr(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     body = Expr(:block)
 
@@ -774,16 +786,20 @@ function make_function(func_array::Matrix{Node}, variable_order::AbstractVector{
     push!(body.args, :(return result))
 
     if in_place
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), variable_order)..., :result), body)
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), input_variables)..., :result), body)
     else
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), variable_order)...), body)
+        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), input_variables)...), body)
     end
 end
+export make_Expr
+
+make_function(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
+export make_function
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
 function _jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
     tmp = _symbolic_jacobian!(graph, variable_order)
-    return make_function(tmp, variable_order, in_place=in_place)
+    return make_Expr(tmp, variable_order, in_place=in_place)
 end
 
 

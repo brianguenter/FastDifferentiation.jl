@@ -1719,9 +1719,23 @@ end
     using FastSymbolicDifferentiation.FSDInternals
     using FastSymbolicDifferentiation.FSDTests
 
-    fsd_graph = spherical_harmonics(FastSymbolic(), 10)
-    JTv, vars = jacobian_transpose_v(roots(fsd_graph), variables(fsd_graph))
-    make_function()
+    order = 10
+    fsd_graph = spherical_harmonics(FastSymbolic(), order)
+    func_vars = variables(fsd_graph)
+    Jᵀv, v_vars = jacobian_transpose_v(roots(fsd_graph), func_vars)
+
+    #compute the product the slow way
+    Jᵀv_slow = convert.(Node, symbolic_jacobian(roots(fsd_graph), variables(fsd_graph)) * v_vars)
+    both_vars = [func_vars; v_vars]
+    slow = eval(make_function(reshape(Jᵀv_slow, (length(Jᵀv_slow), 1)), both_vars))
+    fast = eval(make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars))
+
+    for _ in 1:100
+        input = rand(length(both_vars))
+        slow_val = slow(input)
+        fast_val = fast(input)
+        @test isapprox(slow_val, fast_val, rtol=1e-10)
+    end
 end
 
 end #module

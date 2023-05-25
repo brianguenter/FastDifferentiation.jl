@@ -129,6 +129,9 @@ julia> func(1.0, 2.0)
  -1.68294    0.540302
   0.909297  -0.416147
 ```
+
+Evaluate Jᵀv and Jv (see this [paper](https://ieeexplore.ieee.org/abstract/document/9622796) for applications of this operation)
+
 Convert between FastSymbolicDifferentiation and Symbolics representations:
 ```
 julia> f = x^2+y^2 #Symbolics expression
