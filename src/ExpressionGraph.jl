@@ -529,8 +529,6 @@ function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node
 end
 export make_function
 
-# make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
-
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)
     if arity(a) === 0
