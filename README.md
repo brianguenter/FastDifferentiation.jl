@@ -141,10 +141,12 @@ julia> (f1,f2) = cos(nx)*ny,sin(ny)*nx
 julia> jv,vvec = jacobian_times_v([f1,f2],[nx,ny])
 (Node[((y * (-(sin(x)) * var"##60351")) + (cos(x) * var"##60352")), ((sin(y) * var"##60351") + (x * (cos(y) * var"##60352")))], Node[var"##60351", var"##60352"])
 
-julia> jv_exe = jacobian_times_v_exe([f1,f2],[nx,ny])
+julia> jv_exe = jacobian_times_v_exe([f1,f2],[nx,ny]) 
 #73 (generic function with 1 method)
 
-julia> jv_exe([1.0,2.0],[3.0,4.0])
+julia> jv_exe([1.0,2.0],[3.0,4.0]) # code generation currently creates a scalarized executable. 
+# Vector arguments are splatted, which is slow. Modifying to handle vector arguments natively is on the to do list.
+
 2×1 Matrix{Float64}:
  -2.8876166853748195
   1.0633049342884753
