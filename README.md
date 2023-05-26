@@ -49,7 +49,7 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 
 If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it will be for others to determine if FSD is likely to help them with their problem.
 <details> 
- <summary> Examples and basic usage </summary>
+ <summary> <b> Examples and basic usage </b> </summary>
  
 There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation, then convert back to Symbolics.jl form. Or you can do everything in **FSD**: create **FSD** variables, make an expression using those variables and then differentiate it. Creating the expressions in Symbolics.jl and then converting to **FSD** form can be slow.
 
@@ -184,7 +184,7 @@ Symbolics.Num
 </details>
 
 <details>
-    <summary> Benchmarks </summary>
+    <summary> <b> Benchmarks </b> </summary>
  
 ## Benchmarks
 
