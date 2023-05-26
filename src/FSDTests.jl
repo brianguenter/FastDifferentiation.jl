@@ -1787,6 +1787,7 @@ end
         xin = rand(length(fsd_func))
         vin = rand(codomain_dimension(fsd_graph))
         slow_val = slow([xin; vin]...)
+
         fast_val = fast2(xin, vin)
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
