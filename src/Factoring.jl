@@ -721,23 +721,26 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
     factor!(graph)
     for (variable, one_v) in zip(variables(graph), v_vector)
         new_edges = PathEdge[]
-        old_edges = parent_edges(graph, variable)
+        old_edges = collect(parent_edges(graph, variable)) #can't use iterator returned by parent_edges because it will include new edges. Need snapshot of old edges.
         for parent in old_edges
             push!(new_edges,
                 PathEdge(
                     top_vertex(parent),
                     bott_vertex(parent),
                     value(parent) * one_v,
-                    reachable_variables(parent),
-                    reachable_roots(parent)
+                    copy(reachable_variables(parent)),
+                    copy(reachable_roots(parent))
                 )
             )
             #multiply all parent edges by one_v and replace edge in graph
         end
 
-        for (old_edge, new_edge) in zip(old_edges, new_edges)
-            delete_edge!(graph, old_edge, true)
+        for new_edge in new_edges
             add_edge!(graph, new_edge)
+        end
+
+        for old_edge in old_edges
+            delete_edge!(graph, old_edge, true)
         end
     end
 
@@ -749,7 +752,7 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
         result[i] = Node(0.0)
     end
 
-    factor!(graph)
+
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
