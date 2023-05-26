@@ -23,7 +23,7 @@ FSD currently supports these operations:
 
 These operations are not yet supported (check back in a few days):
 * sparse symbolic Hessian
-* compiled sparse Jacobian, sparse Hessian, dense Hessian
+* compiled: sparse Jacobian, sparse Hessian, dense Hessian
 
 # How it works
 The **FSD** symbolic differentiation algorithm is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. 
