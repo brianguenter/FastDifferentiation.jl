@@ -5,39 +5,30 @@ using .FSDTests
 
 
 function test()
-    order = 10
+    x, graph, _, _ = simple_dominator_graph()
+    nx = Node(x)
+    factor!(graph)
+    fedge = edges(graph, 1, 4)[1]
+    tmp0 = make_function([value(fedge)], [nx])
+    dfsimp(x) = tmp0(x)[1]
+    x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new Node(x)
+    nx = Node(x)
+    tmp00 = make_function([root(graph, 1)], [nx])
+    origfsimp(x) = tmp00(x)[1]
+    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
-    fsd_graph = spherical_harmonics(FastSymbolic(), order)
-    fsd_func = roots(fsd_graph)
-    func_vars = variables(fsd_graph)
+    graph = complex_dominator_graph()
+    factor!(graph)
+    fedge = edges(graph, 1, 8)[1]
+    tmp1 = make_function([value(fedge)], variables(graph))
+    df(x) = tmp1(x)[1]
 
-    Jv, v_vars = jacobian_times_v(fsd_func, func_vars)
+    graph = complex_dominator_graph()
+    tmp2 = make_function([root(graph, 1)], variables(graph))
+    origf(x) = tmp2(x)[1]
 
-    #compute the product the slow way
-    Jv_slow = convert.(Node, symbolic_jacobian(fsd_func, func_vars) * v_vars)
-    both_vars = [func_vars; v_vars]
-    slow_symbolic = reshape(Jv_slow, (length(Jv_slow), 1))
-
-    slow = make_function(slow_symbolic, both_vars)
-    fast = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
-
-    for _ in 1:100
-        input = rand(length(func_vars) + length(v_vars))
-        slow_val = slow(input...)
-        fast_val = fast(input...)
-
-        @assert isapprox(slow_val, fast_val, rtol=1e-9) "slow_val $slow_val \n fast_val $fast_val"
-    end
-
-    fast2 = jacobian_times_v_exe(fsd_func, func_vars)
-
-    for _ in 1:100
-        xin = rand(length(fsd_func))
-        vin = rand(domain_dimension(fsd_graph))
-        slow_val = slow([xin; vin]...)
-        fast_val = fast2(xin, vin)
-
-        @assert isapprox(slow_val, fast_val, rtol=1e-8) "slow_val $slow_val \n fast_val $fast_val"
+    for test_val in -3.0:0.013:3.0
+        @assert isapprox(central_fdm(5, 1)(origf, test_val), df(test_val)[1])
     end
 end
 

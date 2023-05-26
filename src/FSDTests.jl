@@ -364,29 +364,6 @@ end
     end
 end
 
-@testitem "make_function for Node" begin
-    import Symbolics
-
-    Symbolics.@variables x y
-
-    A = [x^2+y 0 2x
-        0 0 2y
-        y^2+x 0 0]
-    dag = expr_to_dag.(A)
-    symbolics_answer = Symbolics.substitute.(A, Ref(Dict(x => 1.1, y => 2.3)))
-    float_answer = similar(symbolics_answer, Float64)
-    for index in eachindex(symbolics_answer)
-        float_answer[index] = symbolics_answer[index].val
-    end
-
-    FSD_func = make_function.(dag, Ref([x, y]))
-    res = [FSD_func[1, 1](1.1, 2.3) FSD_func[1, 2](0.0, 0.0) FSD_func[1, 3](1.1, 0.0)
-        FSD_func[2, 1](0.0, 0.0) FSD_func[2, 2](0.0, 0.0) FSD_func[2, 3](0, 2.3)
-        FSD_func[3, 1](1.1, 2.3) FSD_func[3, 2](0, 0) FSD_func[3, 3](0, 0)
-    ]
-    @test isapprox(res, float_answer)
-end
-
 @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
     using FastSymbolicDifferentiation.FSDTests
     import Symbolics
@@ -440,26 +417,6 @@ end
     @test derivative(a, Val(2)) == nx
     @test derivative(nx) == Node(1)
     @test derivative(Node(1)) == Node(0)
-end
-
-@testitem "simple make_function" begin
-    using FastSymbolicDifferentiation.FSDTests
-
-    x, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
-    #not practical to compare the graphs directly since the order in which nodes come out of the differentiation
-    #process is complicated. For dom subgraphs it depends on the order nodes appear in the parents list of a node. This 
-    #is determined by code that has nothing to do with differentiation so don't want to take a dependency on it since it is
-    #subject to change. Comparing graphs
-    #directly would make the test fragile. Instead verify that the functions evaluate to the same thing.
-
-    for testval in -π:0.08345:π
-        correct_4_2_value = make_function(four_2_subgraph)
-        computed_4_2_value = make_function(four_2_subgraph)
-        correct_1_3_value = make_function(one_3_subgraph)
-        computed_1_3_value = make_function(one_3_subgraph)
-        @test isapprox(correct_4_2_value(testval), computed_4_2_value(testval), atol=1e-14)
-        @test isapprox(correct_1_3_value(testval), computed_1_3_value(testval), atol=1e-14)
-    end
 end
 
 @testitem "compute_factorable_subgraphs test order" begin
@@ -529,48 +486,6 @@ end
     @test index_8_4 < index_8_1p
     @test index_8_3 < index_8_1p
     @test index_1_7 < index_8_1p
-end
-
-@testitem "make_function" begin #generation of derivative functions
-    import Symbolics
-    using Symbolics: @variables, substitute
-    using FastSymbolicDifferentiation.FSDTests
-    using FastSymbolicDifferentiation.FSDInternals
-
-    Symbolics.@variables zz
-    dom_expr = zz * (cos(zz) + sin(zz))
-
-    symbol_result = substitute(dom_expr, zz => 3.7)
-
-    exe = make_function(expr_to_dag(dom_expr))
-
-    @test exe(3.7) ≈ symbol_result
-
-    Symbolics.@variables x, y
-    sym_expr = cos(log(x) + sin(y)) * zz
-    symbol_result = substitute(sym_expr, Dict([zz => 3.2, x => 2.5, y => 7.0]))
-
-    exe = make_function(expr_to_dag(sym_expr))
-
-    sym_expr2 = cos(2.0 * x) - sqrt(y)
-    symbol_result = substitute(sym_expr2, Dict([x => 5.0, y => 3.2]))
-    exe2 = make_function(expr_to_dag(sym_expr2), [x, y])
-
-    symbol_val = symbol_result.val
-    @test symbol_val ≈ exe2(5.0, 3.2)
-
-    sym_expr3 = sin(x^3 + y^0.3)
-    symbol_result3 = substitute(sym_expr3, Dict([x => 7.0, y => 0.4]))
-    exe3 = make_function(expr_to_dag(sym_expr3), [x, y])
-    symbol_val3 = symbol_result3.val
-    @test symbol_val3 ≈ exe3(7.0, 0.4)
-
-    #ensure that common terms are not reevaluated.
-    sym_expr4 = sin(cos(x)) * cos(cos(x))
-    symbol_result4 = substitute(sym_expr4, Dict([x => 7.0]))
-    exe4 = make_function(expr_to_dag(sym_expr4), [x])
-    symbol_val4 = symbol_result4.val
-    @test symbol_val4 ≈ exe4(7.0)
 end
 
 @testitem "edges" begin
@@ -1534,23 +1449,30 @@ end
     using FiniteDifferences
     using FastSymbolicDifferentiation.FSDInternals
 
-    _, graph, _, _ = simple_dominator_graph()
+    x, graph, _, _ = simple_dominator_graph()
+    nx = Node(x)
     factor!(graph)
     fedge = edges(graph, 1, 4)[1]
-    dfsimp = make_function(value(fedge))
-    _, graph, _, _ = simple_dominator_graph()
-    origfsimp = make_function(root(graph, 1))
-    @test isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3))
+    tmp0 = make_function([value(fedge)], [nx])
+    dfsimp(x) = tmp0(x)[1]
+    x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new Node(x)
+    nx = Node(x)
+    tmp00 = make_function([root(graph, 1)], [nx])
+    origfsimp(x) = tmp00(x)[1]
+    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
     factor!(graph)
     fedge = edges(graph, 1, 8)[1]
-    df = make_function(value(fedge))
+    tmp1 = make_function([value(fedge)], variables(graph))
+    df(x) = tmp1(x)[1]
 
     graph = complex_dominator_graph()
-    origf = make_function(root(graph, 1))
+    tmp2 = make_function([root(graph, 1)], variables(graph))
+    origf(x) = tmp2(x)[1]
+
     for test_val in -3.0:0.013:3.0
-        @test isapprox(central_fdm(5, 1)(origf, test_val), df(test_val))
+        @assert isapprox(central_fdm(5, 1)(origf, test_val), df(test_val)[1])
     end
 end
 
@@ -1580,7 +1502,7 @@ end
 
     @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
-    computed_jacobian = make_function.(jac, Ref([x, y]))
+    computed_jacobian = make_function(jac, [x, y])
 
     #verify the computed and hand caluclated jacobians agree.
     for x in -1.0:0.01:1.0

@@ -849,7 +849,7 @@ function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::A
 end
 export jacobian_transpose_v_exe
 
-function make_Expr(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     body = Expr(:block)
 
@@ -874,7 +874,7 @@ function make_Expr(func_array::Matrix{T}, input_variables::AbstractVector{S}; in
 end
 export make_Expr
 
-make_function(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
+make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place, use_vector_runtime_args=use_vector_runtime_args))
 export make_function
 
 """Computes an `Expr` that can be compiled to compute the Jacobian at run time"""

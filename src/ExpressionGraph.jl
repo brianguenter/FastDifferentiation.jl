@@ -481,54 +481,6 @@ function function_body!(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sy
     return body, _dag_to_function(dag)
 end
 
-"""`variable_order` contains `Symbolics` variables in the order you want them to appear in the generated function. You can have more variables in `variable_order` than are present in the dag. Those input variables to the generated function will have no effect on the output."""
-function _make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
-    if node_to_var === nothing
-        node_to_var = Dict{Node,Union{Symbol,Real}}()
-    end
-
-    all_vars = variables(dag)
-    if variable_order === nothing
-        ordering = all_vars
-    else
-        ordering = Node.(variable_order)
-    end
-
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable." #In a future version plan to eliminate this restriction to allow computation of sparse Jacobians.
-
-    body, variable = function_body!(dag, node_to_var)
-    push!(body.args, :(return $variable))
-
-    return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
-end
-
-"""Creates a runtime generated function that returns the value of the function expression evaluated at the runtime variable values. If `variable_order` is `nothing` then the order of the arguments to the function will be however the variables happen to be ordered when the expression graph was created. This is unpredictable, not guaranteed to be consistent between software releases, and can lead to confusing results. In general you should set `variable_order` to a non `nothing` value. 
-
-## Example:
-
-```
-julia>  @variables x y
-2-element Vector{Num}:
- x
- y
-julia> h = expr_to_dag(cos(x)*cos(y))
-(cos(x) * cos(y))
-
-julia> g = make_function(h,[x,y]);
-
-julia> g(1.0,2.0)
--0.2248450953661529
-```
-
-Variables can disappear from the DAG during differentiation. For example, if  your dag is `2x+y^2` and you compute just the partial with respect to `x` the derivative function is the constant 2. If you call `make_function` on this dag with `variable_order=nothing` then the runtime derivative function will not have any arguments. 
-
-In general, you won't know what variables will be used in the derivative function. A simple solution to consistently and correctly evalute the derivative is to set `variable_order` to be all the variables in the original dag before differentiation. The runtime function will take all the variables as arguments, even if none of them are present in the computed derivative.
-"""
-function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing) where {T<:AbstractVector{Num}}
-    return @RuntimeGeneratedFunction(_make_function(dag, variable_order, node_to_var))
-end
-export make_function
-
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)
     if arity(a) === 0
