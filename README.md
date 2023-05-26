@@ -15,12 +15,13 @@ This is **beta** software being modified on a daily basis. Documentation is also
 
 Expect bugs and frequent, possibly breaking changes, over the next month or so. Once the code is feature complete I'll put it on the Julia registry.
 
-This functionality is coded and tested:
+FSD currently supports these operations:
 * dense and sparse symbolic Jacobian, dense symbolic Hessian
 * compiled executable, in place and out of place, for dense Jacobian
 * higher order derivatives
+* symbolic and executable Jᵀv and Jv operations (see [paper](https://arxiv.org/abs/1812.01892) for applications)
 
-This is not yet coded:
+These operations are not yet supported (check back in a few days):
 * sparse symbolic Hessian
 * compiled sparse Jacobian, sparse Hessian, dense Hessian
 
