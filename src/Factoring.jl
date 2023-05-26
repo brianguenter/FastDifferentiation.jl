@@ -779,7 +779,7 @@ function jacobian_times_v_exe(terms::AbstractVector{T}, partial_variables::Abstr
 
     return (x, v) -> tmp([x; v]...)
 end
-
+export jacobian_times_v_exe
 
 
 """Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
@@ -839,14 +839,15 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 end
 export jacobian_transpose_v
 
-"""Creates an executable `(x,v)-> Jv([x;v]...)` to evaluate `J(x)ᵀ*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian transpose by."""
+"""Creates an executable `(x,v)-> Jᵀv([x;v]...)` to evaluate `J(x)ᵀ*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian transpose by."""
 function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
-    Jv, v_vec = jacobian_transpose_v(terms, partial_variables)
+    Jᵀv, v_vec = jacobian_transpose_v(terms, partial_variables)
     both_vars = [partial_variables; v_vec]
-    tmp = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
+    tmp = make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
 
     return (x, v) -> tmp([x; v]...)
 end
+export jacobian_transpose_v_exe
 
 function make_Expr(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()

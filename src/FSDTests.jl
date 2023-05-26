@@ -1739,25 +1739,25 @@ end
         slow_val = slow(input...)
         fast_val = fast(input...)
 
-        @test isapprox(slow_val, fast_val, rtol=1e-9) "slow_val $slow_val \n fast_val $fast_val"
+        @test isapprox(slow_val, fast_val, rtol=1e-9)
     end
 
-    fast2= jacobian_times_v_exe(fsd_func,func_vars)
+    fast2 = jacobian_times_v_exe(fsd_func, func_vars)
 
     for _ in 1:100
         xin = rand(length(fsd_func))
         vin = rand(domain_dimension(fsd_graph))
-        slow_val = slow(input...)
-        fast_val = fast2(xin,vin)
+        slow_val = slow([xin; vin]...)
+        fast_val = fast2(xin, vin)
 
-        @test isapprox(slow_val, fast_val, rtol=1e-8) "slow_val $slow_val \n fast_val $fast_val"
+        @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
 end
 
 @testitem "jacobian_transpose_v" begin
     using FastSymbolicDifferentiation.FSDInternals
     using FastSymbolicDifferentiation.FSDTests
-    
+
     order = 10
 
     fsd_graph = spherical_harmonics(FastSymbolic(), order)
@@ -1778,18 +1778,18 @@ end
         slow_val = slow(input...)
         fast_val = fast(input...)
 
-        @test isapprox(slow_val, fast_val, rtol=1e-8) "slow_val $slow_val \n fast_val $fast_val"
+        @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
 
-    fast2= jacobian_transpose_v_exe(fsd_func,func_vars)
+    fast2 = jacobian_transpose_v_exe(fsd_func, func_vars)
 
     for _ in 1:100
         xin = rand(length(fsd_func))
         vin = rand(codomain_dimension(fsd_graph))
-        slow_val = slow(input...)
-        fast_val = fast2(xin,vin)
+        slow_val = slow([xin; vin]...)
+        fast_val = fast2(xin, vin)
 
-        @test isapprox(slow_val, fast_val, rtol=1e-8) "slow_val $slow_val \n fast_val $fast_val"
+        @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
 end
 

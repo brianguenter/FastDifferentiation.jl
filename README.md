@@ -130,7 +130,35 @@ julia> func(1.0, 2.0)
   0.909297  -0.416147
 ```
 
-Evaluate Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation)
+Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation)
+```
+julia> nx,ny = Node.((x,y))
+
+julia> (f1,f2) = cos(nx)*ny,sin(ny)*nx
+((cos(x) * y), (sin(y) * x))
+
+julia> jv,vvec = jacobian_times_v([f1,f2],[nx,ny])
+(Node[((y * (-(sin(x)) * var"##60351")) + (cos(x) * var"##60352")), ((sin(y) * var"##60351") + (x * (cos(y) * var"##60352")))], Node[var"##60351", var"##60352"])
+
+julia> jv_exe = jacobian_times_v_exe([f1,f2],[nx,ny])
+#73 (generic function with 1 method)
+
+julia> jv_exe([1.0,2.0],[3.0,4.0])
+2×1 Matrix{Float64}:
+ -2.8876166853748195
+  1.0633049342884753
+
+julia> jTv,rvec = jacobian_transpose_v([f1,f2],[nx,ny])
+(Node[(((y * var"##60361") * -(sin(x))) + (sin(y) * var"##60362")), ((cos(x) * var"##60361") + ((x * var"##60362") * cos(y)))], Node[var"##60361", var"##60362"])
+
+julia> jtv_exe = jacobian_transpose_v_exe([f1,f2],[nx,ny])
+#138 (generic function with 1 method)
+
+julia> jtv_exe([1.0,2.0],[3.0,4.0])
+2×1 Matrix{Float64}:
+ -1.4116362015446517
+ -0.04368042858415033
+```
 
 Convert between FastSymbolicDifferentiation and Symbolics representations:
 ```
