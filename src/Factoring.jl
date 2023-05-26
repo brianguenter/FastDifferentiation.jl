@@ -714,7 +714,7 @@ end
 sparse_symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_symbolic_jacobian
 
-"""Returns a vector of Node, where each element in the vector is the symbolic form of Jᵀv. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate Jᵀv and you want to separate the inputs to the function and the `v` variables."""
+"""Returns a vector of Node, where each element in the vector is the symbolic form of `Jv``. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     graph = DerivativeGraph(terms)
     v_vector = make_variables(gensym(), domain_dimension(graph))
@@ -770,6 +770,83 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
     return result, v_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
 end
 export jacobian_times_v
+
+"""Creates an executable `(x,v)-> Jv([x;v]...)` to evaluate `J(x)*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian by."""
+function jacobian_times_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    Jv, v_vec = jacobian_times_v(terms, partial_variables)
+    both_vars = [partial_variables; v_vec]
+    tmp = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
+
+    return (x, v) -> tmp([x; v]...)
+end
+
+
+
+"""Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
+function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    graph = DerivativeGraph(terms)
+    r_vector = make_variables(gensym(), codomain_dimension(graph))
+    factor!(graph)
+    for (one_root, one_v) in zip(roots(graph), r_vector)
+        new_edges = PathEdge[]
+        old_edges = collect(child_edges(graph, one_root)) #can't use iterator returned by parent_edges because it will include new edges. Need snapshot of old edges.
+        for child in old_edges
+            push!(new_edges,
+                PathEdge(
+                    top_vertex(child),
+                    bott_vertex(child),
+                    value(child) * one_v,
+                    copy(reachable_variables(child)),
+                    copy(reachable_roots(child))
+                )
+            )
+            #multiply all parent edges by one_v and replace edge in graph
+        end
+
+        for new_edge in new_edges
+            add_edge!(graph, new_edge)
+        end
+
+        for old_edge in old_edges
+            delete_edge!(graph, old_edge, true)
+        end
+    end
+
+    outdim = domain_dimension(graph)
+
+    result = Vector{Node}(undef, outdim)
+
+    for i in eachindex(result)
+        result[i] = Node(0.0)
+    end
+
+
+
+    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
+
+    for (i, var) in pairs(partial_variables)
+        for root_index in 1:codomain_dimension(graph)
+            var_index = variable_node_to_index(graph, var)
+            if var_index !== nothing
+                result[var_index] += evaluate_path(graph, root_index, var_index)
+            else
+                result[var_index] = zero(Node) #TODO fix this so get more generic zero value
+            end
+        end
+    end
+
+    return result, r_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
+end
+export jacobian_transpose_v
+
+"""Creates an executable `(x,v)-> Jv([x;v]...)` to evaluate `J(x)ᵀ*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian transpose by."""
+function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    Jv, v_vec = jacobian_transpose_v(terms, partial_variables)
+    both_vars = [partial_variables; v_vec]
+    tmp = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
+
+    return (x, v) -> tmp([x; v]...)
+end
 
 function make_Expr(func_array::Matrix{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
