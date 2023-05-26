@@ -369,4 +369,4 @@ In its current form **FSD** can only differentiate symbolic expressions without 
 However, a better approach might be to use FSD as a processing step in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
 [^1]: More rules may be added in future versions of FSD to improve efficiency.
-[^2]: See the D* paper for an example of an automatically generated derivative for Lagrangian dynamics that is comparable in efficiency to a hand written derivative.
+[^2]: See the D* [paper](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) for an example of an automatically generated derivative for Lagrangian dynamics that is comparable in efficiency to a hand written derivative.
