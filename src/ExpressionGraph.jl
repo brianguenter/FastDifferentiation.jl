@@ -438,7 +438,7 @@ function node_symbol(a::Node)
 end
 
 
-"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variables names. This is an example for a simple function:
+"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
 ```
 quote
     var"##343" = 2x
@@ -465,7 +465,7 @@ function function_body!(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sy
 
         tmp = get(node_to_var, node, nothing)
 
-        if tmp === nothing
+        if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
             node_to_var[node] = node_symbol(node)
 
             if is_tree(node)
@@ -529,7 +529,7 @@ function make_function(dag::Node, variable_order::Union{T,Nothing}=nothing, node
 end
 export make_function
 
-make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
+# make_function(a::Num, variable_order::Union{T,Nothing}=nothing) where {T<:AbstractVector{Num}} = make_function(expr_to_dag(a), variable_order)
 
 """converts from dag to Symbolics expression"""
 function dag_to_Symbolics_expression(a::Node)

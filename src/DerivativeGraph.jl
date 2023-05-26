@@ -536,7 +536,10 @@ end
 
 make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
 
-"""Returns an n vector of Julia functions"""
+"""Returns a runtime generated function with this signature:
+```
+```
+"""
 function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}) where {S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real}}()
     body = Expr(:block)

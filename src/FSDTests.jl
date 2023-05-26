@@ -542,7 +542,7 @@ end
 
     symbol_result = substitute(dom_expr, zz => 3.7)
 
-    exe = make_function(dom_expr)
+    exe = make_function(expr_to_dag(dom_expr))
 
     @test exe(3.7) ≈ symbol_result
 
@@ -550,25 +550,25 @@ end
     sym_expr = cos(log(x) + sin(y)) * zz
     symbol_result = substitute(sym_expr, Dict([zz => 3.2, x => 2.5, y => 7.0]))
 
-    exe = make_function(sym_expr)
+    exe = make_function(expr_to_dag(sym_expr))
 
     sym_expr2 = cos(2.0 * x) - sqrt(y)
     symbol_result = substitute(sym_expr2, Dict([x => 5.0, y => 3.2]))
-    exe2 = make_function(sym_expr2, [x, y])
+    exe2 = make_function(expr_to_dag(sym_expr2), [x, y])
 
     symbol_val = symbol_result.val
     @test symbol_val ≈ exe2(5.0, 3.2)
 
     sym_expr3 = sin(x^3 + y^0.3)
     symbol_result3 = substitute(sym_expr3, Dict([x => 7.0, y => 0.4]))
-    exe3 = make_function(sym_expr3, [x, y])
+    exe3 = make_function(expr_to_dag(sym_expr3), [x, y])
     symbol_val3 = symbol_result3.val
     @test symbol_val3 ≈ exe3(7.0, 0.4)
 
     #ensure that common terms are not reevaluated.
     sym_expr4 = sin(cos(x)) * cos(cos(x))
     symbol_result4 = substitute(sym_expr4, Dict([x => 7.0]))
-    exe4 = make_function(sym_expr4, [x])
+    exe4 = make_function(expr_to_dag(sym_expr4), [x])
     symbol_val4 = symbol_result4.val
     @test symbol_val4 ≈ exe4(7.0)
 end
