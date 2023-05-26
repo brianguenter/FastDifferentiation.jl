@@ -5,30 +5,36 @@ using .FSDTests
 
 
 function test()
-    x, graph, _, _ = simple_dominator_graph()
+    @variables x y
+
     nx = Node(x)
-    factor!(graph)
-    fedge = edges(graph, 1, 4)[1]
-    tmp0 = make_function([value(fedge)], [nx])
-    dfsimp(x) = tmp0(x)[1]
-    x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new Node(x)
-    nx = Node(x)
-    tmp00 = make_function([root(graph, 1)], [nx])
-    origfsimp(x) = tmp00(x)[1]
-    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
+    ny = Node(y)
+    n2 = nx * ny
+    n4 = n2 * ny
+    n5 = n2 * n4
 
-    graph = complex_dominator_graph()
-    factor!(graph)
-    fedge = edges(graph, 1, 8)[1]
-    tmp1 = make_function([value(fedge)], variables(graph))
-    df(x) = tmp1(x)[1]
+    graph = DerivativeGraph([n4, n5])
 
-    graph = complex_dominator_graph()
-    tmp2 = make_function([root(graph, 1)], variables(graph))
-    origf(x) = tmp2(x)[1]
+    df21(x, y) = 2 * x * y^3
+    df22(x, y) = 4 * x^2 * y^2
+    df11(x, y) = y^2
+    df12(x, y) = 2 * x * y
 
-    for test_val in -3.0:0.013:3.0
-        @assert isapprox(central_fdm(5, 1)(origf, test_val), df(test_val)[1])
+    correct_jacobian = [df11 df12; df21 df22]
+    copy_jac = _symbolic_jacobian(graph, [nx, ny])
+    jac = _symbolic_jacobian!(graph, [nx, ny])
+
+    @assert all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
+
+    computed_jacobian = make_function(jac, [nx, ny])
+
+    #verify the computed and hand caluclated jacobians agree.
+    for _x in -1.0:0.01:1.0
+        for _y in -1.0:0.3:1.0
+            for index in CartesianIndices(correct_jacobian)
+                @assert isapprox(correct_jacobian[index](_x, _y), computed_jacobian(_x, _y)[index])
+            end
+        end
     end
 end
 

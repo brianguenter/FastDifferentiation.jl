@@ -1502,13 +1502,13 @@ end
 
     @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
-    computed_jacobian = make_function(jac, [x, y])
+    computed_jacobian = make_function(jac, [nx, ny])
 
     #verify the computed and hand caluclated jacobians agree.
-    for x in -1.0:0.01:1.0
-        for y in -1.0:0.3:1.0
+    for _x in -1.0:0.01:1.0
+        for _y in -1.0:0.3:1.0
             for index in CartesianIndices(correct_jacobian)
-                @test isapprox(correct_jacobian[index](x, y), computed_jacobian[index](x, y))
+                @test isapprox(correct_jacobian[index](_x, _y), computed_jacobian(_x, _y)[index])
             end
         end
     end
