@@ -19,7 +19,7 @@ FSD currently supports these operations:
 * dense and sparse symbolic Jacobian, dense symbolic Hessian
 * compiled executable, in place and out of place, for dense Jacobian
 * higher order derivatives
-* symbolic and executable Jᵀv and Jv operations (see [paper](https://arxiv.org/abs/1812.01892) for applications)
+* symbolic and executable Jᵀv and Jv operations (see this [paper](https://arxiv.org/abs/1812.01892) for applications)
 
 These operations are not yet supported (check back in a few days):
 * sparse symbolic Hessian
