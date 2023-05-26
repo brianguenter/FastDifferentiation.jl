@@ -1714,7 +1714,7 @@ end
     @test DA == derivative(A, nq1)
 end
 
-@testitem "jacobian_transpose_v" begin
+@testitem "jacobian_times_v" begin
     using FastSymbolicDifferentiation.FSDInternals
     using FastSymbolicDifferentiation.FSDTests
 
@@ -1724,15 +1724,15 @@ end
     fsd_func = roots(fsd_graph)
     func_vars = variables(fsd_graph)
 
-    Jᵀv, v_vars = jacobian_transpose_v(fsd_func, func_vars)
+    Jv, v_vars = jacobian_times_v(fsd_func, func_vars)
 
     #compute the product the slow way
-    Jᵀv_slow = convert.(Node, symbolic_jacobian(fsd_func, func_vars) * v_vars)
+    Jv_slow = convert.(Node, symbolic_jacobian(fsd_func, func_vars) * v_vars)
     both_vars = [func_vars; v_vars]
-    slow_symbolic = reshape(Jᵀv_slow, (length(Jᵀv_slow), 1))
+    slow_symbolic = reshape(Jv_slow, (length(Jv_slow), 1))
 
     slow = make_function(slow_symbolic, both_vars)
-    fast = make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
+    fast = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
 
     for _ in 1:100
         input = rand(length(func_vars) + length(v_vars))

@@ -11,7 +11,7 @@ function test()
     fsd_func = roots(fsd_graph)
     func_vars = variables(fsd_graph)
 
-    Jᵀv, v_vars = jacobian_transpose_v(fsd_func, func_vars)
+    Jᵀv, v_vars = jacobian_times_v(fsd_func, func_vars)
 
     #compute the product the slow way
     Jᵀv_slow = convert.(Node, symbolic_jacobian(fsd_func, func_vars) * v_vars)
