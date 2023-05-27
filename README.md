@@ -39,7 +39,7 @@ The **FSD** symbolic differentiation algorithm is related to the [D* ](https://w
 
 **FSD** transforms the input expression graph into a derivative graph and then factors this derivative graph to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. See the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) paper if you want to understand derivative graph factorization concepts. The new algorithms used in **FSD** will be described in a soon to be written paper.
 
-If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. For more complex functions with many common subexpressions it is likely that **FSD** will outperform Symbolics.jl, perhaps substantially (see [Benchmarks](#Benchmarks).
+If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. For more complex functions with many common subexpressions it is likely that **FSD** will outperform Symbolics.jl, perhaps [substantially](#Benchmarks).
 
 **FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** symbolic forms is straightforward. However, because of the tree based representation used by Symbolics.jl expression size can grow significantly when converting from **FSD** to Symbolics.jl form.
 
