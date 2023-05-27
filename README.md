@@ -33,7 +33,7 @@ Expression graphs with more than 10⁵ operations may take seconds or minutes fo
 
 For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
-See section [Future Work](#FutureWork) for more discussion on all these topics.
+See [Future Work](#FutureWork) for more discussion on all these topics.
 # How it works
 The **FSD** symbolic differentiation algorithm is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. 
 
