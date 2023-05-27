@@ -26,6 +26,7 @@ These operations are not yet supported (check back in a few days):
 * sparse symbolic Hessian
 * compiled: sparse Jacobian, sparse Hessian, dense Hessian
 
+If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it will be for others to determine if FSD is likely to help them with their problem.
 ## Limitations
 FSD currently only works on expression graphs without conditionals. It is possible to extend the algorithm to work with conditionals but the processing time and graph size can grow exponentially with conditional nesting depth. A future version may allow for limited conditionals.
 
@@ -56,7 +57,6 @@ The efficiency of **FSD** comes from analysis of the graph structure of the func
 
 These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
 
-If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it will be for others to determine if FSD is likely to help them with their problem.
 <details> 
  <summary> <b> Examples and basic usage </b> </summary>
  
