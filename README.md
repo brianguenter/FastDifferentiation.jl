@@ -140,7 +140,7 @@ julia> func(1.0, 2.0)
   0.909297  -0.416147
 ```
 
-Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation)
+Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation). The executables of these operations are currently slow because of array splatting. For some functions I've observed a 100x slowdown because of the splatting. This will be fixed soon and performance should be much better.
 ```
 julia> nx,ny = Node.((x,y))
 
