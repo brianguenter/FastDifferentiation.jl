@@ -31,7 +31,7 @@ FSD currently only works on expression graphs without conditionals. It is possib
 
 Expression graphs with more than 10⁵ operations may take seconds or minutes for the symbolic preprocesing step. This is a known issue and should be addressed in a future version. 
 
-The translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
+For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
 See section [Future Work](#FutureWork) for more discussion on all these topics.
 # How it works
