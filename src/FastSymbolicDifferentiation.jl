@@ -9,7 +9,6 @@ using SpecialFunctions
 using NaNMath
 using Statistics
 using RuntimeGeneratedFunctions
-using Logging
 import Base: iterate
 using UUIDs
 using SparseArrays
@@ -29,24 +28,7 @@ macro invariant(ex, msgs...)
     end
 end
 
-"""
-Created this because it is not safe to use @infiltrate. If you use `@infiltrate` then you also must have a `using` or `import Infiltrator` 
-statement. Unfortunately this triggers the package manager to 
-add `Infiltrator` as a direct dependency in the Project.toml file for `FastSymbolicDifferentiation`.
 
-Unfortunately package manager won't remove `Infiltrator` 
-as a direct dependency even if all the `@infiltrate` and `using Infiltrate` statements are removed. Because of this `Infiltrator` will 
-ship as a dependendency in the released code.
-Want `Infiltrator` to only be a dependency for the global Julia
-environment, not the FastSymbolicDifferentiation environment.
-"""
-macro safe_infiltrate()
-    :(
-        if isdefined(Main, :Infiltrator)
-            Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
-        end
-    )
-end
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -64,10 +46,5 @@ include("GraphVisualization.jl")
 
 include("FSDTests.jl")
 include("Scratchpad.jl")
-
-# logger = SimpleLogger(open("log1.txt", "w+"))
-
-# global_logger(logger)
-# @info "Testing logger"
 
 end # module
