@@ -698,8 +698,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
         for (i, partial_var) in pairs(partial_variables)
             partial_index = variable_node_to_index(graph, partial_var) #make sure variable is in the domain of the graph
             if partial_index !== nothing
-                if reach_vars[partial_index] #make sure variable is reachable from this root
-                    #TODO this does not use variable_ordering. Need to fix.
+                if reach_vars[partial_index] #make sure variable is reachable from this root. If ∂fⱼ/∂xᵢ ≡ 0 then there will not be a path from fⱼ to xᵢ so don't need a separate check for this case.
                     push!(row_indices, root)
                     push!(col_indices, i)
                     push!(values, evaluate_path(graph, root, partial_index))
