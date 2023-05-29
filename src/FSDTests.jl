@@ -1454,11 +1454,11 @@ end
     factor!(graph)
     fedge = edges(graph, 1, 4)[1]
     tmp0 = make_function([value(fedge)], [nx])
-    dfsimp(x) = tmp0(x)[1]
+    dfsimp(x) = tmp0([x])[1]
     x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new Node(x)
     nx = Node(x)
     tmp00 = make_function([root(graph, 1)], [nx])
-    origfsimp(x) = tmp00(x)[1]
+    origfsimp(x) = tmp00([x])[1]
     @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
@@ -1508,7 +1508,7 @@ end
     for _x in -1.0:0.01:1.0
         for _y in -1.0:0.3:1.0
             for index in CartesianIndices(correct_jacobian)
-                @test isapprox(correct_jacobian[index](_x, _y), computed_jacobian(_x, _y)[index])
+                @test isapprox(correct_jacobian[index](_x, _y), computed_jacobian([_x, _y])[index])
             end
         end
     end
@@ -1563,7 +1563,7 @@ end
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
     mn_func = make_function(roots(fsd_graph), variables(fsd_graph))
-    fsd_func(variables...) = vec(mn_func(variables...))
+    fsd_func(vars...) = vec(mn_func(vars))
 
 
     sym_func = _jacobian_function!(fsd_graph, variables(fsd_graph))
@@ -1573,7 +1573,7 @@ end
             for zr = -1.0:0.3:1.0
                 finite_diff = jacobian(central_fdm(12, 1, adapt=3), fsd_func, xr, yr, zr)
                 mat_form = hcat(finite_diff[1], finite_diff[2], finite_diff[3])
-                symbolic = sym_func(xr, yr, zr)
+                symbolic = sym_func([xr, yr, zr])
 
                 @test isapprox(symbolic, mat_form, rtol=1e-8)
             end
@@ -1588,7 +1588,7 @@ end
 
     chebyshev_order = 20
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    mn_func = make_function(roots(fsd_graph),variables(fsd_graph))
+    mn_func = make_function(roots(fsd_graph), variables(fsd_graph))
     fsd_func(variables...) = vec(mn_func(variables...))
 
     func_wrap(x) = fsd_func(x)[1]
@@ -1661,8 +1661,8 @@ end
 
     for _ in 1:100
         input = rand(length(func_vars) + length(v_vars))
-        slow_val = slow(input...)
-        fast_val = fast(input...)
+        slow_val = slow(input)
+        fast_val = fast(input)
 
         @test isapprox(slow_val, fast_val, rtol=1e-9)
     end
@@ -1672,8 +1672,8 @@ end
     for _ in 1:100
         xin = rand(length(fsd_func))
         vin = rand(domain_dimension(fsd_graph))
-        slow_val = slow([xin; vin]...)
-        fast_val = fast2(xin, vin)
+        slow_val = slow([xin; vin])
+        fast_val = fast2([xin; vin])
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
@@ -1700,8 +1700,8 @@ end
 
     for _ in 1:100
         input = rand(length(func_vars) + length(r_vars))
-        slow_val = slow(input...)
-        fast_val = fast(input...)
+        slow_val = slow(input)
+        fast_val = fast(input)
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
@@ -1711,8 +1711,8 @@ end
     for _ in 1:100
         xin = rand(length(fsd_func))
         vin = rand(codomain_dimension(fsd_graph))
-        slow_val = slow([xin; vin]...)
-        fast_val = fast2(xin, vin)
+        slow_val = slow([xin; vin])
+        fast_val = fast2([xin; vin])
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
     end

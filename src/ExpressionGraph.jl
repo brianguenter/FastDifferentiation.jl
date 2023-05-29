@@ -426,11 +426,11 @@ function _expr_to_dag(symx, cache::IdDict, substitutions::Union{IdDict,Nothing})
     end
 end
 
-function node_symbol(a::Node)
+function node_symbol(a::Node, variable_to_index::Dict{Node,Int64})
     if is_tree(a)
         result = gensym() #create a symbol to represent the node
     elseif is_variable(a)
-        result = nameof(value(a))  #use the name of the Symbolics symbol which represents the variable
+        result = :(input_variables[$(variable_to_index[a])])  #use the name of the Symbolics symbol which represents the variable
     else
         result = value(a) #not a tree not a variable so is some kind of constant. Symbolics represents constants as Num so extract value so returned function will return a conventional number, not a Num.
     end
@@ -454,9 +454,9 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real}}}=nothing)
+function function_body!(dag::Node, variable_to_index::Dict{Node,Int64}, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real,Expr}}}=nothing)
     if node_to_var === nothing
-        node_to_var = Dict{Node,Union{Symbol,Real}}()
+        node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     end
 
     body = Expr(:block)
@@ -466,7 +466,7 @@ function function_body!(dag::Node, node_to_var::Union{Nothing,Dict{Node,Union{Sy
         tmp = get(node_to_var, node, nothing)
 
         if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
-            node_to_var[node] = node_symbol(node)
+            node_to_var[node] = node_symbol(node, variable_to_index)
 
             if is_tree(node)
                 args = _dag_to_function.(children(node))

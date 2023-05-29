@@ -4,43 +4,40 @@ using FiniteDifferences
 using .FSDTests
 
 
-
-
-struct SimApp
-    # variables
-    nx::Int
-    Δt::Float64
-    Δx::Float64
-
-    # coordinates
-    x::AbstractRange
-end
-SimApp(nx, Δt) = SimApp(nx, Δt, 2π / nx, range(0.0, 2π * (1 - 1 / nx), nx))
-
-function step(y, app::SimApp)
-    # initialize interpolation
-    itp = interpolate(y, BSpline(Linear(Periodic())))
-    sitp = scale(itp, app.x)
-    extp = extrapolate(sitp, Periodic())
-
-    # interpolate solution at departure points
-    x_back = app.x .- app.Δt * y
-    y_intp = extp.(x_back)
-
-    return y_intp
-end
-
 function test()
-    # @variables u[1:64]
+    order = 10
 
-    # nu = [Node(u_i) for u_i ∈ u]
+    fsd_graph = spherical_harmonics(FastSymbolic(), order)
+    fsd_func = roots(fsd_graph)
+    func_vars = variables(fsd_graph)
 
-    # app = SimApp(64, 0.02)
+    Jᵀv, r_vars = jacobian_transpose_v(fsd_func, func_vars)
 
-    # fs = step(nu, app)
-    println("ere")
+    Jᵀv_slow = convert.(Node, transpose(symbolic_jacobian(fsd_func, func_vars)) * r_vars)
+    both_vars = [func_vars; r_vars]
+    slow_symbolic = reshape(Jᵀv_slow, (length(Jᵀv_slow), 1))
 
-    # fs = step(collect(u), app)
+    slow = make_function(slow_symbolic, both_vars)
+    fast = make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
+
+    for _ in 1:100
+        input = rand(length(func_vars) + length(r_vars))
+        slow_val = slow(input)
+        fast_val = fast(input)
+
+        @assert isapprox(slow_val, fast_val, rtol=1e-8)
+    end
+
+    fast2 = jacobian_transpose_v_exe(fsd_func, func_vars)
+
+    for _ in 1:100
+        xin = rand(length(fsd_func))
+        vin = rand(codomain_dimension(fsd_graph))
+        slow_val = slow([xin; vin])
+        fast_val = fast2([xin; vin])
+
+        @assert isapprox(slow_val, fast_val, rtol=1e-8)
+    end
 end
 
 

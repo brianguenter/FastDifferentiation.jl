@@ -774,9 +774,7 @@ export jacobian_times_v
 function jacobian_times_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     Jv, v_vec = jacobian_times_v(terms, partial_variables)
     both_vars = [partial_variables; v_vec]
-    tmp = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
-
-    return (x, v) -> tmp([x; v]...)
+    return make_function(reshape(Jv, (length(Jv), 1)), both_vars)
 end
 export jacobian_times_v_exe
 
@@ -842,14 +840,13 @@ export jacobian_transpose_v
 function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     Jᵀv, v_vec = jacobian_transpose_v(terms, partial_variables)
     both_vars = [partial_variables; v_vec]
-    tmp = make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
-
-    return (x, v) -> tmp([x; v]...)
+    println(both_vars)
+    return make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
 end
 export jacobian_transpose_v_exe
 
 function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node}
-    node_to_var = Dict{Node,Union{Symbol,Real}}()
+    node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
     if !in_place
@@ -857,8 +854,13 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         #TODO: Unfortunately this fixes the type of the result to be Float64. Should write code so the type is picked up from the runtime arguments to the generated function. Add this feature later.
     end
 
+    node_to_index = Dict{Node,Int64}()
+    for (i, node) in pairs(input_variables)
+        node_to_index[node] = i
+    end
+
     for (i, node) in pairs(func_array)
-        node_body, variable = function_body!(node, node_to_var)
+        node_body, variable = function_body!(node, node_to_index, node_to_var)
         push!(node_body.args, :(result[$i] = $variable))
         push!(body.args, node_body)
     end
@@ -866,9 +868,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     push!(body.args, :(return result))
 
     if in_place
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), input_variables)..., :result), body)
+        return Expr(:->, Expr(:tuple, :input_variables, :result), body)
     else
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), input_variables)...), body)
+        return Expr(:->, Expr(:tuple, :input_variables), body)
     end
 end
 export make_Expr
