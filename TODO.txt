@@ -6,3 +6,13 @@ add function derivative_columns which accepts multiple variable arguments and co
 
 optimize set_diff to be non_allocating. Make it set_diff! and accept a BitArray arg.
 
+promote_symp_type
+
+https://pkgdocs.julialang.org/v1.9/creating-packages/#Conditional-loading-of-code-in-packages-(Extensions)
+
+use conditional loads for ElectronDisplay 
+
+fix project.toml
+
+use chain rules
+
