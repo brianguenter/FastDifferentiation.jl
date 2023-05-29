@@ -1718,4 +1718,21 @@ end
     end
 end
 
+@testitem "hessian" begin
+    using Symbolics: @variables
+    @variables x y z
+    nx, ny, nz = Node.((x, y, z))
+
+    h = hessian(nx^2 * ny^2 * nz^2, [nx, ny, nz])
+    h_exe = make_function(h, [nx, ny, nz])
+
+    @test isapprox(
+        h_exe([1, 2, 3]),
+        [
+            72.0 72.0 48.0
+            72.0 18.0 24.0
+            48.0 24.0 8.0]
+    )
+end
+
 end #module
