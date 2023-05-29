@@ -840,7 +840,7 @@ export jacobian_transpose_v
 function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     Jᵀv, v_vec = jacobian_transpose_v(terms, partial_variables)
     both_vars = [partial_variables; v_vec]
-    println(both_vars)
+
     return make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
 end
 export jacobian_transpose_v_exe
