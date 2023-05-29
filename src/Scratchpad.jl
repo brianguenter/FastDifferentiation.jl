@@ -31,16 +31,16 @@ function step(y, app::SimApp)
 end
 
 function test()
-    @variables u[1:64]
+    # @variables u[1:64]
 
-    nu = [Node(u_i) for u_i ∈ u]
+    # nu = [Node(u_i) for u_i ∈ u]
 
-    app = SimApp(64, 0.02)
+    # app = SimApp(64, 0.02)
 
-    fs = step(nu, app)
+    # fs = step(nu, app)
+    println("ere")
 
-
-    fs = step(collect(u), app)
+    # fs = step(collect(u), app)
 end
 
 
