@@ -1562,7 +1562,9 @@ end
     using FastSymbolicDifferentiation.FSDInternals
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
-    fsd_func = make_function(fsd_graph, variables(fsd_graph))
+    mn_func = make_function(roots(fsd_graph), variables(fsd_graph))
+    fsd_func(variables...) = vec(mn_func(variables...))
+
 
     sym_func = _jacobian_function!(fsd_graph, variables(fsd_graph))
 
@@ -1586,7 +1588,8 @@ end
 
     chebyshev_order = 20
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    fsd_func = make_function(fsd_graph)
+    mn_func = make_function(roots(fsd_graph),variables(fsd_graph))
+    fsd_func(variables...) = vec(mn_func(variables...))
 
     func_wrap(x) = fsd_func(x)[1]
 

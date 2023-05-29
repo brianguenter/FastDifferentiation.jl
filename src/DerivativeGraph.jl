@@ -536,34 +536,6 @@ end
 
 make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
 
-"""Returns a runtime generated function with this signature:
-```
-```
-"""
-function make_function(graph::DerivativeGraph, variable_order::AbstractVector{S}) where {S<:Node}
-    node_to_var = Dict{Node,Union{Symbol,Real}}()
-    body = Expr(:block)
-    push!(body.args, :(result = fill(0.0, $(length(roots(graph))))))
-    all_vars = variables(graph)
-    if variable_order === nothing
-        ordering = all_vars
-    else
-        ordering = Node.(variable_order)
-    end
-
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
-
-    for (i, node) in pairs(roots(graph))
-        node_body, variable = function_body!(node, node_to_var)
-        push!(node_body.args, :(result[$i] = $variable))
-        push!(body.args, node_body)
-    end
-
-    push!(body.args, :(return result))
-
-    return @RuntimeGeneratedFunction(Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body))
-end
-export make_function
 
 """Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
 function sparsity(graph::DerivativeGraph)
