@@ -497,9 +497,9 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 <div id="FutureWork"></div>
 
 ## Future work
-The **FD** algorithm is fast enough to differentiate large expression graphs: ≈10⁵ operations in approximately 1 minute on a modern laptop. However, LLVM compile time can be significant at this scale. For these very large graphs [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. I will be experimenting with this over the coming months. This would be useful when your function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
+The **FD** algorithm is fast enough to preprocess expression graphs with ≈10⁵ operations in approximately 1 minute on a modern laptop (processing time scales non-linearly so smaller graphs take much less time).
 
-
+However, LLVM compile time can be significant at this scale. For expressions this size and larger [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. This would be especially useful when your function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
 
 In its current form **FD** can only differentiate expressions without conditionals involving **FD** variables. The algorithm can be extended to allow this but symbolic processing can scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
 
