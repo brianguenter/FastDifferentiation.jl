@@ -99,11 +99,6 @@ The **FD** differentiation algorithm is related to the [D*](https://www.microsof
 
 **FD** transforms the input expression graph into a derivative graph[^a], *D*, and then factors *D* to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
 
-
-If you need to do further analysis on the symbolic derivative converting between Symbolics.jl and **FD** symbolic forms is straightforward using a separate package [FDConversion](https://github.com/brianguenter/FDConversion/tree/main) which will be available soon[^b].
-
-
-
 The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^c] to expressions:
 * `x×0=>0`
 * `x×1=>x`
@@ -273,7 +268,7 @@ julia> jtv_exe([1.0,2.0,3.0,4.0])
  -0.04368042858415033
 ```
 
-Convert between FastDifferentiation and Symbolics representations (requires FDConversions package, not released yet):
+Convert between FastDifferentiation and Symbolics representations (requires [FDConversion](https://github.com/brianguenter/FDConversion/tree/main) package, not released yet[^b]):
 ```
 julia> f = x^2+y^2 #Symbolics expression
 x^2 + y^2
@@ -488,7 +483,7 @@ However, a better approach might be to use FD as a processing step in a tracing 
 
 [^c]: More rules may be added in future versions of FD to improve efficiency.
 
-[^b]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl. This would make it unnecessary to manually convert between the **FD** and Symbolics.jl expression representations.
+[^b]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.
 
 [^a]: See the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) paper for an explanation of derivative graph factorization. 
 
