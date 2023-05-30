@@ -95,13 +95,19 @@ julia> h_symb = hessian(x^2+y^2+z^2,[x,y,z])
  0.0  2    0.0
  0.0  0.0  2
 
-julia> h_exe = make_function(h_symb,[x,y,z])
+julia> h_symb1 = hessian(x^2*y^2*z^2,[x,y,z])
+3×3 Matrix{FastDifferentiation.Node}:
+ (2 * ((z ^ 2) * (y ^ 2)))        (((2 * x) * (2 * y)) * (z ^ 2))  (((2 * x) * (2 * z)) * (y ^ 2))
+ (((2 * y) * (2 * x)) * (z ^ 2))  (2 * ((z ^ 2) * (x ^ 2)))        (((2 * y) * (2 * z)) * (x ^ 2))
+ (((2 * z) * (2 * x)) * (y ^ 2))  (((2 * z) * (2 * y)) * (x ^ 2))  (2 * ((x ^ 2) * (y ^ 2)))
+
+julia> hexe_1 = make_function(h_symb1,[x,y,z])
 ...
-julia> h_exe([1,2,3])
+julia> hexe_1([1.0,2.0,3.0])
 3×3 Matrix{Float64}:
- 0.0  3.0  2.0
- 3.0  0.0  1.0
- 2.0  1.0  0.0
+ 72.0  72.0  48.0
+ 72.0  18.0  24.0
+ 48.0  24.0   8.0
 ```
 Compute `Hv` without forming the full Hessian matrix. This is useful if the Hessian is very large
 ```
