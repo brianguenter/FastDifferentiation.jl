@@ -120,7 +120,9 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
  
 The first step is to create **FD** variables which are then passed to the function you want to differentiate. The return value is a graph structure which **FD** will analyze to generate efficient executables or symbolic expressions.
  
-**FD** uses a global cache for common subexpression elimination so the **FD** preprocessing step is not thread safe (**FD** generated executables are thread safe). Under ordinary conditions the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function `clear_cache` after you have completely processed your expression.
+**FD** uses a global cache for common subexpression elimination so the **FD** expression preprocessing step is not thread safe. 
+
+Under ordinary conditions the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function `clear_cache` after you have completely processed your expression.
 
 Set up variables:
 ```
