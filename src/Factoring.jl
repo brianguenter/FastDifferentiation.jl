@@ -770,14 +770,6 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
 end
 export jacobian_times_v
 
-"""Creates an executable `(x,v)-> Jv([x;v]...)` to evaluate `J(x)*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian by."""
-function jacobian_times_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
-    Jv, v_vec = jacobian_times_v(terms, partial_variables)
-    both_vars = [partial_variables; v_vec]
-    return make_function(reshape(Jv, (length(Jv), 1)), both_vars)
-end
-export jacobian_times_v_exe
-
 
 """Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
@@ -835,15 +827,6 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
     return result, r_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
 end
 export jacobian_transpose_v
-
-"""Creates an executable `(x,v)-> Jᵀv([x;v]...)` to evaluate `J(x)ᵀ*v`. The executable takes two vector arguments `x` and `v`. The `x` vector is the input to Jacobian function `J`. `v` is the vector you want to multiply the Jacobian transpose by."""
-function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
-    Jᵀv, v_vec = jacobian_transpose_v(terms, partial_variables)
-    both_vars = [partial_variables; v_vec]
-
-    return make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
-end
-export jacobian_transpose_v_exe
 
 function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,N}
     node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()

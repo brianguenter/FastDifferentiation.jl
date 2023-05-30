@@ -109,11 +109,13 @@ julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
  0.0  2    0.0
  0.0  0.0  2
 
- julia> hessian(nx*ny*nz,[nx,ny,nz])
- 3×3 Matrix{Node}:
-  0.0  z    y
-  z    0.0  x
-  y    x    0.0
+julia> h_exe = make_function(h_symb,[nx,ny,nz])
+...
+julia> h_exe([1,2,3])
+3×3 Matrix{Float64}:
+ 0.0  3.0  2.0
+ 3.0  0.0  1.0
+ 2.0  1.0  0.0
 ```
 Compute Jacobian:
 ```
@@ -131,17 +133,24 @@ julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
 ```
-Generate executable function that evaluates derivative function:
+Create executable to evaluate Jacobian:
 ```
-julia> func = jacobian_function([f1, f2], [nx, ny]);
-
-julia> func(1.0, 2.0)
+jjulia> func = make_function(symb,[nx,ny])
+...
+julia> func([1.0,2.0])
 2×2 Matrix{Float64}:
- -1.68294    0.540302
-  0.909297  -0.416147
+ -1.68294  0.540302
+ -1.68294  0.540302
 ```
+For faster execution call the executable function with an `SVector` (for short vectors, probably < 100 elements):
+```
+julia> func(SVector{2}([1.0,2.0]))
+2×2 Matrix{Float64}:
+ -1.68294  0.540302
+ -1.68294  0.540302
+ ```
 
-Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation). The executables of these operations are currently slow because of array splatting. For some functions I've observed a 100x slowdown because of the splatting. This will be fixed soon and performance should be much better.
+Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation).
 ```
 julia> nx,ny = Node.((x,y))
 
@@ -151,24 +160,21 @@ julia> (f1,f2) = cos(nx)*ny,sin(ny)*nx
 julia> jv,vvec = jacobian_times_v([f1,f2],[nx,ny])
 (Node[((y * (-(sin(x)) * var"##60351")) + (cos(x) * var"##60352")), ((sin(y) * var"##60351") + (x * (cos(y) * var"##60352")))], Node[var"##60351", var"##60352"])
 
-julia> jv_exe = jacobian_times_v_exe([f1,f2],[nx,ny]) 
-#73 (generic function with 1 method)
-
-julia> jv_exe([1.0,2.0],[3.0,4.0]) # code generation currently creates a scalarized executable. 
-# Vector arguments are splatted, which is slow. Modifying to handle vector arguments natively is on the to do list.
+julia> jv_exe = make_function(jv,[[nx,ny];vvec])
+...
+julia> jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are nx,ny values and last two are v vector values
 
 2×1 Matrix{Float64}:
  -2.8876166853748195
   1.0633049342884753
 
 julia> jTv,rvec = jacobian_transpose_v([f1,f2],[nx,ny])
-(Node[(((y * var"##60361") * -(sin(x))) + (sin(y) * var"##60362")), ((cos(x) * var"##60361") + ((x * var"##60362") * cos(y)))], Node[var"##60361", var"##60362"])
+(Node[(((y * var"##3071") * -(sin(x))) + (sin(y) * var"##3072")), ((cos(x) * var"##3071") + ((x * var"##3072") * cos(y)))], Node[var"##3071", var"##3072"])
 
-julia> jtv_exe = jacobian_transpose_v_exe([f1,f2],[nx,ny])
-#138 (generic function with 1 method)
-
-julia> jtv_exe([1.0,2.0],[3.0,4.0])
-2×1 Matrix{Float64}:
+julia> jtv_exe = make_function(jTv,[[nx,ny];rvec])
+...
+julia> jtv_exe([1.0,2.0,3.0,4.0])
+2-element Vector{Float64}:
  -1.4116362015446517
  -0.04368042858415033
 ```

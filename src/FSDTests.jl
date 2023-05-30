@@ -1657,7 +1657,7 @@ end
     slow_symbolic = reshape(Jv_slow, (length(Jv_slow), 1))
 
     slow = make_function(slow_symbolic, both_vars)
-    fast = make_function(reshape(Jv, (length(Jv), 1)), both_vars)
+    fast = make_function(Jv, both_vars)
 
     for _ in 1:100
         input = rand(length(func_vars) + length(v_vars))
@@ -1667,16 +1667,6 @@ end
         @test isapprox(slow_val, fast_val, rtol=1e-9)
     end
 
-    fast2 = jacobian_times_v_exe(fsd_func, func_vars)
-
-    for _ in 1:100
-        xin = rand(length(fsd_func))
-        vin = rand(domain_dimension(fsd_graph))
-        slow_val = slow([xin; vin])
-        fast_val = fast2([xin; vin])
-
-        @test isapprox(slow_val, fast_val, rtol=1e-8)
-    end
 end
 
 @testitem "jacobian_transpose_v" begin
@@ -1696,23 +1686,12 @@ end
     slow_symbolic = reshape(Jᵀv_slow, (length(Jᵀv_slow), 1))
 
     slow = make_function(slow_symbolic, both_vars)
-    fast = make_function(reshape(Jᵀv, (length(Jᵀv), 1)), both_vars)
+    fast = make_function(Jᵀv, both_vars)
 
     for _ in 1:100
         input = rand(length(func_vars) + length(r_vars))
         slow_val = slow(input)
         fast_val = fast(input)
-
-        @test isapprox(slow_val, fast_val, rtol=1e-8)
-    end
-
-    fast2 = jacobian_transpose_v_exe(fsd_func, func_vars)
-
-    for _ in 1:100
-        xin = rand(length(fsd_func))
-        vin = rand(codomain_dimension(fsd_graph))
-        slow_val = slow([xin; vin])
-        fast_val = fast2([xin; vin])
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
     end
