@@ -35,7 +35,7 @@ Expression graphs with more than 10⁵ operations may take seconds or minutes fo
 
 For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
-See [Future Work](#FutureWork) for more discussion on these topics.
+See [Future Work](#FutureWork) for more discussion on these three topics.
 
 The current code is not memory efficient - it allocates much more than necessary. This also makes the code slower than it should be. This will improve in future versions.
 # How it works
