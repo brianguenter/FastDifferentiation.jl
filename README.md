@@ -470,7 +470,7 @@ This is because the call `f(x,y)` creates an expression graph. At graph creation
 
 The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditional nesting. See [Future Work](#FutureWork) for a potential long term solution to this problem.
 
-Expressions graphs with more than ≈10⁵ operations may take a minute or more to differentiate. This is due to two factors. 
+The preprocessing/compilation step for expressions graphs with more than ≈10⁵ operations may take a minute or more. This is due to two factors. 
 
 The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. Future versions will be more memory efficient.
 
