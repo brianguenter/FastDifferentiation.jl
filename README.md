@@ -474,7 +474,7 @@ Expressions graphs with more than ≈10⁵ operations may take a minute or more 
 
 The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. Future versions will be more memory efficient.
 
-The code uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FD** would only be practical for modest size graphs (<10⁴ nodes). But, it scaled better than expected and for larger graphs the memory overhead of the BitVector representation is significant. Using Set instead of BitVector for larger graphs should significantly reduce symbolic processing time.
+The code uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FD** would only be practical for modest size expressions (<10⁴ operations). But, it scaled better than expected and for larger graphs the memory overhead of the BitVector representation is significant. Using Set instead of BitVector for larger graphs should significantly reduce symbolic processing time.
 
 
 # How it works
