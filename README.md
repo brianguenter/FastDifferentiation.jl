@@ -13,7 +13,7 @@ For the ℝⁿ->ℝᵐ case the performance improvement relative to conventional
 
 You should consider using FastDifferentiation when you need: 
 * a fast executable for evaluating the derivative of a function and the overhead of the preprocessing/compilation time is swamped by evaluation time.
-* to do additional symbolic processing on your derivative. **FD** can generate a true symbolic derivative to be processed further in Symbolics.jl or another computer algebra system (CAS).
+* to do additional symbolic processing on your derivative. **FD** can generate a true symbolic derivative to be processed further in Symbolics.jl or another computer algebra system.
 
 This is the **FD** feature set (operations marked ❌ will be completed soon):
 
