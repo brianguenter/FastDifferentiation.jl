@@ -84,7 +84,16 @@ julia> X = make_variables(:x,3)
  x2
  x3
 ```
- 
+Make an executable function
+```
+julia> xy_exe = make_function([x^2*y^2,sqrt(x*y)],[x,y])
+...
+
+julia> xy_exe([1.0,2.0])
+2-element Vector{Float64}:
+ 4.0
+ 1.4142135623730951
+ ```
 Compute Hessian:
 ```
 @variables x y z
