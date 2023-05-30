@@ -22,14 +22,10 @@ export Chebyshev
 
 Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
 
-function chebyshev(::JuliaSymbolics, model_size)
-    Symbolics.@variables x
-    return [Chebyshev(model_size, x)], [x]
-end
 
 function chebyshev(::FastSymbolic, model_size)
-    Symbolics.@variables x
-    nx = Node(x)
+    @variables nx
+
     # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
     return DerivativeGraph([Chebyshev(model_size, nx)])
 end

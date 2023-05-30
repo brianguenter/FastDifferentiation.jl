@@ -1,9 +1,7 @@
 using FastSymbolicDifferentiation
-using Symbolics
 
-@variables x y
+@variables nx ny
 
-nx, ny = Node.((x, y))
 f1 = cos(nx) * ny
 f2 = sin(ny) * nx
 

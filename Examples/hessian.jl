@@ -1,9 +1,6 @@
 using FastSymbolicDifferentiation
-using Symbolics
 
-@variables x y z
-
-nx, ny, nz = Node.((x, y, z))
+@variables nx ny nz
 
 hessian(nx^2 + ny^2 + nz^2, [nx, ny, nz])
 

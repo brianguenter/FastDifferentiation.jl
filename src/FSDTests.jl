@@ -10,7 +10,6 @@ module FSDTests
 using DiffRules
 using TermInterface
 import SymbolicUtils
-import Symbolics
 using StaticArrays
 using Memoize
 using DataStructures
@@ -51,20 +50,31 @@ function number_of_operations(symbolic_expr)
     end
 end
 
+function testtest()
+    order = 10
+
+    fsd_graph = spherical_harmonics(FastSymbolic(), order)
+    fsd_func = roots(fsd_graph)
+    func_vars = variables(fsd_graph)
+
+    Jv, v_vars = jacobian_times_v(fsd_func, func_vars)
+end
+export testtest
+
 function simple_dag(cache::Union{IdDict,Nothing}=IdDict())
-    Symbolics.@variables zz y
+    @variables zz y
     return expr_to_dag(zz^2 + y * (zz^2), cache), zz, y
 end
 export simple_dag
 
 function simple_numbered_dag()
-    Symbolics.@variables zz
+    @variables zz
     return expr_to_dag(zz * cos(zz^2))
 end
 export simple_numbered_dag
 
 function dominators_dag()
-    Symbolics.@variables zz
+    @variables zz
     return expr_to_dag(zz * (cos(zz) + sin(zz))), zz
 end
 export dominators_dag
@@ -109,11 +119,10 @@ with these factorable subgraphs
 (8,4), (8,3), (8,1), (1,4), (1,7), (1,8)
 """
 function complex_dominator_dag()
-    Symbolics.@variables zz
-    # generate node dag explicitly rather than starting from Symbolics expression because don't know how Symbolics might rearrange the nodes, causing the postorder numbers to change for tests.
-    nx = FastSymbolicDifferentiation.Node(zz.val)
-    sinx = FastSymbolicDifferentiation.Node(sin, MVector(nx))
-    cosx = FastSymbolicDifferentiation.Node(cos, MVector(nx))
+    @variables x
+
+    sinx = FastSymbolicDifferentiation.Node(sin, MVector(x))
+    cosx = FastSymbolicDifferentiation.Node(cos, MVector(x))
     A = FastSymbolicDifferentiation.Node(*, MVector(cosx, sinx))
     sinA = FastSymbolicDifferentiation.Node(sin, MVector(A))
     expsin = FastSymbolicDifferentiation.Node(*, MVector(A, FastSymbolicDifferentiation.Node(exp, MVector(sinx))))
@@ -126,7 +135,7 @@ complex_dominator_graph() = DerivativeGraph(complex_dominator_dag())
 export complex_dominator_graph
 
 function R2_R2_function()
-    Symbolics.@variables x y
+    @variables x y
 
     nx = Node(x)
     ny = Node(y)
@@ -139,15 +148,14 @@ end
 export R2_R2_function
 
 function simple_dominator_graph()
-    Symbolics.@variables x
+    @variables nx
 
-    nx = Node(x)
     ncos = Node(cos, nx)
     nplus = Node(+, ncos, nx)
     ntimes = Node(*, ncos, nplus)
     four_2_subgraph = Node(+, nplus, ncos)
     one_3_subgraph = Node(+, Node(*, Node(-1), Node(sin, nx)), Node(1))
-    return x, DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
+    return nx, DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
 end
 export simple_dominator_graph
 
@@ -163,15 +171,12 @@ function simple_factorable_subgraphs()
     ]
 end
 export simple_factorable_subgraphs
-
 @testitem "isa_connected_path 1" begin # case when path is one edge long
-    using Symbolics: @variables
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x y
+    @variables nx ny
 
-    nx = Node(x)
     func = nx * nx
 
     gr = DerivativeGraph([func])
@@ -188,7 +193,7 @@ export simple_factorable_subgraphs
 end
 
 @testitem "isa_connected_path 2" begin #cases when path is longer than one edge and various edges have either roots or variables reset.
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
     @variables x y
@@ -237,7 +242,7 @@ end
 end
 
 @testitem "add_non_dom_edges" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -290,7 +295,7 @@ end
 end
 
 @testitem "iteration" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -343,42 +348,43 @@ end
 end
 
 
+#TODO conversion 
+# @testitem "all_nodes" begin
+#     using FastSymbolicDifferentiation.FSDTests
+#     using FastSymbolicDifferentiation.FSDInternals
 
-@testitem "all_nodes" begin
-    using FastSymbolicDifferentiation.FSDTests
-    using FastSymbolicDifferentiation.FSDInternals
+#     cache = IdDict()
+#     dag, x, y = simple_dag(cache)
 
-    cache = IdDict()
-    dag, x, y = simple_dag(cache)
+#     correct = expr_to_dag.([((x^2) + (y * (x^2))), (x^2), x, 2, (y * (x^2)), y], Ref(cache))
+#     tmp = all_nodes(dag)
 
-    correct = expr_to_dag.([((x^2) + (y * (x^2))), (x^2), x, 2, (y * (x^2)), y], Ref(cache))
-    tmp = all_nodes(dag)
+#     #verify that all the node expressions exist in the dag. Can't rely on them being in a particular order because Symbolics can
+#     #arbitrarily choose how to reorder trees.
+#     for expr in correct
+#         @test in(expr, tmp)
+#     end
+# end
 
-    #verify that all the node expressions exist in the dag. Can't rely on them being in a particular order because Symbolics can
-    #arbitrarily choose how to reorder trees.
-    for expr in correct
-        @test in(expr, tmp)
-    end
-end
 
-@testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
-    using FastSymbolicDifferentiation.FSDTests
-    import Symbolics
+#TODO conversion 
+# @testitem "conversion from graph of FastSymbolicDifferentiation.Node to Symbolics expression" begin
+#     using FastSymbolicDifferentiation.FSDTests
+#     import Symbolics
 
-    order = 7
-    Symbolics.@variables x y z
+#     order = 7
+#     @variables x y z
 
-    derivs = Symbolics.jacobian(SHFunctions(order, x, y, z), [x, y, z]; simplify=true)
-    # show(@time SHDerivatives(order,x,y,z))
-    tmp = expr_to_dag.(derivs)
-    # show(@time expr_to_dag.(derivs))
-    from_dag = to_symbolics.(tmp)
-    subs = Dict([x => rand(), y => rand(), z => rand()])
-    @test isapprox(map(xx -> xx.val, Symbolics.substitute.(derivs, Ref(subs))), map(xx -> xx.val, Symbolics.substitute.(from_dag, Ref(subs))), atol=1e-12)
-end
+#     derivs = Symbolics.jacobian(SHFunctions(order, x, y, z), [x, y, z]; simplify=true)
+#     # show(@time SHDerivatives(order,x,y,z))
+#     tmp = expr_to_dag.(derivs)
+#     # show(@time expr_to_dag.(derivs))
+#     from_dag = to_symbolics.(tmp)
+#     subs = Dict([x => rand(), y => rand(), z => rand()])
+#     @test isapprox(map(xx -> xx.val, Symbolics.substitute.(derivs, Ref(subs))), map(xx -> xx.val, Symbolics.substitute.(from_dag, Ref(subs))), atol=1e-12)
+# end
 
 @testitem "is_tree" begin
-    using Symbolics: @variables
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x
@@ -404,11 +410,10 @@ end
 end
 
 @testitem "derivative" begin
-    using Symbolics: @variables
-    @variables x, y
 
-    nx = Node(x)
-    ny = Node(y)
+    @variables nx ny
+
+
     a = nx * ny
     @test derivative(a, Val(1)) == ny
     @test derivative(a, Val(2)) == nx
@@ -417,7 +422,7 @@ end
 end
 
 @testitem "compute_factorable_subgraphs test order" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -486,7 +491,7 @@ end
 end
 
 @testitem "edges" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -523,15 +528,11 @@ end
 end
 
 @testitem "DerivativeGraph constructor" begin
-    import Symbolics
-    using Symbolics: @variables, substitute
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables nx ny
 
-    #f = [cos(x) * sin(y), cos(x) + sin(y)]
-    nx = Node(x)
-    ny = Node(y)
+
     cosx = Node(cos, nx)
     sinx = Node(sin, nx)
     partial_cosx = Node(-, sinx)
@@ -551,25 +552,26 @@ end
     @test all([correct_postorder_numbers[node] == postorder_number(graph, node) for node in grnodes])
 
     correct_partials = Dict((cosx => [partial_cosx], siny => [partial_siny], ctimess => partial_times, cpluss => partial_plus))
-    for (node, partials) in pairs(correct_partials)
-        for (i, one_partial) in pairs(partials)
-            f1 = to_symbolics(partial_value(graph, node, i))
-            f2 = to_symbolics(one_partial)
+    #TODO need to use finite differences instead of Symbolics. 
+    # for (node, partials) in pairs(correct_partials)
+    #     for (i, one_partial) in pairs(partials)
+    #         f1 = to_symbolics(partial_value(graph, node, i))
+    #         f2 = to_symbolics(one_partial)
 
-            for test_point in BigFloat(-1):BigFloat(0.01):BigFloat(1) #graphs might have equivalent but different forms so evaluate at many points at high precision to verify derivatives are the same.
-                v1 = Symbolics.value(Symbolics.substitute(f1, Dict((x => test_point), (y => test_point))))
-                v2 = Symbolics.value(Symbolics.substitute(f2, Dict((x => test_point), (y => test_point))))
-                @test isapprox(v1, v2, atol=1e-50)
-            end
-        end
-    end
+    #         for test_point in BigFloat(-1):BigFloat(0.01):BigFloat(1) #graphs might have equivalent but different forms so evaluate at many points at high precision to verify derivatives are the same.
+    #             v1 = Symbolics.value(Symbolics.substitute(f1, Dict((x => test_point), (y => test_point))))
+    #             v2 = Symbolics.value(Symbolics.substitute(f2, Dict((x => test_point), (y => test_point))))
+    #             @test isapprox(v1, v2, atol=1e-50)
+    #         end
+    #     end
+    # end
 end
 
 @testitem "DerivativeGraph pathmasks" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 2
     ny = Node(y) #postorder # 3
@@ -608,10 +610,10 @@ end
 end
 
 @testitem "ConstrainedPathIterator" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
     nx = Node(x) #postorder # 2
@@ -675,10 +677,10 @@ end
 end
 
 @testitem "edge_exists" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 2
     ny = Node(y) #postorder # 3
@@ -701,10 +703,10 @@ end
 end
 
 @testitem "add_edge! for DerivativeGraph" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 2
     ny = Node(y) #postorder # 3
@@ -737,10 +739,10 @@ end
 end
 
 @testitem "delete_edge! for DerivativeGraph" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     function reset_test(all_edges, graph, func::Function)
         for edge in all_edges
@@ -780,11 +782,11 @@ end
 end
 
 @testitem "compute_edge_paths" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 2
     ny = Node(y) #postorder # 3
@@ -826,12 +828,12 @@ end
 end
 
 @testitem "dominators DerivativeGraph" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 2
     ny = Node(y) #postorder # 3
@@ -896,13 +898,13 @@ end
 
 
 @testitem "dom_subgraph && pdom_subgraph" begin
-    using Symbolics: @variables
+
 
     using FastSymbolicDifferentiation: dom_subgraph, pdom_subgraph
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
     nx = Node(x) #postorder # 1
     ncos = Node(cos, nx) #pos
@@ -939,10 +941,10 @@ end
 
 
 @testitem "reachable" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables x y
 
 
     nx1 = Node(x)
@@ -1057,7 +1059,7 @@ end
 end
 
 @testitem "subgraph_edges with branching" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1128,14 +1130,13 @@ end
 end
 
 @testitem "subgraph reachable_roots, reachable_variables" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables nx1 ny2
 
-    nx1 = Node(x)
-    ny2 = Node(y)
+
     nxy3 = nx1 * ny2
     r2_4 = nx1 * nxy3
     r1_5 = r2_4 * nxy3
@@ -1168,14 +1169,13 @@ end
 end
 
 @testitem "Path_Iterator" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables nx1 ny2
 
-    nx1 = Node(x)
-    ny2 = Node(y)
+
     nxy3 = nx1 * ny2
     r2_4 = nx1 * nxy3
     r1_5 = r2_4 * nxy3
@@ -1254,14 +1254,13 @@ end
 end
 
 @testitem "make_factored_edge" begin
-    using Symbolics: @variables
+
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables v1, v2
+    @variables n1 n2
 
-    n1 = Node(v1)
-    n2 = Node(v2)
+
     n3 = n1 * n2
     n4 = n3 * n2
     n5 = n3 * n4
@@ -1287,7 +1286,7 @@ end
 
 
 @testitem "factor_subgraph simple ℝ²->ℝ²" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -1315,13 +1314,12 @@ end
 
 
 @testitem "factor_subgraph 2" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x y
+    @variables nx1 ny2
 
-    nx1 = Node(x)
-    ny2 = Node(y)
+
     n3 = nx1 * ny2
     n4 = n3 * ny2
     n5 = n3 * n4
@@ -1346,13 +1344,12 @@ end
 end
 
 @testitem "factor simple ℝ²->ℝ²" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y
+    @variables nx1 ny2
 
-    nx1 = Node(x)
-    ny2 = Node(y)
+
     n3 = nx1 * ny2
     r1_4 = sin(n3)
     r2_5 = cos(n3)
@@ -1382,11 +1379,11 @@ end
 
 
 @testitem "constant and variable roots" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x
-    nx = Node(x)
+    @variables nx
+
     zr = Node(0.0)
 
     graph = DerivativeGraph([nx, zr])
@@ -1418,26 +1415,26 @@ end
 end
 
 @testitem "multiply_sequence" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables x, y, z, w, u
+    @variables x y z w u
 
-    e1 = PathEdge(1, 2, Node(x), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
-    e2 = PathEdge(3, 2, Node(y), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
-    e3 = PathEdge(3, 2, Node(z), BitVector([1, 1, 0]), BitVector([0, 0, 1]))
-    e4 = PathEdge(3, 2, Node(w), BitVector([1, 1, 0]), BitVector([1, 0, 1]))
-    e5 = PathEdge(3, 2, Node(u), BitVector([1, 1, 0]), BitVector([0, 1, 1]))
+    e1 = PathEdge(1, 2, x, BitVector([1, 0, 1]), BitVector([0, 0, 1]))
+    e2 = PathEdge(3, 2, y, BitVector([1, 0, 0]), BitVector([0, 0, 1]))
+    e3 = PathEdge(3, 2, z, BitVector([1, 1, 0]), BitVector([0, 0, 1]))
+    e4 = PathEdge(3, 2, w, BitVector([1, 1, 0]), BitVector([1, 0, 1]))
+    e5 = PathEdge(3, 2, u, BitVector([1, 1, 0]), BitVector([0, 1, 1]))
 
 
     path = [e1, e3, e2]   #2,2,1 times used
-    @test (Node(x) * Node(z)) * Node(y) === multiply_sequence(path)
+    @test (x * z) * y === multiply_sequence(path)
     path = [e4, e5]
-    @test (Node(w) * Node(u)) === multiply_sequence(path)
+    @test (w * u) === multiply_sequence(path)
     path = [e4, e5, e1]
-    @test (Node(w) * Node(u)) * Node(x) === multiply_sequence(path)
+    @test (w * u) * x === multiply_sequence(path)
     path = [e4, e5, e1, e3]
-    @test (Node(w) * Node(u)) * (Node(x) * Node(z)) === multiply_sequence(path)
+    @test (w * u) * (x * z) === multiply_sequence(path)
 end
 
 
@@ -1475,7 +1472,7 @@ end
 
 
 @testitem "symbolic_jacobian" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
     @variables x y
@@ -1514,9 +1511,9 @@ end
 @testitem "sparse_symbolic_jacobian!" begin
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
-    using Symbolics: @variables
 
-    @variables x, y, z
+
+    @variables x y z
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
     sprse = _sparse_symbolic_jacobian!(fsd_graph, variables(fsd_graph))
@@ -1615,12 +1612,11 @@ end
 end
 
 @testitem "derivative of matrix" begin
-    using Symbolics: @variables
+
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables q1 q2
-    nq1 = Node(q1)
-    nq2 = Node(q2)
+    @variables nq1 nq2
+
 
     A = [
         cos(nq1) -cos(nq1)
@@ -1695,9 +1691,8 @@ end
 end
 
 @testitem "hessian" begin
-    using Symbolics: @variables
-    @variables x y z
-    nx, ny, nz = Node.((x, y, z))
+
+    @variables nx ny nz
 
     h = hessian(nx^2 * ny^2 * nz^2, [nx, ny, nz])
     h_exe = make_function(h, [nx, ny, nz])

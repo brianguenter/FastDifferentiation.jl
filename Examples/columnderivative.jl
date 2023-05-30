@@ -1,9 +1,6 @@
 using FastSymbolicDifferentiation
-using Symbolics
 
-@variables t
-
-nt = Node(t)
+@variables nt
 
 A = [nt nt^2; 3nt^2 5]
 

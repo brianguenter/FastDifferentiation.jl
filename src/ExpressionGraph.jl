@@ -17,17 +17,17 @@ clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
 
-macro nvariables(args)
+macro variables(args...)
     tmp = Expr(:block)
-    for x in args.args
+    for x in args
         push!(tmp.args, :($(esc(x)) = Node($(Meta.quot(x)))))
     end
     return tmp
 end
-export @nvariables
+export @variables
 
 # #also add this inner constructor
-# Node(a::S) where {S<:Symbol} = new{S,0}(a)
+#
 #
 # #end of code block to add
 
@@ -50,12 +50,9 @@ struct Node{T,N}
 
     Node(a::SymbolicUtils.BasicSymbolic{Real}) = new{typeof(a),0}(a, nothing)
 
-
+    Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
 end
 export Node
-
-"""ensure that no Node has a node_value of Num type. Extract either the number or BasicSymbolic type and use that instead"""
-Node(a::Num) = Node(a.val)
 
 
 #convenience function to extract the fields from Node object to check cache
@@ -87,7 +84,8 @@ is_leaf(::Node{T,N}) where {T,N} = false
 is_tree(::Node{T,N}) where {T,N} = N >= 1
 
 
-is_variable(a::Node) = SymbolicUtils.issym(value(a))
+# is_variable(a::Node) = SymbolicUtils.issym(value(a))
+is_variable(a::Node) = isa(value(a), Symbol)
 
 
 is_constant(a::Node) = !is_variable(a) && !is_tree(a) #pretty confident this is correct but there may be edges cases in Symbolics I am not aware of.
@@ -310,9 +308,9 @@ end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
-# Special cases for leaf nodes with no children. Handles the case when the node value is a Symbolics Num value, which can be either a symbol or a number.
+# Special cases for leaf nodes with no children.
 function derivative(a::Node{T,0}) where {T}
-    if SymbolicUtils.issym(value(a))
+    if is_variable(a)
         return Node(1)
     else
         return Node(0)
@@ -356,7 +354,7 @@ function to_string(a::Node)
     end
 end
 
-expr_to_dag(x::NoDeriv, cache, substitions) = Node(NaN) #when taking the derivative with respect to the first element of 1.0*x Symbolics.derivative will return Symbolics.NoDeriv. These derivative values will never be used (or should never be used) in my derivative computation so set to NaN so error will show up if this ever happens.
+expr_to_dag(x::AutomaticDifferentiation.NoDeriv, cache, substitions) = Node(NaN) #when taking the derivative with respect to the first element of 1.0*x Symbolics.derivative will return Symbolics.NoDeriv. These derivative values will never be used (or should never be used) in my derivative computation so set to NaN so error will show up if this ever happens.
 
 function expr_to_dag(x::Real, cache::IdDict=IdDict(), substitutions::Union{IdDict,Nothing}=nothing)
     return _expr_to_dag(x, cache, substitutions)
@@ -364,7 +362,7 @@ end
 export expr_to_dag
 
 
-#WARNING!!!!!!! TODO. *,+ simplification code relies on Node(0) have node_value 0 as Int64, not wrapped in a Num. Need to make sure that expr_to_dag unwraps numbers or the simplification code won't work.
+#WARNING!!!!!!! TODO. *,+ simplification code relies on Node(0) have node_value 0 as Int64. Need to make sure that expr_to_dag unwraps numbers or the simplification code won't work.
 function _expr_to_dag(symx, cache::IdDict, substitutions::Union{IdDict,Nothing}) #cache is an IdDict, to make clear that hashing into the cache Dict is  based on objectid, i.e., using === rather than ==.
     # Substitutions are done on a Node graph, not a SymbolicsUtils.Sym graph. As a consequence the values
     # in substitutions Dict are Node not Sym type. cache has keys (op,args...) where op is generally a function type but sometimes a Sym, 
@@ -427,7 +425,7 @@ function node_symbol(a::Node, variable_to_index::Dict{Node,Int64})
     elseif is_variable(a)
         result = :(input_variables[$(variable_to_index[a])])  #use the name of the Symbolics symbol which represents the variable
     else
-        result = value(a) #not a tree not a variable so is some kind of constant. Symbolics represents constants as Num so extract value so returned function will return a conventional number, not a Num.
+        result = value(a) #not a tree not a variable so is some kind of constant.
     end
     return result
 end
@@ -560,8 +558,7 @@ function make_variables(name::Symbol, how_many::Int64)
     result = Vector{Node}(undef, how_many)
 
     for i in 1:how_many
-        temp = :(@variables $(Symbol(name, i)))
-        result[i] = Node(eval(temp)[1])
+        result[i] = Node(Symbol(name, i))
     end
     return result
 end

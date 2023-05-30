@@ -4,8 +4,6 @@ using FastSymbolicDifferentiation
 using FastSymbolicDifferentiation.FSDTests
 using StaticArrays
 
-using Symbolics: @variables
-
 @variables x y z
 nx = Node(x)
 ny = Node(y)

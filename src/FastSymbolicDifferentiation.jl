@@ -1,7 +1,6 @@
 module FastSymbolicDifferentiation
 
 using TermInterface
-using Symbolics: Num, @variables, NoDeriv
 import SymbolicUtils
 using SymbolicUtils: arguments
 using StaticArrays
