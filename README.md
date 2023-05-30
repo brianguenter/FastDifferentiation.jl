@@ -28,6 +28,8 @@ These operations are not yet supported but will be soon:
 
 If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it will be for others to determine if FSD is likely to help them with their problem.
 
+Documentation issues and PR's are as welcome as code issues and PR's. If you find the documentation confusing or incomplete file an issue or create a PR.
+
 ## Limitations
 FSD currently only works on expression graphs without conditionals. It is possible to extend the algorithm to work with conditionals but the processing time and graph size can grow exponentially with conditional nesting depth. A future version may allow for limited conditionals.
 
