@@ -198,7 +198,7 @@ julia> jac_exe([1.0,2.0])
  -1.68294  0.540302
  -1.68294  0.540302
 ```
-Executable with in_place matrix evaluation to avoid allocation of a matrix for the Jacobian (in_place option also available for Jᵀv,Jv executables):
+Executable with in_place matrix evaluation to avoid allocation of a matrix for the Jacobian (in_place option available on all executables including Jᵀv,Jv,Hv):
 ```
 julia> jac_exe = make_function(symb,[x,y], in_place=true)
 ...
