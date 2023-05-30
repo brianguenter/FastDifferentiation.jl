@@ -86,7 +86,7 @@ julia> X = make_variables(:x,3)
 ```
 Make an executable function
 ```
-julia> xy_exe = make_function([x^2*y^2,sqrt(x*y)],[x,y])
+julia> xy_exe = make_function([x^2*y^2,sqrt(x*y)],[x,y]) #[x,y] vector specifies the order of the arguments to the exe
 ...
 
 julia> xy_exe([1.0,2.0])
