@@ -480,7 +480,7 @@ The code uses BitVector for tracking reachability of function roots and variable
 # How it works
 The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper.
 
-**FD** transforms the input expression graph into a derivative graph[^a], *D*, and then factors *D* to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
+**FD** transforms the input expression graph into a derivative graph[^a], and then factors this graph to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
 
 The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^c] to expressions:
 * `x×0=>0`
