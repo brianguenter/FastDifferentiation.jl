@@ -146,8 +146,8 @@ julia> jac_exe = make_function(symb,[x,y])
 ...
 julia> jac_exe([1.0,2.0])
 2×2 Matrix{Float64}:
- -1.68294  0.540302
- -1.68294  0.540302
+ -1.68294    0.540302
+  0.909297  -0.416147
 ```
 Executable with in_place matrix evaluation to avoid allocation of a matrix for the Jacobian (in_place option available on all executables including Jᵀv,Jv,Hv):
 ```
