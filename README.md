@@ -14,7 +14,7 @@ You should consider using FastSymbolicDifferentiation when:
 
 This is **beta** software being modified on a daily basis. Documentation is also frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
-Expect bugs and frequent, possibly breaking changes, over the next month or so. Once the code is feature complete I'll put it on the Julia registry.
+Expect bugs and frequent, possibly breaking changes, over the next month or so.
 
 FSD currently supports these operations:
 * dense and sparse symbolic Jacobian, dense symbolic Hessian
