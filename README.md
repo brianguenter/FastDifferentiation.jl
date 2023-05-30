@@ -58,58 +58,6 @@ If you use FD in your work please share the functions you differentiate with me.
 
 This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
-## Limitations
-**FD** currently only works on expressions without conditionals. For example, you can do this:
-```
-julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
-f (generic function with 2 methods)
-
-julia> f(0.0,x,y)
-cos(x)
-
-julia> f(1.0,x,y)
-sin(y)
-```
-but you can't do this:
-```
-julia> f(a,b) = a < b ? cos(a) : sin(b)
-f (generic function with 2 methods)
-
-julia> f(x,y)
-ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
-
-Closest candidates are:
-  isless(::Any, ::DataValues.DataValue{Union{}})
-   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:291
-  isless(::S, ::DataValues.DataValue{T}) where {S, T}
-   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:285
-  isless(::DataValues.DataValue{Union{}}, ::Any)
-   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:293
-  ...
-```
-This is because the call `f(x,y)` creates an expression graph. At graph creation time the **FD** variables `x,y` are unevaluated variables with no specific value so they cannot be compared with any other value.
-
-The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditional nesting. See [Future Work](#FutureWork) for a potential long term solution to this problem.
-
-Expression graphs with more than 10⁵ operations may take seconds or minutes for the expression graph preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
-
-The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. This should improve in future versions.
-# How it works
-The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper.
-
-**FD** transforms the input expression graph into a derivative graph[^a], *D*, and then factors *D* to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
-
-The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^c] to expressions:
-* `x×0=>0`
-* `x×1=>x`
-* `x/1=>x`
-* `x+0=>x`
-* `c₁×c₂=>c₃` for `c₁,c₂,c₃` constants
-* `c₁+c₂=>c₃` for `c₁,c₂,c₃` constants
-* `c₁×(c₂×x)` => `(c₁×c₂)×x`  for `c₁,c₂` constants
-
-These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of `x` happens to be NaN or Inf the **FD** expression `x*0` will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
-
 <details> 
  <summary> <b> Examples and basic usage </b> </summary>
  
@@ -297,7 +245,7 @@ Symbolics.Num
  
 ##  Symbolic Processing
 
-Because **FD** can generate true symbolic derivatives it can easily be used in conjunction with Symbolics.jl. For some expressions the differentiation function in Symbolics.jl may outperform **FD** and for many functions  the oppopsite will be true. The relative performance of the two is strongly dependent on graph structure. 
+Because **FD** can generate true symbolic derivatives it can easily be used in conjunction with Symbolics.jl.
 
 A rule of thumb is that if your function is small (a few hundred operations or less) or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform or equal **FD**. For more complex functions with many common subexpressions **FD** may substantially outperform Symbolics.jl.
  
@@ -469,6 +417,60 @@ As was the case for Chebyshev polynomials the number of paths from the roots to 
  The **Exe** benchmark took many hours to run and was stopped at model size 24 instead of 25 as for the **Symbolic** and **MakeFunction** benchmarks.
 
 </details>
+
+
+## Limitations
+**FD** currently only works on expressions without conditionals. For example, you can do this:
+```
+julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
+f (generic function with 2 methods)
+
+julia> f(0.0,x,y)
+cos(x)
+
+julia> f(1.0,x,y)
+sin(y)
+```
+but you can't do this:
+```
+julia> f(a,b) = a < b ? cos(a) : sin(b)
+f (generic function with 2 methods)
+
+julia> f(x,y)
+ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
+
+Closest candidates are:
+  isless(::Any, ::DataValues.DataValue{Union{}})
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:291
+  isless(::S, ::DataValues.DataValue{T}) where {S, T}
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:285
+  isless(::DataValues.DataValue{Union{}}, ::Any)
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:293
+  ...
+```
+This is because the call `f(x,y)` creates an expression graph. At graph creation time the **FD** variables `x,y` are unevaluated variables with no specific value so they cannot be compared with any other value.
+
+The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditional nesting. See [Future Work](#FutureWork) for a potential long term solution to this problem.
+
+Expression graphs with more than 10⁵ operations may take seconds or minutes for the expression graph preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
+
+The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. This should improve in future versions.
+# How it works
+The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper.
+
+**FD** transforms the input expression graph into a derivative graph[^a], *D*, and then factors *D* to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
+
+The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^c] to expressions:
+* `x×0=>0`
+* `x×1=>x`
+* `x/1=>x`
+* `x+0=>x`
+* `c₁×c₂=>c₃` for `c₁,c₂,c₃` constants
+* `c₁+c₂=>c₃` for `c₁,c₂,c₃` constants
+* `c₁×(c₂×x)` => `(c₁×c₂)×x`  for `c₁,c₂` constants
+
+These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of `x` happens to be NaN or Inf the **FD** expression `x*0` will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
+
 
 <div id="FutureWork"></div>
 
