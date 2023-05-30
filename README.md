@@ -420,7 +420,7 @@ As was the case for Chebyshev polynomials the number of paths from the roots to 
 
 
 ## Limitations
-**FD** currently only works on expressions without conditionals. For example, you can do this:
+**FD** does not support expressions with conditionals on **FD** variables. For example, you can do this:
 ```
 julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
 f (generic function with 2 methods)
