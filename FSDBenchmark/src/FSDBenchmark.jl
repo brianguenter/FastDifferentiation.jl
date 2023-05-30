@@ -50,8 +50,6 @@ function plot_SH_FSD_graph_vs_jacobian_size(min_order, max_order)
 end
 export plot_SH_FSD_graph_vs_jacobian_size
 
-
-
 ## Benchmark code for FSD
 run_benchmark(model_function::Function, model_size, package::FastSymbolic, ::Symbolic; simplify=false) = @benchmark symbolic_jacobian!(gr) setup = gr = $model_function($package, $model_size) evals = 1
 

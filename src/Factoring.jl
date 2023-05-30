@@ -845,13 +845,12 @@ function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::A
 end
 export jacobian_transpose_v_exe
 
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node,N}
     node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
     if !in_place
-        push!(body.args, :(result = fill(0.0, $(size(func_array))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian. 
-        #TODO: Unfortunately this fixes the type of the result to be Float64. Should write code so the type is picked up from the runtime arguments to the generated function. Add this feature later.
+        push!(body.args, :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...))))
     end
 
     node_to_index = Dict{Node,Int64}()
@@ -868,9 +867,12 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     push!(body.args, :(return result))
 
     if in_place
-        return Expr(:->, Expr(:tuple, :input_variables, :result), body)
+        # return Expr(:->, Expr(:tuple, :input_variables, :result), body)
+        return :(((input_variables::$(typeof(input_variables)), result) -> $body))
     else
-        return Expr(:->, Expr(:tuple, :input_variables), body)
+        # return Expr(:->, Expr(:tuple, :input_variables), body)
+        println("here")
+        return :(((input_variables::$(typeof(input_variables))) -> $body))
     end
 end
 export make_Expr
