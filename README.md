@@ -483,8 +483,7 @@ The **FD** algorithm is fast enough to differentiate large expression graphs (â‰
 
 
 
-In its current form **FD** can only differentiate expressions without conditionals involving **
-FD** variables. The algorithm can be extended to allow this but symbolic processing can scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
+In its current form **FD** can only differentiate expressions without conditionals involving **FD** variables. The algorithm can be extended to allow this but symbolic processing can scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
 
 However, a better approach might be to use FD as a processing step in a tracing JIT compiler, applying **FD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
