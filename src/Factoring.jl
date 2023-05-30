@@ -845,7 +845,7 @@ function jacobian_transpose_v_exe(terms::AbstractVector{T}, partial_variables::A
 end
 export jacobian_transpose_v_exe
 
-function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node,N}
+function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,N}
     node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
@@ -866,17 +866,15 @@ function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVect
 
     push!(body.args, :(return result))
 
-    vector_type(vars) = isa(vars, SVector) ? :(SVector{$(length(vars)),T}) : :(Vector)
-    vector_type(partial_variables)
     if in_place
-        return :(((input_variables::$(typeof(input_variables)), result) -> $body))
+        return :((input_variables, result) -> $body)
     else
-        return :(((input_variables::$(typeof(input_variables))) -> $body))
+        return :((input_variables) -> $body)
     end
 end
 export make_Expr
 
-make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place, use_vector_runtime_args=use_vector_runtime_args))
+make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
 export make_function
 
 
