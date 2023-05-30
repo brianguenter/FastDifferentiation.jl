@@ -171,10 +171,10 @@ julia> a
 
 For faster execution call the executable function with an `SVector` (for short vectors, probably < 100 elements):
 ```
-julia> jac_exe(SVector{2}([1.0,2.0]))
+julia> jac_exe(SVector{2}(1.0,2.0))
 2×2 Matrix{Float64}:
- -1.68294  0.540302
- -1.68294  0.540302
+ -1.68294    0.540302
+  0.909297  -0.416147
  ```
 Compute any subset of the columns of the Jacobian:
 ```
@@ -203,10 +203,11 @@ julia> (f1,f2) = cos(x)*y,sin(y)*x
 ((cos(x) * y), (sin(y) * x))
 
 julia> jv,vvec = jacobian_times_v([f1,f2],[x,y])
-(Node[((y * (-(sin(x)) * var"##60351")) + (cos(x) * var"##60352")), ((sin(y) * var"##60351") + (x * (cos(y) * var"##60352")))], Node[var"##60351", var"##60352"])
+...
 
 julia> jv_exe = make_function(jv,[[x,y];vvec])
 ...
+
 julia> jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are x,y values and last two are v vector values
 
 2×1 Matrix{Float64}:
@@ -214,7 +215,7 @@ julia> jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are x,y values and last two 
   1.0633049342884753
 
 julia> jTv,rvec = jacobian_transpose_v([f1,f2],[x,y])
-(Node[(((y * var"##3071") * -(sin(x))) + (sin(y) * var"##3072")), ((cos(x) * var"##3071") + ((x * var"##3072") * cos(y)))], Node[var"##3071", var"##3072"])
+...
 
 julia> jtv_exe = make_function(jTv,[[x,y];rvec])
 ...
