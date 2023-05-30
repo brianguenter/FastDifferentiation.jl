@@ -452,9 +452,13 @@ This is because the call `f(x,y)` creates an expression graph. At graph creation
 
 The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditional nesting. See [Future Work](#FutureWork) for a potential long term solution to this problem.
 
-Expression graphs with more than 10⁵ operations may take seconds or minutes for the expression graph preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
+Expressions graphs with more than ≈10⁵ operations may take a minute or more to differentiate. This is due to two factors. 
 
-The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. This should improve in future versions.
+The current code is not memory efficient - it allocates much more than necessary which makes it slower than it should be. Future versions will be more memory efficient.
+
+The code uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FD** would only be practical for modest size graphs (<10⁴ nodes). But, it scaled better than expected and for larger graphs the memory overhead of the BitVector representation is significant. Using Set instead of BitVector for larger graphs should significantly reduce symbolic processing time.
+
+
 # How it works
 The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper.
 
@@ -477,7 +481,7 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 ## Future work
 The **FD** algorithm is fast enough to differentiate large expression graphs (≈10⁵ operations) but LLVM compile time can be significant at this scale. For these very large graphs [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. I will be experimenting with this over the coming months. This would be useful when your function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
 
-The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FD** would only be practical for modest size graphs (<10⁴ nodes). But, it scaled better than expected and for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when to switch from BitVector to Set. This should significantly reduce symbolic processing time for large graphs.
+
 
 In its current form **FD** can only differentiate expressions without conditionals involving **
 FD** variables. The algorithm can be extended to allow this but symbolic processing can scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
