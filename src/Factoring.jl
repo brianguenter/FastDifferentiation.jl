@@ -866,12 +866,11 @@ function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVect
 
     push!(body.args, :(return result))
 
+    vector_type(vars) = isa(vars, SVector) ? :(SVector{$(length(vars)),T}) : :(Vector)
+    vector_type(partial_variables)
     if in_place
-        # return Expr(:->, Expr(:tuple, :input_variables, :result), body)
         return :(((input_variables::$(typeof(input_variables)), result) -> $body))
     else
-        # return Expr(:->, Expr(:tuple, :input_variables), body)
-        println("here")
         return :(((input_variables::$(typeof(input_variables))) -> $body))
     end
 end
