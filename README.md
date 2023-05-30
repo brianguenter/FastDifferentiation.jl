@@ -39,7 +39,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td> ✅ </td>
 </tr>
 <tr>
-<td> <b> Symbolic expr. </b> </td> 
+<td> <b> Symbolic expression </b> </td> 
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
