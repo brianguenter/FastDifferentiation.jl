@@ -17,19 +17,14 @@ clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
 
-# #if I want to eventually define my own @variables macro 
-# #Add the code in this block
-#
-# macro nvariables(args)
-#     tmp = Expr(:block)
-#     for x in args.args
-#         println(x)
-#         println(typeof(x))
-#         push!(tmp.args, :($(esc(x)) = Node($(Meta.quot(x)))))
-#     end
-#     tmp
-# end
-# export @nvariables
+macro nvariables(args)
+    tmp = Expr(:block)
+    for x in args.args
+        push!(tmp.args, :($(esc(x)) = Node($(Meta.quot(x)))))
+    end
+    return tmp
+end
+export @nvariables
 
 # #also add this inner constructor
 # Node(a::S) where {S<:Symbol} = new{S,0}(a)
@@ -482,18 +477,18 @@ function function_body!(dag::Node, variable_to_index::Dict{Node,Int64}, node_to_
 end
 
 """converts from dag to Symbolics expression"""
-function dag_to_Symbolics_expression(a::Node)
+function to_symbolics(a::Node)
     if arity(a) === 0
         return Num(value(a)) #convert everything to Num type. This will wrap types like Int64,Float64, etc., but will not double wrap nodes that are Num types already.
     else
         if arity(a) === 1
-            return a.node_value(dag_to_Symbolics_expression(a.children[1]))
+            return a.node_value(to_symbolics(a.children[1]))
         else
-            return foldl(a.node_value, dag_to_Symbolics_expression.(a.children))
+            return foldl(a.node_value, to_symbolics.(a.children))
         end
     end
 end
-export dag_to_Symbolics_expression
+export to_symbolics
 
 """Used to postorder function with multiple outputs"""
 function postorder(roots::AbstractVector{T}) where {T<:Node}

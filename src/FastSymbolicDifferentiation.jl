@@ -7,7 +7,7 @@ using SymbolicUtils: arguments
 using StaticArrays
 using SpecialFunctions
 using NaNMath
-using Statistics
+# using Statistics
 using RuntimeGeneratedFunctions
 import Base: iterate
 using UUIDs

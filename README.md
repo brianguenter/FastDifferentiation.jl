@@ -151,6 +151,26 @@ julia> func(SVector{2}([1.0,2.0]))
  -1.68294  0.540302
  -1.68294  0.540302
  ```
+Compute partial Jacobian:
+```
+julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nx,ny,nz])
+3×3 Matrix{Node}:
+ y    x    0.0
+ 0.0  z    y
+ z    0.0  x
+
+julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nx,ny])
+3×2 Matrix{Node}:
+ y    x
+ 0.0  z
+ z    0.0
+
+julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nz,ny])
+3×2 Matrix{Node}:
+ 0.0  x
+ y    z
+ x    0.0
+ ```
 
 Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation).
 ```
@@ -195,7 +215,7 @@ Node{SymbolicUtils.BasicSymbolic{Real}, 0}
 julia> node_exp = nx^3/ny^4 #FastSymbolicDifferentiation expression
 ((x ^ 3) / (y ^ 4))
 
-julia> dag_to_Symbolics_expression(node_exp)
+julia> to_symbolics(node_exp)
 (x^3) / (y^4)
 
 julia> typeof(ans)

@@ -24,9 +24,7 @@ export FSD
 
 using TestItems
 
-include("../FSDBenchmark/src/Types.jl")
-include("../FSDBenchmark/src/Chebyshev.jl")
-include("../FSDBenchmark/src/SphericalHarmonics.jl")
+include("../TestPrograms/TestCode.jl")
 
 """If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
 function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
@@ -375,7 +373,7 @@ end
     # show(@time SHDerivatives(order,x,y,z))
     tmp = expr_to_dag.(derivs)
     # show(@time expr_to_dag.(derivs))
-    from_dag = dag_to_Symbolics_expression.(tmp)
+    from_dag = to_symbolics.(tmp)
     subs = Dict([x => rand(), y => rand(), z => rand()])
     @test isapprox(map(xx -> xx.val, Symbolics.substitute.(derivs, Ref(subs))), map(xx -> xx.val, Symbolics.substitute.(from_dag, Ref(subs))), atol=1e-12)
 end
@@ -556,8 +554,8 @@ end
     correct_partials = Dict((cosx => [partial_cosx], siny => [partial_siny], ctimess => partial_times, cpluss => partial_plus))
     for (node, partials) in pairs(correct_partials)
         for (i, one_partial) in pairs(partials)
-            f1 = dag_to_Symbolics_expression(partial_value(graph, node, i))
-            f2 = dag_to_Symbolics_expression(one_partial)
+            f1 = to_symbolics(partial_value(graph, node, i))
+            f2 = to_symbolics(one_partial)
 
             for test_point in BigFloat(-1):BigFloat(0.01):BigFloat(1) #graphs might have equivalent but different forms so evaluate at many points at high precision to verify derivatives are the same.
                 v1 = Symbolics.value(Symbolics.substitute(f1, Dict((x => test_point), (y => test_point))))
