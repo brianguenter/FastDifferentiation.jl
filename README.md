@@ -273,7 +273,7 @@ julia> jtv_exe([1.0,2.0,3.0,4.0])
  -0.04368042858415033
 ```
 
-Convert between FastDifferentiation and Symbolics representations (requires FDConversions package):
+Convert between FastDifferentiation and Symbolics representations (requires FDConversions package, not released yet):
 ```
 julia> f = x^2+y^2 #Symbolics expression
 x^2 + y^2
