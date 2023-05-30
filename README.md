@@ -120,7 +120,7 @@ julia> f = x^2 * y^2
 julia> hv_fast, v_vec2 = hessian_times_v(f, [x, y])
 ...
 
-julia> hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2])
+julia> hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2]) #need v_vec2 because hv_fast is a function of x,y,v1,v2 and have to specify the order of all inputs to the executable
 ...
 julia> hv_fast_exe([1.0,2.0,3.0,4.0]) #first two vector elements are x,y last two are v1,v2
 2-element Vector{Float64}:
