@@ -28,7 +28,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td> <b> Hv </b> </td>
 </tr>
 <tr>
-<td> <b> Compiled exe </b> </td> 
+<td> <b> Compiled function </b> </td> 
 <td> ✅ </td>
 <td> ❌ </td>
 <td> ✅ </td>
