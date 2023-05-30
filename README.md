@@ -18,13 +18,13 @@ Expect bugs and frequent, possibly breaking changes, over the next month or so. 
 
 FSD currently supports these operations:
 * dense and sparse symbolic Jacobian, dense symbolic Hessian
-* compiled executable, in place and out of place, for dense Jacobian
+* compiled executable, in place and out of place, for dense Jacobian and Hessian
 * higher order derivatives
 * symbolic and executable Jᵀv and Jv operations (see this [paper](https://arxiv.org/abs/1812.01892) for applications)
 
 These operations are not yet supported (check back in a few days):
 * sparse symbolic Hessian
-* compiled: sparse Jacobian, sparse Hessian, dense Hessian
+* compiled: sparse Jacobian, sparse Hessian
 
 If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it will be for others to determine if FSD is likely to help them with their problem.
 
