@@ -1692,7 +1692,7 @@ end
     @variables a11 a12 a13 a21 a22 a23 a31 a32 a33
 
     vars = vec([a11 a12 a13 a21 a22 a23 a31 a32 a33])
-    spmat = [a11 a12 a13; a21 a22 a23; a31 a32 a33]
+    spmat = sparse([a11 a12 a13; a21 a22 a23; a31 a32 a33])
     f1 = make_function(spmat, vars)
     inputs = [1 2 3 4 5 6 7 8 9]
     correct = [1 2 3; 4 5 6; 7 8 9]
