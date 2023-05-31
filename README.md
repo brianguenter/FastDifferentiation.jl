@@ -45,7 +45,7 @@ The **FSD** symbolic differentiation algorithm is related to the [D* ](https://w
 
 If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. For more complex functions with many common subexpressions it is likely that **FSD** will outperform Symbolics.jl, perhaps [substantially](#Benchmarks).
 
-**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** symbolic forms is straightforward. However, because of the tree based representation used by Symbolics.jl expression size can grow significantly when converting from **FSD** to Symbolics.jl form.
+**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** symbolic forms is straightforward.
 
 Unlike forward and reverse automatic differentiation you don't have to choose which differentiation algorithm to use based on the graph structure. **FSD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. 
 
@@ -63,55 +63,39 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 <details> 
  <summary> <b> Examples and basic usage </b> </summary>
  
-There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation, then convert back to Symbolics.jl form. Or you can do everything in **FSD**: create **FSD** variables, make an expression using those variables and then differentiate it. Creating the expressions in Symbolics.jl and then converting to **FSD** form can be slow.
+There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation, then convert back to Symbolics.jl form. Or you can do everything in **FSD**: create **FSD** variables, make an expression using those variables and then differentiate it. 
 
-Converting the other way can be slow because of the tree expression representation used by Symbolics.jl. FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
-
-If all you need is an executable derivative function then the fastest workflow will be to do everything in **FSD**. 
+Creating the expressions in Symbolics.jl and then converting to **FSD** form is slower than working entirely in **FSD** - this only makes sense if you are doing symbolic processing other than differentiation. If all you need is an executable derivative function then the fastest workflow will be to do everything in **FSD**. 
  
-**FSD** uses a global cache for common subexpression elimination so **FSD** is not thread safe (yet). Under ordinary conditions the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function `clear_cache`after you have completely processed your expression.
+**FSD** uses a global cache for common subexpression elimination so **FSD** is not thread safe (yet). Under ordinary conditions the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function `clear_cache` after you have completely processed your expression.
 
 Set up variables:
 ```
 using FastSymbolicDifferentiation
-using Symbolics
 
-@variables x y z
+@variables x y z #Similar to the Symbolics @variables macro
 
-julia> nx,ny,nz = Node.((x,y,z)) #create FastSymbolicDifferentiation variables.
-(x, y, z)
 ```
-FSD requires objectid consistency of vector variable elements but the vectors created by the Symbolics @variables macro do not satisfy this property:
- ```
- julia> @variables k[1:3]
-1-element Vector{Symbolics.Arr{Num, 1}}:
- k[1:3]
-
-julia> k[1] === k[1]
-false
-```
- As a temporary workaround you can use the `make_variables` function to create a vector of variables:
+ Make a vector of variables
  ```
 julia> X = make_variables(:x,3)
 3-element Vector{Node}:
  x1
  x2
  x3
-
-julia> X[1] === X[1]
-true
 ```
-I'm working with the SciML folks to figure out how to make FSD work seamlessly with Symbolics, but the two systems use different representations of expressions (FSD uses directed acyclic graphs and Symbolics uses trees). This difference has far reaching architectural effects so it might take some time to figure out the best path.
  
 Compute Hessian:
 ```
-julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
+@variables x y z
+
+julia> hessian(x^2+y^2+z^2,[x,y,z])
 3×3 Matrix{Node}:
  2    0.0  0.0
  0.0  2    0.0
  0.0  0.0  2
 
-julia> h_exe = make_function(h_symb,[nx,ny,nz])
+julia> h_exe = make_function(h_symb,[x,y,z])
 ...
 julia> h_exe([1,2,3])
 3×3 Matrix{Float64}:
@@ -121,23 +105,23 @@ julia> h_exe([1,2,3])
 ```
 Compute Jacobian:
 ```
-julia> nx, ny = Node.((x, y))
+julia> x, y = Node.((x, y))
 (x, y)
 
-julia> f1 = cos(nx) * ny
+julia> f1 = cos(x) * y
 (cos(x) * y)
 
-julia> f2 = sin(ny) * nx
+julia> f2 = sin(y) * x
 (sin(y) * x)
 
-julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
+julia> symb = symbolic_jacobian([f1, f2], [x, y]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
 ```
 Create executable to evaluate Jacobian:
 ```
-jjulia> func = make_function(symb,[nx,ny])
+jjulia> func = make_function(symb,[x,y])
 ...
 julia> func([1.0,2.0])
 2×2 Matrix{Float64}:
@@ -153,19 +137,19 @@ julia> func(SVector{2}([1.0,2.0]))
  ```
 Compute partial Jacobian:
 ```
-julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nx,ny,nz])
+julia> symb = symbolic_jacobian([x*y,y*z,x*z],[x,y,z])
 3×3 Matrix{Node}:
  y    x    0.0
  0.0  z    y
  z    0.0  x
 
-julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nx,ny])
+julia> symb = symbolic_jacobian([x*y,y*z,x*z],[x,y])
 3×2 Matrix{Node}:
  y    x
  0.0  z
  z    0.0
 
-julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nz,ny])
+julia> symb = symbolic_jacobian([x*y,y*z,x*z],[z,y])
 3×2 Matrix{Node}:
  0.0  x
  y    z
@@ -174,26 +158,26 @@ julia> symb = symbolic_jacobian([nx*ny,ny*nz,nx*nz],[nz,ny])
 
 Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation).
 ```
-julia> nx,ny = Node.((x,y))
+julia> x,y = Node.((x,y))
 
-julia> (f1,f2) = cos(nx)*ny,sin(ny)*nx
+julia> (f1,f2) = cos(x)*y,sin(y)*x
 ((cos(x) * y), (sin(y) * x))
 
-julia> jv,vvec = jacobian_times_v([f1,f2],[nx,ny])
+julia> jv,vvec = jacobian_times_v([f1,f2],[x,y])
 (Node[((y * (-(sin(x)) * var"##60351")) + (cos(x) * var"##60352")), ((sin(y) * var"##60351") + (x * (cos(y) * var"##60352")))], Node[var"##60351", var"##60352"])
 
-julia> jv_exe = make_function(jv,[[nx,ny];vvec])
+julia> jv_exe = make_function(jv,[[x,y];vvec])
 ...
-julia> jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are nx,ny values and last two are v vector values
+julia> jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are x,y values and last two are v vector values
 
 2×1 Matrix{Float64}:
  -2.8876166853748195
   1.0633049342884753
 
-julia> jTv,rvec = jacobian_transpose_v([f1,f2],[nx,ny])
+julia> jTv,rvec = jacobian_transpose_v([f1,f2],[x,y])
 (Node[(((y * var"##3071") * -(sin(x))) + (sin(y) * var"##3072")), ((cos(x) * var"##3071") + ((x * var"##3072") * cos(y)))], Node[var"##3071", var"##3072"])
 
-julia> jtv_exe = make_function(jTv,[[nx,ny];rvec])
+julia> jtv_exe = make_function(jTv,[[x,y];rvec])
 ...
 julia> jtv_exe([1.0,2.0,3.0,4.0])
 2-element Vector{Float64}:
@@ -201,7 +185,7 @@ julia> jtv_exe([1.0,2.0,3.0,4.0])
  -0.04368042858415033
 ```
 
-Convert between FastSymbolicDifferentiation and Symbolics representations:
+Convert between FastSymbolicDifferentiation and Symbolics representations (requires FSDConversions package):
 ```
 julia> f = x^2+y^2 #Symbolics expression
 x^2 + y^2
@@ -212,7 +196,7 @@ x^2 + y^2
 julia> typeof(ans)
 Node{SymbolicUtils.BasicSymbolic{Real}, 0}
 
-julia> node_exp = nx^3/ny^4 #FastSymbolicDifferentiation expression
+julia> node_exp = x^3/y^4 #FastSymbolicDifferentiation expression
 ((x ^ 3) / (y ^ 4))
 
 julia> to_symbolics(node_exp)
@@ -375,16 +359,12 @@ function spherical_harmonics(::JuliaSymbolics, model_size)
 end
 
 function spherical_harmonics(::FastSymbolic, model_size, x, y, z)
-    nx = Node(x)
-    ny = Node(y)
-    nz = Node(z)
-
-    graph = DerivativeGraph(SHFunctions(model_size, nx, ny, nz))
+    graph = DerivativeGraph(SHFunctions(model_size, x, y, z))
     return graph
 end
 
 function spherical_harmonics(package::FastSymbolic, model_size)
-    Symbolics.@variables x, y, z
+    FSD.@variables x, y, z
     return spherical_harmonics(package, model_size, x, y, z)
 end
 export spherical_harmonics
