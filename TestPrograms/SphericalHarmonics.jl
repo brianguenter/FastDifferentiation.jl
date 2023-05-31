@@ -54,7 +54,7 @@ export compare_factorial_approximation
 end
 export N
 
-"""l is the order of the spherical harmonic. I think"""
+"""l is the order of the spherical harmonic"""
 @memoize function Y(l, m, x, y, z)
     @assert l >= 0
     @assert abs(m) <= l
@@ -67,7 +67,6 @@ end
 export Y
 
 SHFunctions(max_l, x::Node, y::Node, z::Node) = SHFunctions(Vector{Node}(undef, 0), max_l, x, y, z)
-SHFunctions(max_l, x::Symbolics.Num, y::Symbolics.Num, z::Symbolics.Num) = SHFunctions(Vector{Symbolics.Num}(undef, 0), max_l, x, y, z)
 
 function SHFunctions(shfunc, max_l, x, y, z)
     for l in 0:max_l-1
@@ -80,24 +79,15 @@ function SHFunctions(shfunc, max_l, x, y, z)
 end
 export SHFunctions
 
-
-to_dag(max_l, x, y, z) = expr_to_dag.(SHDerivatives(max_l, x, y, z))
-export to_dag
-function to_graph(max_l)
-
-    Symbolics.@variables x, y, z
-    nx = Node(x)
-    ny = Node(y)
-    nz = Node(z)
-
-    graph = RnToRmGraph(SHFunctions(max_l, nx, ny, nz))
-    return graph, x, y, z
+function spherical_harmonics(::FastSymbolic, model_size, x, y, z)
+    graph = DerivativeGraph(SHFunctions(model_size, x, y, z))
+    return graph
 end
-export to_graph
 
-function compute_SH_function_jacobian(gr)
-    return jacobian_function!(gr)
+function spherical_harmonics(package::FastSymbolic, model_size)
+    @variables x y z
+    return spherical_harmonics(package, model_size, x, y, z)
 end
-export compute_SH_function_jacobian
+export spherical_harmonics
 
 

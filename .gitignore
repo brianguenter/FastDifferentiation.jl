@@ -19,6 +19,9 @@
 # Local History for Visual Studio Code
 .history/
 
+# ignore graph files
+*.dot 
+
 #make sure image files don't accidentally get added to repo
 *.gz
 *.mem
@@ -28,6 +31,7 @@ src/*.svg
 src/*.png
 src/*.mem
 src/*.gz
+*.pdf
 
 ## Julia.gitignore ##
 

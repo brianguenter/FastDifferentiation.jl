@@ -1,15 +1,11 @@
 
-# next_edge_constraint(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{PostDominatorSubgraph,DominatorSubgraph}} = next_edge_constraint(subgraph, dominance_mask(subgraph))
-# next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}, roots_mask::BitVector) where {T} = PathConstraint(graph(sub), true, roots_mask)
-# next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}, variables_mask::BitVector) where {T} = PathConstraint(graph(sub), false, variables_mask)
-
-next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), false, reachable_roots(sub), dominance_mask(sub))
-next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), true, dominance_mask(sub), reachable_variables(sub))
+next_edge_constraint(sub::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), false, reachable_roots(sub), reachable_dominance(sub))
+next_edge_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint(dominating_node(sub), graph(sub), true, reachable_dominance(sub), reachable_variables(sub))
 top_down_constraint(sub::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathConstraint()
 
 """Evaluates the subgraph, creates a new edge with this value, and then inserts the new edge into `graph`"""
-function add_edge!(graph::RnToRmGraph, subgraph::FactorableSubgraph, subgraph_value::Node)
-    verts = subgraph_vertices(subgraph)
+function add_edge!(graph::DerivativeGraph, subgraph::FactorableSubgraph, subgraph_value::Node)
+    verts = vertices(subgraph)
     edge = PathEdge(verts[1], verts[2], subgraph_value, reachable_variables(subgraph), reachable_roots(subgraph))
     add_edge!(graph, edge)
 end
@@ -71,13 +67,12 @@ Proof:
 
 Assume `a` has only one child. Since `a=idom(b)` all upward paths from `b` must pass through `a`. Since `a` has only one child, `nᵢ`, all paths from `b` must first pass through `nᵢ` before passing through `a`. But then `nᵢ` would be the idom of `b`, not `a`, which violates `a=idom(b)`. Hence there must be two downward paths from `a` to `b`.
 """
-function dom_subgraph(graph::RnToRmGraph, root_index::Integer, dominated_node::Integer, idom)
-    tmp = _node_edges(edges(graph), dominated_node)
+function dom_subgraph(graph::DerivativeGraph, root_index::Integer, dominated_node::Integer, idom)
+    dominated_edges = parent_edges(graph, dominated_node)
 
-    if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable dom subgraph.
+    if length(dominated_edges) == 0  #no edges edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
-        dominated_edges = parents(tmp)
         count = 0
         for edge in dominated_edges
             if bott_vertex(edge) == dominated_node && reachable_roots(edge)[root_index] #there is an edge upward which has a path to the root
@@ -91,13 +86,12 @@ function dom_subgraph(graph::RnToRmGraph, root_index::Integer, dominated_node::I
     end
 end
 
-function pdom_subgraph(graph::RnToRmGraph, variable_index::Integer, dominated_node::Integer, pidom)
-    tmp = _node_edges(edges(graph), dominated_node)
-    if tmp === nothing #no edges upward so must be a root. dominated_node can't be part of a factorable pdom subgraph.
+function pdom_subgraph(graph::DerivativeGraph, variable_index::Integer, dominated_node::Integer, pidom)
+    dominated_edges = child_edges(graph, dominated_node)
+
+    if length(dominated_edges) == 0  #no edges up so must be a root. dominated_node can't be part of a factorable dom subgraph.
         return nothing
     else
-        dominated_edges = children(tmp)
-
         count = 0
         for edge in dominated_edges
             if top_vertex(edge) == dominated_node && reachable_variables(edge)[variable_index] #there is an edge downward which has a path to the variable
@@ -110,6 +104,13 @@ function pdom_subgraph(graph::RnToRmGraph, variable_index::Integer, dominated_no
         return nothing
     end
 end
+
+struct FactorOrder <: Base.Order.Ordering
+end
+
+Base.lt(::FactorOrder, a, b) = factor_order(a, b)
+Base.isless(::FactorOrder, a, b) = factor_order(a, b)
+
 
 """returns true if a should be sorted before b"""
 function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
@@ -128,10 +129,11 @@ function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
         end
     end
 end
-export factor_order
+
 
 sort_in_factor_order!(a::AbstractVector{T}) where {T<:FactorableSubgraph} = sort!(a, lt=factor_order)
-export sort_in_factor_order!
+
+
 
 """
 Given subgraph `(a,b)` in the subset of the ℝⁿ->ℝᵐ graph reachable from root `rᵢ`.  
@@ -151,52 +153,49 @@ subgraph `(a,b)` is in the subset of the ℝⁿ->ℝᵐ graph reachable from var
 `&& num_parents(a) > 1 for parents on the path to `b`  
 `&& num_children(b) > 1 for children on the path to variable `vᵢ` through `a`  
 """
-function compute_factorable_subgraphs(graph::RnToRmGraph{T}) where {T}
-    dom_subgraphs = Dict{Tuple{T,T},BitVector}()
+function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
-    dual_subgraphs = Tuple{T,T,BitVector,BitVector}[]
-    idoms = compute_dominance_tables(graph, true)
-    pidoms = compute_dominance_tables(graph, false)
-    subgraph_map = Dict{Tuple{T,T},Tuple{FactorableSubgraph,T}}()
+    dom_subgraphs = Dict{Tuple{T,T},BitVector}()
 
-    for root_index in 1:codomain_dimension(graph)
-        for dominated in keys(idoms[root_index])
-            dsubgraph = dom_subgraph(graph, root_index, dominated, idoms[root_index])
-            if dsubgraph !== nothing
-                existing_subgraph = get(dom_subgraphs, dsubgraph, nothing)
-                if existing_subgraph !== nothing
-                    dom_subgraphs[dsubgraph][root_index] = 1
-                else
-                    tmp = falses(codomain_dimension(graph))
-                    tmp[root_index] = 1
-                    dom_subgraphs[dsubgraph] = tmp
-                end
+    function set_dom_bits!(subgraph::Union{Nothing,Tuple{T,T}}, all_subgraphs::Dict, var_or_root_index::Integer, bit_dimension::Integer) where {T<:Integer}
+        if subgraph !== nothing
+            existing_subgraph = get(all_subgraphs, subgraph, nothing)
+            if existing_subgraph !== nothing
+                all_subgraphs[subgraph][var_or_root_index] = 1
+            else
+                tmp = falses(bit_dimension)
+                tmp[var_or_root_index] = 1
+                all_subgraphs[subgraph] = tmp
             end
         end
     end
 
-    for variable_index in 1:domain_dimension(graph)
-        for dominated in keys(pidoms[variable_index])
-            psubgraph = pdom_subgraph(graph, variable_index, dominated, pidoms[variable_index])
-            if psubgraph !== nothing
-                existing_p_subgraph = get(pdom_subgraphs, psubgraph, nothing)
+    temp_doms = Dict{T,T}()
 
-                if existing_p_subgraph !== nothing
-                    pdom_subgraphs[psubgraph][variable_index] = 1
-                else
-                    tmp = falses(domain_dimension(graph))
-                    tmp[variable_index] = 1
-                    pdom_subgraphs[psubgraph] = tmp
-                end
-            end
+    for root_index in 1:codomain_dimension(graph)
+        post_num = root_index_to_postorder_number(graph, root_index)
+        temp_dom = compute_dom_table(graph, true, root_index, post_num, temp_doms)
+
+        for dominated in keys(temp_dom)
+            dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
+            set_dom_bits!(dsubgraph, dom_subgraphs, root_index, codomain_dimension(graph))
+        end
+    end
+
+    for variable_index in 1:domain_dimension(graph)
+        post_num = variable_index_to_postorder_number(graph, variable_index)
+        temp_dom = compute_dom_table(graph, false, variable_index, post_num, temp_doms)
+
+        for dominated in keys(temp_dom)
+            psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
+            set_dom_bits!(psubgraph, pdom_subgraphs, variable_index, domain_dimension(graph))
         end
     end
 
 
     #convert to factorable subgraphs
 
-    result = Vector{FactorableSubgraph}(undef, length(dom_subgraphs) + length(pdom_subgraphs)) #slightly faster and more memory efficient than pushing to a zero length array
-    empty!(result)
+    result = BinaryHeap{FactorableSubgraph{T,S} where {S<:AbstractFactorableSubgraph},FactorOrder}()
 
     #Explanation of the computation of uses. Assume key[1] > key[2] so subgraph is a dom. subgraphs[key] stores the number of roots for which this dom was found to be factorable. 
     #For each root that has the dom as a factorable subgraph the number of paths from the bottom node of the subgraph to the variables will be the same. Total number of uses is the
@@ -204,10 +203,11 @@ function compute_factorable_subgraphs(graph::RnToRmGraph{T}) where {T}
     for key in keys(dom_subgraphs)
         dominator = key[1]
         dominated = key[2]
-        subgraph = dominator_subgraph(graph, dominator, dominated, dom_subgraphs[key], reachable_roots(graph, dominator), reachable_variables(graph, dominated))
+        if !is_constant(node(graph, dominated)) #don't make subgraphs with constant dominated nodes because they are not factorable
+            subgraph = dominator_subgraph(graph, dominator, dominated, dom_subgraphs[key], reachable_roots(graph, dominator), reachable_variables(graph, dominated))
 
-        push!(result, subgraph)
-        subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
+            push!(result, subgraph)
+        end
     end
 
     for key in keys(pdom_subgraphs)
@@ -216,25 +216,22 @@ function compute_factorable_subgraphs(graph::RnToRmGraph{T}) where {T}
         subgraph = postdominator_subgraph(graph, dominator, dominated, pdom_subgraphs[key], reachable_roots(graph, dominated), reachable_variables(graph, dominator))
 
         push!(result, subgraph)
-        subgraph_map[(dominator, dominated)] = (subgraph, lastindex(result))
     end
 
-    sort_in_factor_order!(result) #return subgraphs sorted in lexicographic order. If the subgraphs are processed from lowest index to highest index this will guarantee that innermost graphs are processed first.
-
-    return result, subgraph_map
+    return result
 end
-export compute_factorable_subgraphs
+
 
 function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
     if length(path) == 1
-        return edge_value(path[1])
+        return value(path[1])
     end
 
     run = Node[]
     count = 2
     prod = Node(1.0)
     run_start = times_used(path[1])
-    push!(run, edge_value(path[1]))
+    push!(run, value(path[1]))
 
     for val in @view path[2:end]
         if times_used(val) != run_start
@@ -247,7 +244,7 @@ function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
             run_start = times_used(val)
         end
 
-        push!(run, edge_value(val))
+        push!(run, value(val))
 
         if count == length(path)
             runprod = Node(1.0)
@@ -260,7 +257,7 @@ function multiply_sequence(path::AbstractVector{S}) where {S<:PathEdge}
     end
     return prod
 end
-export multiply_sequence
+
 
 
 function path_sort_order(x, y)
@@ -272,7 +269,7 @@ function path_sort_order(x, y)
         return top_vertex(x) > top_vertex(y)
     end
 end
-export path_sort_order
+
 
 const EDGE_CACHE = Vector{PathEdge{Int64}}[]
 peak_cache_size = 0
@@ -295,63 +292,12 @@ function reclaim_edge_vector(edges::Vector{PathEdge{Int64}})
     return nothing
 end
 
-function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
-    constraint = next_edge_constraint(subgraph)
-    sum = Node(0.0)
+function old_edge_path(next_node_constraint, dominating::T, is_dominator::Bool, reachable_mask::BitVector, current_edge) where {T}
+    flag_value = 1
+    result = PathEdge{Int64}[]
 
-    rel_edges = get_edge_vector()
-    for edge in relation_edges(constraint, dominated_node(subgraph), rel_edges)
-        pedges = get_edge_vector()
-        pedges = edges_on_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, edge)
-        #sort by num_uses then from largest to smallest postorder number
-        @assert pedges !== nothing
-
-        sort!(pedges, lt=path_sort_order)
-        sum += multiply_sequence(pedges)
-        #find sequences of equal times_used and multiply them. Then multiply each of the collapsed sequences to get the final result
-        reclaim_edge_vector(pedges)
-    end
-    reclaim_edge_vector(rel_edges)
-    return sum
-end
-export evaluate_subgraph
-
-make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T} = PathEdge(dominating_node(subgraph), dominated_node(subgraph), evaluate_subgraph(subgraph), reachable_variables(subgraph), dominance_mask(subgraph))
-export make_factored_edge
-make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = PathEdge(dominating_node(subgraph), dominated_node(subgraph), evaluate_subgraph(subgraph), dominance_mask(subgraph), reachable_roots(subgraph))
-export make_factored_edge
-
-struct MaskableEdge{S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
-    edge::PathEdge
-    mask::BitVector
-end
-
-function reset_reachable(me::MaskableEdge{DominatorSubgraph})
-    zero_roots!(me.edge, me.mask)
-    if is_zero(reachable_roots(me.edge))
-        return me.edge
-    else
-        return nothing
-    end
-end
-
-function reset_reachable(me::MaskableEdge{PostDominatorSubgraph})
-    zero_variables!(me.edge, me.mask)
-    if is_zero(reachable_variables(me.edge))
-        return me.edge
-    else
-        return nothing
-    end
-end
-
-
-#not efficient. Make code work correctly then optimize.
-function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, current_edge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T}
-    if result === nothing
-        result = PathEdge{T}[]
-    else
-        empty!(result)
-    end
+    roots_reach = copy(reachable_roots(current_edge))
+    vars_reach = copy(reachable_variables(current_edge))
 
     while true
         push!(result, current_edge)
@@ -362,135 +308,187 @@ function edges_on_path(next_node_constraint, dominating::T, is_dominator::Bool, 
             break
         end
         tmp = get_edge_vector()
-        relation_edges(next_node_constraint, current_edge, tmp)
+        relation_edges!(next_node_constraint, current_edge, tmp)
 
-        if length(tmp) == 0 || length(tmp) ≥ 2
-            return nothing #there is either a branch in the edge path or there is no edge beyond current_edge that leads to the dominating node. This can only occur if the subgraph has been destroyed by factorization so stop processing
+        if is_dominator
+            filter!(x -> subset(reachable_mask, reachable_variables(x)), tmp) #only accept edges which have reachable roots and variables that match the subgraph
+        else
+            filter!(x -> subset(reachable_mask, reachable_roots(x)), tmp)
         end
 
+        #These two cases can only occur if the subgraph has been destroyed by factorization
+        if length(tmp) == 0  #there is no edge beyond current_edge that leads to the dominating node. 
+            reclaim_edge_vector(tmp)
+            flag_value = 0
+            break
+        elseif length(tmp) ≥ 2 #there is a branch in the edge path  
+            reclaim_edge_vector(tmp)
+            flag_value = 2
+            break
+        end
 
         current_edge = tmp[1]
+        roots_reach .= roots_reach .& reachable_roots(current_edge)
+        vars_reach .= vars_reach .& reachable_variables(current_edge) #update reachable roots/variables of the entire path. Sum is only good over this subset
         reclaim_edge_vector(tmp)
     end
-    return result
-end
-export edges_on_path
 
-function compute_Vset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
-    Vset = trues(domain_dimension(graph(constraint)))
-    tmp = get_edge_vector()
-    relation_edges(constraint, dominated_node, tmp)
-    for start_edge in tmp
-        pedges = get_edge_vector()
-        edges_on_path(constraint, dominating_node, true, start_edge, pedges)
-
-        #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        for pedge in pedges
-            Vset .= Vset .& reachable_variables(pedge)
-        end
-        reclaim_edge_vector(pedges)
-    end
-    reclaim_edge_vector(tmp)
-    return Vset
+    return flag_value, result, roots_reach, vars_reach
 end
 
-"""caller has to pass in graph and edges_to_delete vector"""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,S}, sub_eval::Union{Nothing,Node}) where {T,S<:DominatorSubgraph}
-    a = graph(subgraph)
-    @assert subgraph_exists(subgraph)
-    Rdom = dominance_mask(subgraph) #roots for which subgraph is factorable, i.e., dominator(subgraph) dominates every vertex in the subgraph.
-    edges_to_reset = MaskableEdge{S}[]
-    Vset = trues(domain_dimension(graph(subgraph)))
+function evaluate_subgraph(subgraph::FactorableSubgraph{T,S}) where {T,S<:Union{DominatorSubgraph,PostDominatorSubgraph}}
+    constraint = next_edge_constraint(subgraph)
+    sum = Node(0.0)
 
-    R_edges = next_edge_constraint(subgraph)
-    dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
-    Vset = compute_Vset(R_edges, dominator, dominated)
+    rel_edges = get_edge_vector()
+    for edge in relation_edges!(constraint, dominated_node(subgraph), rel_edges)
+        flag, pedges, roots_reach, vars_reach = old_edge_path(constraint, dominating_node(subgraph), S == DominatorSubgraph, reachable(subgraph), edge)
+        #sort by num_uses then from largest to smallest postorder number
 
-    for start_edge in relation_edges(R_edges, dominated)
-        pedges = edges_on_path(R_edges, dominator, true, start_edge)
+        if flag == 1 #non-branching path through subgraph
 
-        #reset roots in R, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        for pedge in pedges
-            Vval = set_diff(reachable_variables(pedge), Vset)
-            if !is_zero(Vval) #need to create and edge to accomodate the part of the reachable set that is not in Rset
-                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), edge_value(pedge), Vval, Rdoml)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
-                mask_variables!(pedge, Vset) #this edge only has the reachable roots in Rset
-            end
+            sort!(pedges, lt=path_sort_order)
+            sum += multiply_sequence(pedges)
 
-            if roots_resettable(pedge, Rdom)
-                push!(edges_to_reset, MaskableEdge{DominatorSubgraph}(pedge, Rdom))
-            end
-            if top_vertex(pedge) == dominator || length(child_edges(a, top_vertex(pedge))) > 1
-                break
-            end
+            #find sequences of equal times_used and multiply them. Then multiply each of the collapsed sequences to get the final result
+            reclaim_edge_vector(pedges)
         end
     end
 
-    if sub_eval === nothing
-        return edges_to_reset, nothing
+
+    reclaim_edge_vector(rel_edges)
+    return sum
+end
+
+function make_factored_edge(subgraph::FactorableSubgraph{T,DominatorSubgraph}, sum::Node) where {T}
+    roots_reach = copy(reachable_dominance(subgraph))
+    vars_reach = copy(reachable_variables(subgraph))
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
+end
+
+function make_factored_edge(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, sum::Node) where {T}
+    roots_reach = copy(reachable_roots(subgraph))
+    vars_reach = copy(reachable_dominance(subgraph))
+    return PathEdge(dominating_node(subgraph), dominated_node(subgraph), sum, vars_reach, roots_reach)
+end
+
+
+"""Returns true if a new factorable subgraph was created inside `subgraph` during the factorization process. If true then must compute factorable subgraphs for the edges inside `subgraph`. `subgraph_exists` should be called before executing this function otherwise it may return false when no new subgraphs have been created."""
+function is_branching(subgraph)
+    fedges = forward_edges(subgraph, dominated_node(subgraph))
+
+    sub_edges = Set{PathEdge}()
+    bad_subgraph = false
+    for edge in fedges #for each forward edge from the dominated node find all edges on that path. If any edge in the subgraph is visited more than once this means a new factorable subgraph has been created.
+        good_edges, tmp = edges_on_path(subgraph, edge)
+
+        if good_edges
+            for pedge in tmp
+                if in(pedge, sub_edges) #edge has been visited twice.
+                    bad_subgraph = true
+                    break
+                end
+                push!(sub_edges, pedge)
+            end
+        end
+    end
+
+    return bad_subgraph
+end
+
+"""reset root and variable masks for edges in the graph and add a new edge connecting `dominating_node(subgraph)` and `dominated_node(subgraph)` to the graph that has the factored value of the subgraph"""
+function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
+    local new_edge::PathEdge{T}
+    if subgraph_exists(subgraph)
+
+        if is_branching(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
+            sum = evaluate_branching_subgraph(subgraph)
+            new_edge = make_factored_edge(subgraph, sum)
+        else
+            sum = evaluate_subgraph(subgraph)
+            new_edge = make_factored_edge(subgraph, sum)
+        end
+        add_non_dom_edges!(subgraph)
+        #reset roots in R, if possible. All edges earlier in the path than the first vertex with more than one child cannot be reset.
+        edges_to_delete = reset_edge_masks!(subgraph)
+        for edge in edges_to_delete
+            delete_edge!(graph(subgraph), edge)
+        end
+
+        add_edge!(graph(subgraph), new_edge)
+    end
+end
+
+order!(::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
+) #largest node number last
+order!(::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
+
+predecessors(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = top_vertex.(filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index))) #allocates but this should rarely be called so shouldn't be efficiency issue.
+predecessors(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = bott_vertex.(filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index)))
+
+predecessor_edges(sub::FactorableSubgraph{T,DominatorSubgraph}, node_index::Integer) where {T<:Integer} = filter(x -> test_edge(sub, x), parent_edges(graph(sub), node_index)) #allocates but this should rarely be called so shouldn't be efficiency issue.
+predecessor_edges(sub::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::Integer) where {T<:Integer} = filter(x -> test_edge(sub, x), child_edges(graph(sub), node_index))
+
+
+"""Computes idoms for special case when new factorable subgraphs are created by factorization. This seems redundant with compute_factorable_subgraphs, fill_idom_tables, etc. but invariants that held when graph was first factored no longer hold so need specialized code. Not currently used, experimental code."""
+function compute_internal_idoms(subgraph::FactorableSubgraph{T}) where {T}
+    _, sub_nodes = deconstruct_subgraph(subgraph)
+    order!(subgraph, sub_nodes)
+    compressed_index = Dict((sub_nodes[i] => i) for i in eachindex(sub_nodes))
+
+    preds = [map(x -> compressed_index[x], predecessors(subgraph, node)) for node in sub_nodes] #allocates but this function should rarely be called
+    compressed_doms = simple_dominance(preds) #idom table in compressed index format_string
+    return Dict{T,T}([(sub_nodes[i], sub_nodes[compressed_doms[i]]) for i in eachindex(sub_nodes)])
+end
+
+
+### These functions are used to evaluate subgraphs with branches created by factorization. This is not the most efficient way to evalute these subgraphs since terms in products are not ordered by uses. But subgraphs with branching seem rare and this is much simpler than recomputing the factorable subgraphs internal to a branching subgraph. Optimize if efficieny becomes an issue.
+
+function vertex_counts(subgraph::FactorableSubgraph{T}) where {T}
+    counts = Dict{T,T}()
+    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
+
+    for node in sub_nodes
+        tmp = count(x -> in(x, sub_edges), backward_edges(subgraph, node)) #only count the child edges that are in the subgraph
+        counts[node] = tmp
+    end
+    return counts
+end
+
+function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
+    global num_times += 1
+    sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
+    counts = vertex_counts(subgraph)
+    counts[dominated_node(subgraph)] = 1
+    vertex_sums = Dict{T,Node}()
+    # Vis.draw_dot(subgraph)
+    _evaluate_branching_subgraph(subgraph, Node(1), dominated_node(subgraph), sub_edges, counts, vertex_sums)
+
+    return vertex_sums[dominating_node(subgraph)]
+end
+
+num_times = 0
+
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, sub_edges, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
+    if get(vertex_sums, current_vertex, nothing) === nothing
+        vertex_sums[current_vertex] = sum
     else
-        return edges_to_reset, PathEdge(dominator, dominated, sub_eval, Vset, Rdom)  #return edges marked for resetting and new added edge that must be added to the graphend
+        vertex_sums[current_vertex] += sum
     end
-end
-export factor_subgraph!
 
-function compute_Rset(constraint::PathConstraint{T}, dominating_node::T, dominated_node::T) where {T}
-    Rset = trues(codomain_dimension(graph(constraint)))
-    tmp = get_edge_vector()
-    relation_edges(constraint, dominated_node, tmp)
-    for start_edge in tmp
-        pedges = get_edge_vector()
-        edges_on_path(constraint, dominating_node, false, start_edge, pedges)
-
-        #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        for pedge in pedges
-            Rset .= Rset .& reachable_roots(pedge)
-        end
-        reclaim_edge_vector(pedges)
-    end
-    reclaim_edge_vector(tmp)
-    return Rset
-end
-
-"""caller has to pass in graph and edges_to_delete vector. There is much redundancy with the DominatorSubgraph version of this code. But the differences are numerous (13 different locations) and the code is easier to read if split into two functions."""
-function factor_subgraph!(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, sub_eval::Union{Nothing,Node}) where {T}
-    a = graph(subgraph)
-    @assert subgraph_exists(subgraph)
-    Vdom = dominance_mask(subgraph) #roots for which subgraph is factorable, i.e., dominator(subgraph) dominates every vertex in the subgraph.
-    edges_to_reset = MaskableEdge{PostDominatorSubgraph}[]
-
-    V_edges_up = next_edge_constraint(subgraph)
-    dominator = dominating_node(subgraph)
-    dominated = dominated_node(subgraph)
-
-    Rset = compute_Rset(V_edges_up, dominator, dominated) #these are the roots for which this subgraph is factorable, i.e., only paths that include these roots will get the factored value of the subgraph.
-
-    for start_edge in relation_edges(V_edges_up, dominated)
-        pedges = edges_on_path(V_edges_up, dominator, false, start_edge)
-
-        #reset roots in V, if possible. All edges higher in the path than the first vertex with more than one child cannot be reset.
-        for pedge in pedges
-            Rval = set_diff(reachable_roots(pedge), Rset)
-            if !is_zero(Rval) #need to create an edge to accomodate the part of the reachable set that is not in Rset
-                add_edge!(a, PathEdge(top_vertex(pedge), bott_vertex(pedge), edge_value(pedge), Vdom, Rval)) #this edge only has reachable roots outside Rset. Need to add this here rather than in factor_one_subgraph because dual processing may need to look at these edges
-                mask_roots!(pedge, Rset) #this edge only has the reachable roots in Rset
-            end
-
-            if variables_resettable(pedge, Vdom)
-                push!(edges_to_reset, MaskableEdge{PostDominatorSubgraph}(pedge, Vdom))
-            end
-            if bott_vertex(pedge) == dominator || length(parent_edges(a, bott_vertex(pedge))) > 1 || is_root(a, bott_vertex(pedge)) #is_root special case for post dominator subgraphs since a root can be a child of another root. Variables cannot have this relationship. If the bottom vertex of the edge is a root that means there is a path to a root that does not go through dominated. All edges below this point in the graph cannot have their variable bits reset.
-                break
+    counts[current_vertex] -= 1
+    if counts[current_vertex] == 0
+        for edge in predecessor_edges(subgraph, current_vertex)
+            if !in(edge, sub_edges)
+                continue
+            else
+                _evaluate_branching_subgraph(subgraph, vertex_sums[current_vertex] * value(edge), forward_vertex(subgraph, edge), sub_edges, counts, vertex_sums)
             end
         end
     end
-    if sub_eval === nothing
-        return edges_to_reset, nothing
-    else
-        return edges_to_reset, PathEdge(dominator, dominated, sub_eval, Vdom, Rset)  #return edges marked for resetting and new added edge that must be added to the graph
-    end
 end
+
+### End of functions for evaluating subgraphs with branches.
 
 
 function print_edges(a, msg)
@@ -500,109 +498,22 @@ function print_edges(a, msg)
     end
 end
 
-"""call this function when the first subgraph processed in a dual pair is a DominatorSubgraph"""
-function dual_subgraph(first_graph::FactorableSubgraph{T,DominatorSubgraph}, second_graph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-    @assert first_graph.graph === second_graph.graph
+function factor!(a::DerivativeGraph{T}) where {T}
+    subgraph_list = compute_factorable_subgraphs(a)
 
-    graph = first_graph.graph
-    Vdom = dominance_mask(second_graph)
-    R = reachable_roots(first_graph)
-    Rdom = dominance_mask(first_graph)
-    R̄ = set_diff(R, Rdom)
-    overlap_graph = postdominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Vdom, Rdom, Vdom)
-    if is_zero(R̄)
-        return overlap_graph, nothing
-    else
-        return overlap_graph, postdominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Vdom, R̄, Vdom) #could let the second Vdom be reachable_variables(second_graph) because this term is not used in computing reachable set for new factored subgraph edge. But safer to do this in case factor_subgraph! code is changed. Then guaranteed not to accidentally get too wide reachability.
+    while !isempty(subgraph_list)
+        # @info "Processed $count subgraphs out of $total"
+        subgraph = pop!(subgraph_list)
+
+        factor_subgraph!(subgraph)
+        #test
+        # Vis.draw_dot(graph(subgraph), start_nodes=[93], graph_label="factored subgraph $(vertices(subgraph))", value_labels=false)
+        #end test
     end
-end
-
-"""call this function when the first subgraph processed in a dual pair is a PostDominatorSubgraph"""
-function dual_subgraph(first_graph::FactorableSubgraph{T,PostDominatorSubgraph}, second_graph::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-    @assert first_graph.graph === second_graph.graph
-
-    graph = first_graph.graph
-    Rdom = dominance_mask(second_graph)
-    R = reachable_roots(first_graph)
-    V = reachable_variables(first_graph)
-    Vdom = dominance_mask(first_graph)
-    V̄ = set_diff(V, Vdom)
-    R̄ = set_diff(R, Rdom)
-    overlap_graph = dominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Rdom, Rdom, Vdom)
-    if is_zero(V̄)
-        return overlap_graph, nothing #complete overlap between dual graphs so no extra edges to be processed in the V̄ graph.
-    else
-        return overlap_graph, dominator_subgraph(graph, dominating_node(second_graph), dominated_node(second_graph), Rdom, Rdom, V̄) #have a dual residual graph that must be processed later
-    end
-end
-
-function process_dual_subgraph(subgraph::FactorableSubgraph{T}, subgraph_dict, subgraph_list) where {T}
-    dual_vertices = reverse(subgraph_vertices(subgraph))
-    dual_info = get(subgraph_dict, dual_vertices, nothing)
-
-    dual_edges_to_reset = nothing
-    if dual_info !== nothing # there is a dual subgraph so have more processing to do
-        dual_graph, list_index = dual_info
-        delete!(subgraph_dict, dual_vertices) #delete original dual subgraph so don't attempt to process it when it is encountered later in the subgraph_list
-
-        if subgraph_exists(dual_graph) #subgraph may have been destroyed so make sure it still exists before processing
-            overlap_dual, residual_dual = dual_subgraph(subgraph, dual_graph) #find the part of the dual graph that must be processed now with subgraph and the residual part that will be processed later.
-
-            if residual_dual !== nothing
-                subgraph_dict[dual_vertices] = (residual_dual, list_index) #substitute new residual dual graph in place of the old one
-                subgraph_list[list_index] = residual_dual
-            end
-
-            dual_edges_to_reset, _ = factor_subgraph!(overlap_dual, nothing)
-            return dual_edges_to_reset
-        else
-            return PathEdge{T}[]
-        end
-    end
-end
-
-
-function factor_one_subgraph!(a::RnToRmGraph, subgraph::FactorableSubgraph, subgraph_list, subgraph_dict)
-    if get(subgraph_dict, subgraph_vertices(subgraph), nothing) !== nothing #subgraph may already have been processed in which case it will have been removed from subgraph_dict. This happens with dual subgraphs (a,b), (b,a). When (a,b) is processed it will also process (b,a) and (b,a) may be removed from subgraph_dict if it completely overlaps with (a,b).
-        # @info("before processing subgraph $subgraph")
-
-        if subgraph_exists(subgraph)
-            sub_eval = evaluate_subgraph(subgraph)
-            edges_to_delete = PathEdge[]
-            edges_to_reset, factored_edge_to_add = factor_subgraph!(subgraph, sub_eval)
-            dual_edges_to_reset = process_dual_subgraph(subgraph, subgraph_dict, subgraph_list)
-            combined = dual_edges_to_reset !== nothing ? vcat(edges_to_reset, dual_edges_to_reset) : edges_to_reset
-
-            for edge in combined
-                tmp = reset_reachable(edge)
-                if tmp !== nothing
-                    push!(edges_to_delete, tmp)
-                end
-            end
-
-            add_edge!(a, factored_edge_to_add)
-
-            delete_edge!.(Ref(a), unique(edges_to_delete)) #dom,pdom may both add an edge to edges_to_delete. This will cause an assertion failure so make sure only delete edges once.
-        end
-
-        delete!(subgraph_dict, subgraph) #not strictly necessary because should never encounter the same subgraph twice so could leave the subgraph in the dictionary. But makes debugging easier when looking at small test cases.
-    end
-
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
 
-function factor!(a::RnToRmGraph{T}) where {T}
-    subgraph_list, subgraph_dict = compute_factorable_subgraphs(a)
-
-    for subgraph in subgraph_list
-        factor_one_subgraph!(a, subgraph, subgraph_list, subgraph_dict)
-    end
-
-    return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
-end
-export factor!
-
-function follow_path(a::RnToRmGraph{T}, root_index::Integer, var_index::Integer) where {T}
+function follow_path(a::DerivativeGraph{T}, root_index::Integer, var_index::Integer) where {T}
     current_node_index = root_index_to_postorder_number(a, root_index)
     path_product = PathEdge{T}[]
 
@@ -611,7 +522,7 @@ function follow_path(a::RnToRmGraph{T}, root_index::Integer, var_index::Integer)
         if length(curr_edges) == 0
             break
         else
-            @assert length(curr_edges) == 1 "Should only be one path from root $root_index to variable $var_index. Instead have $(length(curr_edges)) children from a node on the path"
+            @assert length(curr_edges) == 1 "Should only be one path from root $root_index to variable $var_index. Instead have $(length(curr_edges)) children from node $current_node_index on the path"
             push!(path_product, curr_edges[1])
             current_node_index = bott_vertex(curr_edges[1])
         end
@@ -622,18 +533,18 @@ function follow_path(a::RnToRmGraph{T}, root_index::Integer, var_index::Integer)
         sort!(path_product, lt=((x, y) -> num_uses(x) > num_uses(y))) #sort larger num uses edges first
         product = Node(1.0)
         for term in path_product
-            product *= edge_value(term)
+            product *= value(term)
         end
     end
     return product
 end
 
-function evaluate_path(graph::RnToRmGraph, root_index::Integer, var_index::Integer)
+function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::Integer)
     node_value = root(graph, root_index)
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
             if variable(graph, var_index) == node_value
-                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the number type right
+                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
             else
                 return 0.0 #taking a derivative with respect to a different variable, which is 0.
             end
@@ -645,125 +556,52 @@ function evaluate_path(graph::RnToRmGraph, root_index::Integer, var_index::Integ
     end
 end
 
-"""deletes edges which do not have a path to a variable"""
-function path_to_variable!(graph, current_edge)
-    if is_variable(graph, bott_vertex(current_edge))
-        return true
-    elseif is_constant(graph, bott_vertex(current_edge))
-        delete_edge!(graph, current_edge, true)
-        return false
-    else
-        is_path = false
 
-        edge_copy = copy(child_edges(graph, current_edge))
-        for cedge in edge_copy #have to use a copy because the graph data structure referenced by child_edges will be mutated
-            tmp = path_to_variable!(graph, cedge)
-            is_path = is_path || tmp
+"""Verifies that there is a single path from each root to each variable, if a path exists. This should be an invariant of the factored graph so it should always be true. But the algorithm is complex enough that it is easy to accidentally introduce errors when adding features. `verify_paths` has negligible runtime cost compared to factorization."""
+function _verify_paths(graph::DerivativeGraph, a::Int)
+    branches = child_edges(graph, a)
+    valid_graph = true
+
+    if length(branches) > 1
+        for br1 in 1:length(branches)
+            for br2 in br1+1:length(branches)
+                roots_intersect = reachable_roots(branches[br1]) .& reachable_roots(branches[br2])
+                if !is_zero(roots_intersect) #if any shared roots then can't have any shared variables
+                    if any(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))
+                        valid_graph = false
+                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))"
+                        #could break on first bad path but prefer to list all of them. Better for debugging.
+                    end
+                end
+            end
         end
 
-        if is_path == false
-            delete_edge!(graph, current_edge, true)
+        for child in children(graph, a)
+            valid_graph &= _verify_paths(graph, child)
+        end
+    end
+    return valid_graph
+end
+
+"""verifies that there is a single path from each root to each variable, if such a path exists."""
+function verify_paths(graph::DerivativeGraph)
+    for root in roots(graph)
+        if !_verify_paths(graph, postorder_number(graph, root))
             return false
         end
-        return is_path
     end
-end
-
-function remove_dangling_edges(graph::RnToRmGraph)
-    #might be legal for root to have multiple dangling paths but I don't think any other nodes should. Requires proof, might not be true.
-    for root_index in 1:codomain_dimension(graph)
-        edge_copy = copy(child_edges(graph, root_index_to_postorder_number(graph, root_index)))
-        for cedge in edge_copy #need to copy edge data structure because the child edge array in the graph is being edited by path_to_variable!. This causes premature termination of the loop.
-            path_to_variable!(graph, cedge)
-        end
-    end
+    return true
 end
 
 
-"""Factors the graph then computes jacobian matrix. Destructive."""
-function symbolic_jacobian!(a::RnToRmGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    indim = domain_dimension(a)
-    outdim = codomain_dimension(a)
-
-    result = Matrix{Node}(undef, outdim, indim)
-    factor!(a)
-
-    remove_dangling_edges(a)
-
-    for (i, var) in pairs(variable_ordering)
-        var_index = variable_node_to_index(a, var)
-        for root_index in 1:codomain_dimension(a)
-            result[root_index, i] = evaluate_path(a, root_index, var_index)
-        end
-    end
-
-    return result
-end
-export symbolic_jacobian!
-
-symbolic_jacobian!(a::RnToRmGraph) = symbolic_jacobian!(a, variables(a))
-
-
-jacobian_function!(graph::RnToRmGraph) = jacobian_function!(graph, variables(graph))
-
-function jacobian_Expr!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
-    tmp = symbolic_jacobian!(graph, variable_order)
-    node_to_var = Dict{Node,Union{Symbol,Real}}()
-    all_vars = variables(graph)
-
-    if variable_order === nothing
-        ordering = all_vars
-    else
-        ordering = Node.(variable_order)
-    end
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
-
-    body = Expr(:block)
-    if !in_place
-        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian.
-    end
-
-    for (i, node) in pairs(tmp)
-        node_body, variable = function_body(node, node_to_var)
-        push!(node_body.args, :(result[$i] = $variable))
-        push!(body.args, node_body)
-    end
-
-    push!(body.args, :(return result))
-
-    if in_place
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)..., :result), body)
-    else
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
-    end
-end
-export jacobian_Expr!
-
-jacobian_function!(graph::RnToRmGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
-export jacobian_function!
-
-"""Returns the number of unique nodes in a jacobian. Used to roughly estimate number of operations to evaluation jacobian"""
-function num_unique_nodes(jacobian::Matrix{Node})
+function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Set{Node}()
-    for oned in all_nodes.(jacobian)
+    for index in eachindex(jacobian)
+        oned = all_nodes(jacobian[index])
         union!(nodes, oned)
     end
-    return length(nodes)
+    return nodes
 end
-export num_unique_nodes
 
-"""Computes the derivative of the function matrix `A` with respect to  `variable`."""
-function derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
-    #convert A into vector then compute jacobian
-    vecA = vec(A)
-    graph = RnToRmGraph(vecA)
-    temp = symbolic_jacobian!(graph)
-    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A.
-    column_index = variable_node_to_index(graph, variable)
-    column = temp[:, column_index]
-    mat_column = reshape(column, size(A))
-    result = copy(mat_column)
-
-    return result
-end
-export derivative
+"""Count of number of operations in graph."""
+number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
