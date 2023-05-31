@@ -31,6 +31,53 @@ export @variables
 #
 # #end of code block to add
 
+import Base: getindex, length, size
+
+struct PseudoVector
+    index_range::UnitRange{Int64}
+    name::Symbol
+end
+
+Base.show(io::IO, ::MIME"text/plain", a::PseudoVector) = print(io::IO, "$(a.name)[$(a.index_range)]")
+Base.length(a::PseudoVector) = length(a.index_range)
+Base.size(a::PseudoVector) = (1,)
+Base.eltype(a::PseudoVector) = Node{PseudoVectorElement,0}(PseudoVectorElement)
+
+
+struct PseudoVectorElement
+    parent_object::PseudoVector
+    index::Int64
+end
+export PseudoVector
+
+function Base.getindex(a::PseudoVector, index::Int)
+    @assert index in a.index_range
+    return Node(PseudoVectorElement(a, index))
+end
+
+Base.setindex(::PseudoVector, val, index::Integer) = throw(ErrorException("PseudoVector is read only. Cannot set elements."))
+struct Node{T,N}
+    node_value::T
+    children::Union{MVector{N,Node},Nothing} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
+
+    Node(f::S, a) where {S} = new{S,1}(f, MVector{1}(Node(a)))
+    Node(f::S, a, b) where {S} = new{S,2}(f, MVector{2}(Node(a), Node(b))) #if a,b not a Node convert them.
+
+    Node(a::T) where {T<:Real} = new{T,0}(a, nothing) #convert numbers to Node
+    Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
+
+    Node(a::AutomaticDifferentiation.NoDeriv) = new{AutomaticDifferentiation.NoDeriv,0}(a, nothing) #TODO: this doesn't seem like it should ever be called.
+
+    function Node(operation, args::MVector{N,T}) where {T<:Node,N} #use MVector rather than Vector. 40x faster.
+        ntype = typeof(operation)
+        return new{ntype,N}(operation, args)
+    end
+
+    Node(a::SymbolicUtils.BasicSymbolic{Real}) = new{typeof(a),0}(a, nothing)
+
+    Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
+    Node(a::S) where {S<:PseudoVectorElement} = new{PseudoVectorElement,0}(a)
+end
 struct Node{T,N}
     node_value::T
     children::Union{MVector{N,Node},Nothing} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
