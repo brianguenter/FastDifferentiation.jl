@@ -28,7 +28,7 @@ This is **beta** software being modified on a daily basis. Expect bugs and frequ
 Documentation issues and PR's are as welcome as code issues and PR's. If you find the documentation confusing or incomplete file an issue or create a PR.
 
 ## Limitations
-FD currently only works on expression graphs without conditionals. The algorithm can be extended to work with conditionals but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals.
+**FD** currently only works on expression graphs without conditionals. The algorithm can be extended to work with conditionals but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals.
 
 Expression graphs with more than 10⁵ operations may take seconds or minutes for the symbolic preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
