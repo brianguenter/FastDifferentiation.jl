@@ -1646,10 +1646,10 @@ end
 
 @testitem "hessian" begin
 
-    @variables nx ny nz
+    @variables nx ny z
 
-    h = hessian(nx^2 * ny^2 * nz^2, [nx, ny, nz])
-    h_exe = make_function(h, [nx, ny, nz])
+    h = hessian(nx^2 * ny^2 * z^2, [nx, ny, z])
+    h_exe = make_function(h, [nx, ny, z])
 
     @test isapprox(
         h_exe([1, 2, 3]),

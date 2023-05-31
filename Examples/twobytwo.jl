@@ -1,34 +1,33 @@
 using FastSymbolicDifferentiation
 
-@variables nx ny
+@variables x y
 
-f1 = cos(nx) * ny
-f2 = sin(ny) * nx
+f1 = cos(x) * y
+f2 = sin(y) * x
 
-symb = jacobian([f1, f2], [nx, ny]) #non-destructive
-func = jacobian_function([f1, f2], [nx, ny])
+symb = jacobian([f1, f2], [x, y]) #non-destructive
+func = jacobian_function([f1, f2], [x, y])
 
 func(1.0, 2.0)
 
 """
 ```
-julia> nx, ny = Node.((x, y))
-(x, y)
+julia> @variables x y
 
-julia> f1 = cos(nx) * ny
+julia> f1 = cos(x) * y
 (cos(x) * y)
 
-julia> f2 = sin(ny) * nx
+julia> f2 = sin(y) * x
 (sin(y) * x)
 
 julia> 
 
-julia> symb = jacobian([f1, f2], [nx, ny]) #non-destructive
+julia> symb = jacobian([f1, f2], [x, y]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
 
-julia> func = jacobian_function([f1, f2], [nx, ny])
+julia> func = jacobian_function([f1, f2], [x, y])
 RuntimeGeneratedFunction(#=in FastSymbolicDifferentiation=#, #=using FastSymbolicDifferentiation=#, :((x, y)->begin
           result = fill(0.0, (2, 2))
           begin

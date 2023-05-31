@@ -90,13 +90,9 @@ children(a::EdgeRelations) = a.children
 
 ````
 julia> @variables x y
-2-element Vector{Num}:
- x
- y
+...
 
-julia> nx = Node(x); ny = Node(y);
-
-julia>  h = [cos(nx)*sin(ny), exp(ny)*nx^2];
+julia>  h = [cos(x)*sin(y), exp(y)*x^2];
 
 julia> g = DerivativeGraph(h);
 

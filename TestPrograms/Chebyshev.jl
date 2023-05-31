@@ -24,10 +24,10 @@ Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
 
 
 function chebyshev(::FastSymbolic, model_size)
-    @variables nx
+    @variables x
 
     # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
-    return DerivativeGraph([Chebyshev(model_size, nx)])
+    return DerivativeGraph([Chebyshev(model_size, x)])
 end
 export chebyshev
 
