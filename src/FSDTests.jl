@@ -126,10 +126,8 @@ export complex_dominator_graph
 function R2_R2_function()
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
     return DerivativeGraph([n5, n4])
@@ -137,14 +135,14 @@ end
 export R2_R2_function
 
 function simple_dominator_graph()
-    @variables nx
+    @variables x
 
-    ncos = Node(cos, nx)
-    nplus = Node(+, ncos, nx)
+    ncos = Node(cos, x)
+    nplus = Node(+, ncos, x)
     ntimes = Node(*, ncos, nplus)
     four_2_subgraph = Node(+, nplus, ncos)
-    one_3_subgraph = Node(+, Node(*, Node(-1), Node(sin, nx)), Node(1))
-    return nx, DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
+    one_3_subgraph = Node(+, Node(*, Node(-1), Node(sin, x)), Node(1))
+    return x, DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
 end
 export simple_dominator_graph
 
@@ -164,9 +162,9 @@ export simple_factorable_subgraphs
     using DataStructures
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables nx ny
+    @variables x y
 
-    func = nx * nx
+    func = x * x
 
     gr = DerivativeGraph([func])
     subs_heap = compute_factorable_subgraphs(gr)
@@ -187,10 +185,8 @@ end
     using FastSymbolicDifferentiation.FSDInternals
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
 
@@ -246,10 +242,8 @@ end
 
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
     graph = DerivativeGraph([n4, n5])
@@ -262,9 +256,9 @@ end
     #single edge 3,4 should be split into two: ([r1,r2],[v1,v2]) -> ([r1],[v1,v2]),([r2],[v1,v2])
     edges3_4 = edges(graph, 4, 3)
     @test length(edges3_4) == 2
-    test_edge = PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([0, 1]))
+    test_edge = PathEdge(4, 3, y, BitVector([1, 1]), BitVector([0, 1]))
     @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
-    test_edge = (PathEdge(4, 3, ny, BitVector([1, 1]), BitVector([1, 0])))
+    test_edge = (PathEdge(4, 3, y, BitVector([1, 1]), BitVector([1, 0])))
     @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 
     graph = DerivativeGraph([n4, n5])
@@ -277,9 +271,9 @@ end
     #single edge 3,4 should be split in two: ([r1,r2],[v1,v2])->([r1,r2],[v1]),([r1,r2],[v2])
     edges3_4 = edges(graph, 4, 3)
     @test length(edges3_4) == 2
-    test_edge = PathEdge(4, 3, ny, BitVector([1, 0]), BitVector([1, 1]))
+    test_edge = PathEdge(4, 3, y, BitVector([1, 0]), BitVector([1, 1]))
     @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
-    test_edge = (PathEdge(4, 3, ny, BitVector([0, 1]), BitVector([1, 1])))
+    test_edge = (PathEdge(4, 3, y, BitVector([0, 1]), BitVector([1, 1])))
     @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 end
 
@@ -290,10 +284,8 @@ end
 
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
 
@@ -343,14 +335,14 @@ end
 
     @variables x
 
-    nx = Node(x)
+    x = Node(x)
     z = Node(0)
-    tm = nx * nx
+    tm = x * x
 
-    @test is_tree(nx) == false
-    @test is_leaf(nx) == true
-    @test is_variable(nx) == true
-    @test is_constant(nx) == false
+    @test is_tree(x) == false
+    @test is_leaf(x) == true
+    @test is_variable(x) == true
+    @test is_constant(x) == false
 
     @test is_tree(z) == false
     @test is_leaf(z) == true
@@ -365,13 +357,13 @@ end
 
 @testitem "derivative" begin
 
-    @variables nx ny
+    @variables x y
 
 
-    a = nx * ny
-    @test derivative(a, Val(1)) == ny
-    @test derivative(a, Val(2)) == nx
-    @test derivative(nx) == Node(1)
+    a = x * y
+    @test derivative(a, Val(1)) == y
+    @test derivative(a, Val(2)) == x
+    @test derivative(x) == Node(1)
     @test derivative(Node(1)) == Node(0)
 end
 
@@ -450,10 +442,8 @@ end
 
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
     graph = DerivativeGraph([n5, n4])
@@ -484,22 +474,22 @@ end
 @testitem "DerivativeGraph constructor" begin
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables nx ny
+    @variables x y
 
 
-    cosx = Node(cos, nx)
-    sinx = Node(sin, nx)
+    cosx = Node(cos, x)
+    sinx = Node(sin, x)
     partial_cosx = Node(-, sinx)
-    siny = Node(sin, ny)
-    partial_siny = Node(cos, ny)
+    siny = Node(sin, y)
+    partial_siny = Node(cos, y)
     ctimess = cosx * siny
     partial_times = [siny, cosx]
     cpluss = cosx + siny
     partial_plus = [Node(1), Node(1)]
     roots = [ctimess, cpluss]
-    grnodes = [nx, ny, cosx, siny, cpluss, ctimess]
+    grnodes = [x, y, cosx, siny, cpluss, ctimess]
 
-    correct_postorder_numbers = Dict((nx => 1, cosx => 2, ny => 3, siny => 4, ctimess => 5, cpluss => 6))
+    correct_postorder_numbers = Dict((x => 1, cosx => 2, y => 3, siny => 4, ctimess => 5, cpluss => 6))
 
     graph = DerivativeGraph(roots)
 
@@ -527,9 +517,7 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
@@ -537,7 +525,7 @@ end
     roots = [f1, f2]
     graph = DerivativeGraph(roots)
 
-    #nx,ny,xy shared by both roots. n5,f1 only on f1 path, n3,f2 only on f2 path
+    #x,y,xy shared by both roots. n5,f1 only on f1 path, n3,f2 only on f2 path
     correct_roots_pathmasks = [
         BitArray([1, 0]),
         BitArray([1, 1]),
@@ -570,9 +558,8 @@ end
     @variables x y
 
     #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
@@ -586,7 +573,7 @@ end
 
     parents = Int64[]
     correct_parents = (postorder_number(graph, xy))
-    for parent in relation_node_indices(piterator, postorder_number(graph, nx))
+    for parent in relation_node_indices(piterator, postorder_number(graph, x))
         push!(parents, parent)
     end
 
@@ -619,7 +606,7 @@ end
         push!(children, child)
     end
     @test length(children) == 1
-    @test children[1] == postorder_number(graph, nx)
+    @test children[1] == postorder_number(graph, x)
 
     viterator = DomPathConstraint(graph, false, 2)
     children = Int64[]
@@ -636,9 +623,7 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
@@ -662,15 +647,13 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    variables = [nx, ny]
+    variables = [x, y]
     graph = DerivativeGraph(roots)
 
     previous_edges = unique_edges(graph)
@@ -716,9 +699,8 @@ end
             end
         end
     end
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
@@ -742,15 +724,13 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
     f2 = Node(*, xy, n3) #postorder # 7
     roots = [f1, f2]
-    variables = [nx, ny]
+    variables = [x, y]
     graph = DerivativeGraph(roots)
     compute_edge_paths!(num_vertices(graph), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
@@ -789,9 +769,7 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 2
-    ny = Node(y) #postorder # 3
-    xy = Node(*, nx, ny) #postorder # 4
+    xy = Node(*, x, y) #postorder # 4
     n5 = Node(5) #postorder # 1
     f1 = Node(*, n5, xy) #postorder 5
     n3 = Node(3) #postorder # 6
@@ -812,12 +790,10 @@ end
     end
 
 
-    nx = Node(x) #postorder #1
-    ny = Node(y) #postorder #3
-    ncos = Node(cos, nx) # 2
-    nsin = Node(sin, ny) # 4
+    ncos = Node(cos, x) # 2
+    nsin = Node(sin, y) # 4
     n5 = Node(*, ncos, nsin) #5
-    n6 = Node(*, n5, ny) #6
+    n6 = Node(*, n5, y) #6
     n7 = Node(*, n5, n6) #7
     nexp = Node(exp, n6) # 8
 
@@ -860,9 +836,8 @@ end
 
     @variables x y
 
-    nx = Node(x) #postorder # 1
-    ncos = Node(cos, nx) #pos
-    ntimes1 = Node(*, ncos, nx)
+    ncos = Node(cos, x) #pos
+    ntimes1 = Node(*, ncos, x)
     ntimes2 = Node(*, ncos, ntimes1)
     roots = [ntimes2, ntimes1]
     graph = DerivativeGraph(roots)
@@ -1019,8 +994,8 @@ end
 
     @variables x
 
-    nx = Node(x)
-    gr = DerivativeGraph((cos(nx) * cos(nx)) + nx)
+    x = Node(x)
+    gr = DerivativeGraph((cos(x) * cos(x)) + x)
     # Vis.draw_dot(gr)
     # Vis.draw_dot(gr)
     sub = FactorableSubgraph{Int64,FSD.DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
@@ -1336,12 +1311,12 @@ end
 
     using FastSymbolicDifferentiation.FSDInternals
 
-    @variables nx
+    @variables x
 
     zr = Node(0.0)
 
-    graph = DerivativeGraph([nx, zr])
-    jac = _symbolic_jacobian!(graph, [nx])
+    graph = DerivativeGraph([x, zr])
+    jac = _symbolic_jacobian!(graph, [x])
 
     @test value(jac[1, 1]) == 1
     @test value(jac[2, 1]) == 0
@@ -1398,14 +1373,14 @@ end
     using FastSymbolicDifferentiation.FSDInternals
 
     x, graph, _, _ = simple_dominator_graph()
-    nx = Node(x)
+
     factor!(graph)
     fedge = edges(graph, 1, 4)[1]
-    tmp0 = make_function([value(fedge)], [nx])
+    tmp0 = make_function([value(fedge)], [x])
     dfsimp(x) = tmp0([x])[1]
     x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new Node(x)
-    nx = Node(x)
-    tmp00 = make_function([root(graph, 1)], [nx])
+
+    tmp00 = make_function([root(graph, 1)], [x])
     origfsimp(x) = tmp00([x])[1]
     @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
@@ -1431,10 +1406,8 @@ end
 
     @variables x y
 
-    nx = Node(x)
-    ny = Node(y)
-    n2 = nx * ny
-    n4 = n2 * ny
+    n2 = x * y
+    n4 = n2 * y
     n5 = n2 * n4
 
     graph = DerivativeGraph([n4, n5])
@@ -1445,12 +1418,12 @@ end
     df12(x, y) = 2 * x * y
 
     correct_jacobian = [df11 df12; df21 df22]
-    copy_jac = _symbolic_jacobian(graph, [nx, ny])
-    jac = _symbolic_jacobian!(graph, [nx, ny])
+    copy_jac = _symbolic_jacobian(graph, [x, y])
+    jac = _symbolic_jacobian!(graph, [x, y])
 
     @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
-    computed_jacobian = make_function(jac, [nx, ny])
+    computed_jacobian = make_function(jac, [x, y])
 
     #verify the computed and hand caluclated jacobians agree.
     for _x in -1.0:0.01:1.0
@@ -1646,10 +1619,10 @@ end
 
 @testitem "hessian" begin
 
-    @variables nx ny z
+    @variables x y z
 
-    h = hessian(nx^2 * ny^2 * z^2, [nx, ny, z])
-    h_exe = make_function(h, [nx, ny, z])
+    h = hessian(x^2 * y^2 * z^2, [x, y, z])
+    h_exe = make_function(h, [x, y, z])
 
     @test isapprox(
         h_exe([1, 2, 3]),
