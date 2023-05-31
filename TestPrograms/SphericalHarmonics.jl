@@ -54,7 +54,7 @@ export compare_factorial_approximation
 end
 export N
 
-"""l is the order of the spherical harmonic. I think"""
+"""l is the order of the spherical harmonic"""
 @memoize function Y(l, m, x, y, z)
     @assert l >= 0
     @assert abs(m) <= l

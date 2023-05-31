@@ -1,12 +1,12 @@
 using FastSymbolicDifferentiation
 
-@variables nt
+@variables t
 
-A = [nt nt^2; 3nt^2 5]
+A = [t t^2; 3t^2 5]
 
-derivative(A, nt)
+derivative(A, t)
 
-derivative(A, nt, nt)
+derivative(A, t, t)
 
 
 """
