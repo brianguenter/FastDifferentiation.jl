@@ -235,7 +235,7 @@ function time_test(gr)
     # Vis.draw_dot(gr, value_labels=false, reachability_labels=true, start_nodes=[54])
 
     # factor!(gr)
-    # symbolic_jacobian!(gr)
+    # jacobian!(gr)
     return gr
     return nothing
 end

@@ -100,7 +100,7 @@ julia>  h = [cos(nx)*sin(ny), exp(ny)*nx^2];
 
 julia> g = DerivativeGraph(h);
 
-julia> symbolic_jacobian!(g)
+julia> jacobian!(g)
 [ Info: 0 factorable subgraphs
 2×2 Matrix{Node}:
  (sin(y) * -(sin(x)))  (cos(x) * cos(y))

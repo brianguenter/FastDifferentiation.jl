@@ -114,7 +114,7 @@ julia> f1 = cos(x) * y
 julia> f2 = sin(y) * x
 (sin(y) * x)
 
-julia> symb = symbolic_jacobian([f1, f2], [x, y]) #non-destructive
+julia> symb = jacobian([f1, f2], [x, y]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))
@@ -137,19 +137,19 @@ julia> func(SVector{2}([1.0,2.0]))
  ```
 Compute partial Jacobian:
 ```
-julia> symb = symbolic_jacobian([x*y,y*z,x*z],[x,y,z])
+julia> symb = jacobian([x*y,y*z,x*z],[x,y,z])
 3×3 Matrix{Node}:
  y    x    0.0
  0.0  z    y
  z    0.0  x
 
-julia> symb = symbolic_jacobian([x*y,y*z,x*z],[x,y])
+julia> symb = jacobian([x*y,y*z,x*z],[x,y])
 3×2 Matrix{Node}:
  y    x
  0.0  z
  z    0.0
 
-julia> symb = symbolic_jacobian([x*y,y*z,x*z],[z,y])
+julia> symb = jacobian([x*y,y*z,x*z],[z,y])
 3×2 Matrix{Node}:
  0.0  x
  y    z

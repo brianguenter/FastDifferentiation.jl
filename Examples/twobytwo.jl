@@ -5,7 +5,7 @@ using FastSymbolicDifferentiation
 f1 = cos(nx) * ny
 f2 = sin(ny) * nx
 
-symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
+symb = jacobian([f1, f2], [nx, ny]) #non-destructive
 func = jacobian_function([f1, f2], [nx, ny])
 
 func(1.0, 2.0)
@@ -23,7 +23,7 @@ julia> f2 = sin(ny) * nx
 
 julia> 
 
-julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
+julia> symb = jacobian([f1, f2], [nx, ny]) #non-destructive
 2×2 Matrix{Node}:
  (y * -(sin(x)))  cos(x)
  sin(y)           (x * cos(y))

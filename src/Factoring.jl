@@ -598,22 +598,22 @@ end
 julia> nx, ny = Node.((x, y))
 (x, y)
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+julia> jacobian([nx*ny,ny*nx],[nx,ny])
 2×2 Matrix{Node}:
  y  x
  y  x
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[ny,nx])
+julia> jacobian([nx*ny,ny*nx],[ny,nx])
 2×2 Matrix{Node}:
  x  y
  x  y
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+julia> jacobian([nx*ny,ny*nx],[nx,ny])
 2×2 Matrix{Node}:
  y  x
  y  x
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx])
+julia> jacobian([nx*ny,ny*nx],[nx])
 2×1 Matrix{Node}:
  y
  y
@@ -655,29 +655,29 @@ end
 julia> nx, ny = Node.((x, y))
 (x, y)
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+julia> jacobian([nx*ny,ny*nx],[nx,ny])
 2×2 Matrix{Node}:
  y  x
  y  x
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[ny,nx])
+julia> jacobian([nx*ny,ny*nx],[ny,nx])
 2×2 Matrix{Node}:
  x  y
  x  y
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx,ny])
+julia> jacobian([nx*ny,ny*nx],[nx,ny])
 2×2 Matrix{Node}:
  y  x
  y  x
 
-julia> symbolic_jacobian([nx*ny,ny*nx],[nx])
+julia> jacobian([nx*ny,ny*nx],[nx])
 2×1 Matrix{Node}:
  y
  y
  ```
 """
-symbolic_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
-export symbolic_jacobian
+jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
+export jacobian
 
 
 """Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
@@ -931,7 +931,7 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     graph = DerivativeGraph(vecA)
 
     temp = _symbolic_jacobian!(graph)
-    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify symbolic_jacobian! to only compute the single column of derivatives.
+    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify jacobian! to only compute the single column of derivatives.
     column_index = variable_node_to_index(graph, variable)
     if column_index === nothing
         return Node.(zeros(size(A)))

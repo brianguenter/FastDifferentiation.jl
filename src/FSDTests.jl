@@ -1425,7 +1425,7 @@ end
 end
 
 
-@testitem "symbolic_jacobian" begin
+@testitem "jacobian" begin
 
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1506,7 +1506,7 @@ end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
     using FastSymbolicDifferentiation.FSDTests
-    using FiniteDifferences
+    using FiniteDifferences: jacobian, central_fdm
     using FastSymbolicDifferentiation.FSDInternals
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
@@ -1514,7 +1514,7 @@ end
     fsd_func(vars...) = vec(mn_func(vars))
 
     graph_vars = variables(fsd_graph)
-    sym_func = make_function(symbolic_jacobian(roots(fsd_graph), graph_vars), graph_vars)
+    sym_func = make_function(FSD.jacobian(roots(fsd_graph), graph_vars), graph_vars)
 
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
@@ -1541,7 +1541,7 @@ end
 
     func_wrap(x) = fsd_func(x)[1]
 
-    sym_func = make_function(symbolic_jacobian(roots(fsd_graph), variables(fsd_graph)), variables(fsd_graph), in_place=false)
+    sym_func = make_function(FSD.jacobian(roots(fsd_graph), variables(fsd_graph)), variables(fsd_graph), in_place=false)
 
     for xr in -1.0:0.214:1.0
         finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
@@ -1553,7 +1553,7 @@ end
 
     tmp = Matrix{Float64}(undef, 1, 1)
     fsd_graph = chebyshev(FastSymbolic(), chebyshev_order)
-    sym_func = make_function(symbolic_jacobian(roots(fsd_graph), variables(fsd_graph)), variables(fsd_graph), in_place=false)
+    sym_func = make_function(FSD.jacobian(roots(fsd_graph), variables(fsd_graph)), variables(fsd_graph), in_place=false)
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
@@ -1599,7 +1599,7 @@ end
     Jv, v_vars = jacobian_times_v(fsd_func, func_vars)
 
     #compute the product the slow way
-    Jv_slow = convert.(Node, symbolic_jacobian(fsd_func, func_vars) * v_vars)
+    Jv_slow = convert.(Node, jacobian(fsd_func, func_vars) * v_vars)
     both_vars = [func_vars; v_vars]
     slow_symbolic = reshape(Jv_slow, (length(Jv_slow), 1))
 
@@ -1628,7 +1628,7 @@ end
 
     Jᵀv, r_vars = jacobian_transpose_v(fsd_func, func_vars)
 
-    Jᵀv_slow = convert.(Node, transpose(symbolic_jacobian(fsd_func, func_vars)) * r_vars)
+    Jᵀv_slow = convert.(Node, transpose(jacobian(fsd_func, func_vars)) * r_vars)
     both_vars = [func_vars; r_vars]
     slow_symbolic = reshape(Jᵀv_slow, (length(Jᵀv_slow), 1))
 
