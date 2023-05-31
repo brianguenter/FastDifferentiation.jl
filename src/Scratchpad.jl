@@ -5,13 +5,14 @@ using FiniteDifferences
 
 
 function test()
-    order = 10
+    @variables x y
 
-    fsd_graph = spherical_harmonics(FastSymbolic(), order)
-    fsd_func = roots(fsd_graph)
-    func_vars = variables(fsd_graph)
 
-    Jv, v_vars = jacobian_times_v(fsd_func, func_vars)
+    a = x * y
+    @assert derivative(a, Val(1)) == y
+    @assert derivative(a, Val(2)) == x
+    @assert derivative(x) == Node(1)
+    @assert derivative(Node(1)) == Node(0)
 
 end
 

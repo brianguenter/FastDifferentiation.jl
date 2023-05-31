@@ -164,4 +164,3 @@ function write_dot(filename, dot_string::String)
 end
 
 end #module
-export Vis

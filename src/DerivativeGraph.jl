@@ -552,7 +552,6 @@ function number_of_operations(graph::DerivativeGraph)
 
     return length(filter(x -> is_tree(x), nodes_in_graph))
 end
-export number_of_operations
 
 """Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
 function graph_statistics(graph::DerivativeGraph)

@@ -52,8 +52,6 @@ struct Node{T,N}
 
     Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
 end
-export Node
-
 
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
