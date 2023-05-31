@@ -826,37 +826,7 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 end
 export jacobian_transpose_v
 
-function make_Expr(func_array::AbstractArray{T,N}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,N}
-    node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
-    body = Expr(:block)
 
-    if !in_place
-        push!(body.args, :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...))))
-    end
-
-    node_to_index = Dict{Node,Int64}()
-    for (i, node) in pairs(input_variables)
-        node_to_index[node] = i
-    end
-
-    for (i, node) in pairs(func_array)
-        node_body, variable = function_body!(node, node_to_index, node_to_var)
-        push!(node_body.args, :(result[$i] = $variable))
-        push!(body.args, node_body)
-    end
-
-    push!(body.args, :(return result))
-
-    if in_place
-        return :((input_variables, result) -> $body)
-    else
-        return :((input_variables) -> $body)
-    end
-end
-export make_Expr
-
-make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false, use_vector_runtime_args=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
-export make_function
 
 
 """Computes the full symbolic Hessian matrix"""
@@ -878,17 +848,7 @@ function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) whe
     gradient = sparse_symbolic_jacobian(DerivativeGraph(expression), variable_order)
 end
 
-function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
-    nodes = Set{Node}()
-    for index in eachindex(jacobian)
-        oned = all_nodes(jacobian[index])
-        union!(nodes, oned)
-    end
-    return nodes
-end
 
-"""Count of number of operations in graph."""
-number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
 
 
 """computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
@@ -942,4 +902,14 @@ function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
     end
 end
 
+function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
+    nodes = Set{Node}()
+    for index in eachindex(jacobian)
+        oned = all_nodes(jacobian[index])
+        union!(nodes, oned)
+    end
+    return nodes
+end
 
+"""Count of number of operations in graph."""
+number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
