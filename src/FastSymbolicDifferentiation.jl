@@ -41,6 +41,7 @@ include("DerivativeGraph.jl")
 include("GraphProcessing.jl")
 include("FactorableSubgraph.jl")
 include("Factoring.jl")
+include("Jacobian.jl")
 include("CodeGeneration.jl")
 include("GraphVisualization.jl")
 
