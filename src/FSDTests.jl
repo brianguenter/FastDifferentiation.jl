@@ -1369,7 +1369,7 @@ end
 
 @testitem "factor ℝ¹->ℝ¹ " begin
     using FastSymbolicDifferentiation.FSDTests
-    using FiniteDifferences
+    import FiniteDifferences
     using FastSymbolicDifferentiation.FSDInternals
 
     x, graph, _, _ = simple_dominator_graph()
@@ -1382,7 +1382,7 @@ end
 
     tmp00 = make_function([root(graph, 1)], [x])
     origfsimp(x) = tmp00([x])[1]
-    @assert isapprox(central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
+    @assert isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
     factor!(graph)
@@ -1395,7 +1395,7 @@ end
     origf(x) = tmp2(x)[1]
 
     for test_val in -3.0:0.013:3.0
-        @assert isapprox(central_fdm(5, 1)(origf, test_val), df(test_val)[1])
+        @assert isapprox(FiniteDifferences.central_fdm(5, 1)(origf, test_val), df(test_val)[1])
     end
 end
 
@@ -1479,7 +1479,7 @@ end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
     using FastSymbolicDifferentiation.FSDTests
-    using FiniteDifferences: jacobian, central_fdm
+    import FiniteDifferences
     using FastSymbolicDifferentiation.FSDInternals
 
     fsd_graph = spherical_harmonics(FastSymbolic(), 10)
@@ -1492,7 +1492,7 @@ end
     for xr in -1.0:0.3:1.0
         for yr in -1.0:0.3:1.0
             for zr = -1.0:0.3:1.0
-                finite_diff = jacobian(central_fdm(12, 1, adapt=3), fsd_func, xr, yr, zr)
+                finite_diff = FiniteDifferences.jacobian(FiniteDifferences.central_fdm(12, 1, adapt=3), fsd_func, xr, yr, zr)
                 mat_form = hcat(finite_diff[1], finite_diff[2], finite_diff[3])
                 symbolic = sym_func([xr, yr, zr])
 
@@ -1503,7 +1503,7 @@ end
 end
 
 @testitem "Chebyshev jacobian evaluation test" begin
-    using FiniteDifferences
+    import FiniteDifferences
     using FastSymbolicDifferentiation.FSDTests
     using FastSymbolicDifferentiation.FSDInternals
 
@@ -1517,7 +1517,7 @@ end
     sym_func = make_function(FSD.jacobian(roots(fsd_graph), variables(fsd_graph)), variables(fsd_graph), in_place=false)
 
     for xr in -1.0:0.214:1.0
-        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
+        finite_diff = FiniteDifferences.central_fdm(12, 1, adapt=3)(func_wrap, xr)
 
         symbolic = sym_func(xr)
 
@@ -1530,7 +1530,7 @@ end
 
     #the in place form of jacobian function
     for xr in -1.0:0.214:1.0
-        finite_diff = central_fdm(12, 1, adapt=3)(func_wrap, xr)
+        finite_diff = FiniteDifferences.central_fdm(12, 1, adapt=3)(func_wrap, xr)
 
         symbolic = sym_func(xr, tmp)
 
