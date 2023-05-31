@@ -501,6 +501,8 @@ These rules are generally safe in the sense of obeying IEEE floating point arith
 <div id="FutureWork"></div>
 
 ## Future work
+The top priority work item is reducing memory allocations and improving performance of the preprocessing step.
+
 The **FD** algorithm is fast enough to preprocess expression graphs with ≈10⁵ operations in approximately 1 minute on a modern laptop. This is a one time step to generate compiled derivative functions which, of course, take far less than 1 minute to execute. Preprocessing time scales non-linearly with expression size so smaller graphs take much less time.
 
 However, LLVM compile time can be significant at this scale. For expressions this size and larger [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. This would be especially useful when your function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
