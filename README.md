@@ -21,7 +21,7 @@ These operations are not yet supported but are on the roadmap:
 * sparse symbolic Hessian
 * compiled: sparse Jacobian, sparse Hessian
 
-If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for you to determine if FSD will help with your problem.
+If you use FSD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for others to determine if FSD will help with your problem.
 
 This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
