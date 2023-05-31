@@ -1382,7 +1382,7 @@ end
 
     tmp00 = make_function([root(graph, 1)], [x])
     origfsimp(x) = tmp00([x])[1]
-    @assert isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
+    @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
     factor!(graph)
@@ -1395,7 +1395,7 @@ end
     origf(x) = tmp2(x)[1]
 
     for test_val in -3.0:0.013:3.0
-        @assert isapprox(FiniteDifferences.central_fdm(5, 1)(origf, test_val), df(test_val)[1])
+        @test isapprox(FiniteDifferences.central_fdm(5, 1)(origf, test_val), df(test_val)[1])
     end
 end
 
