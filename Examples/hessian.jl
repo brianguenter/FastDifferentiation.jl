@@ -1,4 +1,4 @@
-using FastSymbolicDifferentiation
+using FastDifferentiation
 
 @variables x y z
 

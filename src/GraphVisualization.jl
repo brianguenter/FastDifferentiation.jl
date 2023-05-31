@@ -1,11 +1,11 @@
 #*******************************
 # To use this visualization software you must install graphviz: https://graphviz.org/.
-# You probably don't need to visualize graphs. This is primarily for debugging the FSD code.
+# You probably don't need to visualize graphs. This is primarily for debugging the FD code.
 #*******************************
 
 module Vis
-using ..FastSymbolicDifferentiation
-using ..FastSymbolicDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
+using ..FastDifferentiation
+using ..FastDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
 using ElectronDisplay
 
 function label_func(mask::BitVector, label_string::String)
@@ -51,7 +51,7 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     if start_nodes !== nothing
         edges_to_draw = edges_from_node(graph, start_nodes)
     else
-        edges_to_draw = collect(FastSymbolicDifferentiation.unique_edges(graph))
+        edges_to_draw = collect(FastDifferentiation.unique_edges(graph))
     end
 
     return make_dot_file(graph, edges_to_draw, label, reachability_labels, value_labels, no_path_edges)
@@ -139,7 +139,7 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
 end
 export draw_dot
 
-draw_dot(subgraph::FastSymbolicDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
+draw_dot(subgraph::FastDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
 
 function write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)

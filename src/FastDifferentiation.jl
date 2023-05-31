@@ -1,4 +1,4 @@
-module FastSymbolicDifferentiation
+module FastDifferentiation
 
 using TermInterface
 import SymbolicUtils
@@ -45,6 +45,6 @@ include("Jacobian.jl")
 include("CodeGeneration.jl")
 include("GraphVisualization.jl")
 
-include("FSDTests.jl")
+include("FDTests.jl")
 
 end # module

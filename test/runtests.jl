@@ -1,4 +1,4 @@
-using FastSymbolicDifferentiation
+using FastDifferentiation
 using TestItemRunner
 
 @run_package_tests

@@ -1,4 +1,4 @@
-using FastSymbolicDifferentiation
+using FastDifferentiation
 
 @variables x y
 
@@ -27,8 +27,8 @@ julia> symb = jacobian([f1, f2], [x, y]) #non-destructive
  sin(y)           (x * cos(y))
 
 julia> func = make_function(symb, [x, y])
-RuntimeGeneratedFunction(#=in FastSymbolicDifferentiation=#, #=using FastSymbolicDifferentiation=#, :((input_variables,)->begin
-          #= /home/brian/source/FastSymbolicDifferentiation.jl/src/CodeGeneration.jl:25 =#
+RuntimeGeneratedFunction(#=in FastDifferentiation=#, #=using FastDifferentiation=#, :((input_variables,)->begin
+          #= /home/brian/source/FastDifferentiation.jl/src/CodeGeneration.jl:25 =#
           begin
               result = Array{promote_type(Float64, eltype(input_variables)), 2}(undef, 2, 2)
               begin
