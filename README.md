@@ -42,7 +42,7 @@ The **FSD** symbolic differentiation algorithm is related to the [D* ](https://w
 
 
 
-**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** symbolic forms is straightforward.
+**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** symbolic forms is straightforward using a separate package [FSDConversion](https://github.com/brianguenter/FSDConversion/tree/main) which will be available in the next few days. I am working with the SciML team to see if it is possible to integrate **FSD** differentiation directly into Symbolics.jl but we are still in the early stages.
 
 Unlike forward and reverse automatic differentiation you don't have to choose which differentiation algorithm to use based on the graph structure. **FSD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. 
 

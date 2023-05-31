@@ -46,6 +46,5 @@ include("CodeGeneration.jl")
 include("GraphVisualization.jl")
 
 include("FSDTests.jl")
-include("Scratchpad.jl")
 
 end # module
