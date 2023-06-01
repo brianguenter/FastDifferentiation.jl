@@ -56,7 +56,37 @@ If you use FD in your work please share the functions you differentiate with me.
 This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
 ## Limitations
-**FD** currently only works on expressions without conditionals. The algorithm can be extended to work with conditionals but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals. See [Future Work](#FutureWork) for a potential long term solution to this problem.
+**FD** currently only works on expressions without conditionals. For example, you can do this:
+```
+julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
+f (generic function with 2 methods)
+
+julia> f(0.0,x,y)
+cos(x)
+
+julia> f(1.0,x,y)
+sin(y)
+```
+but you can't do this:
+```
+julia> f(a,b) = a < b ? cos(a) : sin(b)
+f (generic function with 2 methods)
+
+julia> f(x,y)
+ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
+
+Closest candidates are:
+  isless(::Any, ::DataValues.DataValue{Union{}})
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:291
+  isless(::S, ::DataValues.DataValue{T}) where {S, T}
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:285
+  isless(::DataValues.DataValue{Union{}}, ::Any)
+   @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:293
+  ...
+```
+This is because all values in an **FD** expression must be known when the expression graph object is created. 
+
+The algorithm can be extended to work with conditionals but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals. See [Future Work](#FutureWork) for a potential long term solution to this problem.
 
 Expression graphs with more than 10⁵ operations may take seconds or minutes for the expression graph preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
@@ -427,7 +457,7 @@ The **FD** algorithm is fast enough to differentiate large expression graphs (�
 
 The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FD** would only be practical for modest size graphs (<10⁴ nodes). But, it scaled better than expected and for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when to switch from BitVector to Set. This should significantly reduce symbolic processing time for large graphs.
 
-In its current form **FD** can only differentiate symbolic expressions without branches. The algorithm can be extended to allow branching but this causes symbolic processing time to scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
+In its current form **FD** can only differentiate expressions without conditionals. The algorithm can be extended to allow this but symbolic processing can scale exponentially with the nesting depth of conditionals. For small nesting depths this might be acceptable so a future version of FD might support limited nested conditionals. 
 
 However, a better approach might be to use FD as a processing step in a tracing JIT compiler, applying **FD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
 
