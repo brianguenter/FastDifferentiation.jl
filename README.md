@@ -17,7 +17,6 @@ You should consider using FastDifferentiation when you need:
 
 This is the **FD** feature set (operations marked ❌ will be completed soon):
 
-
 <table>
 <tr>
 <td> <b></b>
@@ -112,7 +111,7 @@ Compute Hessian:
 ```
 @variables x y z
 
-julia> hessian(x^2+y^2+z^2,[x,y,z])
+julia> h_symb = hessian(x^2+y^2+z^2,[x,y,z])
 3×3 Matrix{Node}:
  2    0.0  0.0
  0.0  2    0.0
@@ -128,9 +127,6 @@ julia> h_exe([1,2,3])
 ```
 Compute Jacobian:
 ```
-julia> x, y = Node.((x, y))
-(x, y)
-
 julia> f1 = cos(x) * y
 (cos(x) * y)
 
@@ -144,35 +140,35 @@ julia> symb = jacobian([f1, f2], [x, y]) #non-destructive
 ```
 Create executable to evaluate Jacobian:
 ```
-jjulia> func = make_function(symb,[x,y])
+julia> jac_exe = make_function(symb,[x,y])
 ...
-julia> func([1.0,2.0])
+julia> jac_exe([1.0,2.0])
 2×2 Matrix{Float64}:
  -1.68294  0.540302
  -1.68294  0.540302
 ```
 For faster execution call the executable function with an `SVector` (for short vectors, probably < 100 elements):
 ```
-julia> func(SVector{2}([1.0,2.0]))
+julia> jac_exe(SVector{2}([1.0,2.0]))
 2×2 Matrix{Float64}:
  -1.68294  0.540302
  -1.68294  0.540302
  ```
-Compute partial Jacobian:
+Compute any subset of the columns of the Jacobian:
 ```
-julia> symb = jacobian([x*y,y*z,x*z],[x,y,z])
+julia> symb = jacobian([x*y,y*z,x*z],[x,y,z]) #all columns
 3×3 Matrix{Node}:
  y    x    0.0
  0.0  z    y
  z    0.0  x
 
-julia> symb = jacobian([x*y,y*z,x*z],[x,y])
+julia> symb = jacobian([x*y,y*z,x*z],[x,y]) #first two columns
 3×2 Matrix{Node}:
  y    x
  0.0  z
  z    0.0
 
-julia> symb = jacobian([x*y,y*z,x*z],[z,y])
+julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, reversed so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
 3×2 Matrix{Node}:
  0.0  x
  y    z
@@ -181,8 +177,6 @@ julia> symb = jacobian([x*y,y*z,x*z],[z,y])
 
 Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation).
 ```
-julia> x,y = Node.((x,y))
-
 julia> (f1,f2) = cos(x)*y,sin(y)*x
 ((cos(x) * y), (sin(y) * x))
 
