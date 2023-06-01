@@ -25,6 +25,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td>  <b>Higher order derivatives</b> </td> 
 <td>  <b>Jᵀv</b> </td> 
 <td>  <b>Jv</b> </td> 
+<td> <b> Hv (H dense)</b> </td>
 </tr>
 <tr>
 <td> <b> Compiled exe </b> </td> 
@@ -32,6 +33,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td> ❌ </td>
 <td> ✅ </td>
 <td> ❌  </td>
+<td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
@@ -45,11 +47,12 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
+<td> ✅ </td>
 </tr>
 
 </table>
 
-For applications of the Jᵀv, and Jv operations see this [paper](https://arxiv.org/abs/1812.01892).
+For applications of the Jᵀv, and Jv operations see this [paper](https://arxiv.org/abs/1812.01892). Hv computes the Hessian times a vector without explicitly forming the Hessian matrix. This can be useful when the Hessian matrix would be very large.
 
 If you use FD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for others to determine if FD will help with their problem.
 
@@ -152,6 +155,24 @@ julia> h_exe([1,2,3])
  0.0  3.0  2.0
  3.0  0.0  1.0
  2.0  1.0  0.0
+```
+Compute `Hv` without forming the full Hessian matrix. This is useful if the Hessian is very large
+```
+julia> @variables x y
+y
+
+julia> f = x^2 * y^2
+((x ^ 2) * (y ^ 2))
+
+julia> hv_fast, v_vec2 = hessian_times_v(f, [x, y])
+...
+
+julia> hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2])
+...
+julia> hv_fast_exe([1.0,2.0,3.0,4.0]) #first two vector elements are x,y last two are v1,v2
+2-element Vector{Float64}:
+ 56.0
+ 32.0
 ```
 Compute Jacobian:
 ```
