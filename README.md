@@ -89,7 +89,7 @@ Closest candidates are:
 ```
 This is because the call `f(x,y)` creates an expression graph. At graph creation time the **FD** variables `x,y` are unevaluated variables with no specific value so they cannot be compared with any other value.
 
-The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals. See [Future Work](#FutureWork) for a potential long term solution to this problem.
+The algorithm can be extended to work with conditionals applied to **FD** variables but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditional nesting. See [Future Work](#FutureWork) for a potential long term solution to this problem.
 
 Expression graphs with more than 10⁵ operations may take seconds or minutes for the expression graph preprocesing step. This is a known issue and should be addressed in a future version. For these very large graphs the translation from expression graph to Julia Expr is fast but the LLVM compilation time can be long.
 
