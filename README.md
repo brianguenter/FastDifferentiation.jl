@@ -93,7 +93,7 @@ Set up variables:
 ```
 using FastDifferentiation
 
-@variables x y z #Similar to the Symbolics @variables macro
+@variables x y z
 
 ```
  Make a vector of variables
