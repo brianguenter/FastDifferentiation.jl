@@ -147,6 +147,26 @@ julia> jac_exe([1.0,2.0])
  -1.68294  0.540302
  -1.68294  0.540302
 ```
+Executable with in_place matrix evaluation to avoid allocation of a matrix for the Jacobian:
+```
+julia> jac_exe = make_function(symb,[x,y], in_place=true)
+...
+julia> a = Matrix{Float64}(undef,2,2)
+2×2 Matrix{Float64}:
+ 0.0  0.0
+ 0.0  6.93532e-310
+
+julia> jac_exe([1.0,2.0],a)
+2×2 Matrix{Float64}:
+ -1.68294    0.540302
+  0.909297  -0.416147
+
+julia> a
+2×2 Matrix{Float64}:
+ -1.68294    0.540302
+  0.909297  -0.416147
+```
+
 For faster execution call the executable function with an `SVector` (for short vectors, probably < 100 elements):
 ```
 julia> jac_exe(SVector{2}([1.0,2.0]))
