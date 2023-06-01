@@ -1633,4 +1633,31 @@ end
     )
 end
 
+@testitem "hessian_times_v" begin
+    using StaticArrays
+
+    @variables x y
+    v_vec = make_variables(:v, 2)
+    f = x^2 * y^2
+    hv_slow = convert.(FastDifferentiation.Node, hessian(f, [x, y]) * v_vec)
+
+    hv_slow_exe = make_function(hv_slow, [[x, y]; v_vec])
+
+    hv_fast, v_vec2 = hessian_times_v(f, [x, y])
+
+    hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2])
+
+    n_rand = 10
+    for xval in rand(n_rand)
+        for yval in rand(n_rand)
+            for vval1 in rand(n_rand)
+                for vval2 in rand(n_rand)
+                    @test isapprox(hv_fast_exe(SVector{4,Float64}(xval, yval, vval1, vval2)), hv_slow_exe(SVector{4,Float64}(xval, yval, vval1, vval2)))
+                end
+            end
+        end
+    end
+end
+
+
 end #module

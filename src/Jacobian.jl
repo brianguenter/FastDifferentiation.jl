@@ -121,7 +121,7 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
     graph = DerivativeGraph(terms)
     v_vector = make_variables(gensym(), domain_dimension(graph))
     factor!(graph)
-    for (variable, one_v) in zip(variables(graph), v_vector)
+    for (variable, one_v) in zip(partial_variables, v_vector)
         new_edges = PathEdge[]
         old_edges = collect(parent_edges(graph, variable)) #can't use iterator returned by parent_edges because it will include new edges. Need snapshot of old edges.
         for parent in old_edges
@@ -173,6 +173,12 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
 end
 export jacobian_times_v
 
+"""Computes Hessian times a vector v without forming the Hessian matrix. Useful when the Hessian would be impractically large."""
+function hessian_times_v(term::T, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    gradient = vec(jacobian([term], partial_variables))
+    return jacobian_times_v(gradient, partial_variables)
+end
+export hessian_times_v
 
 """Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
