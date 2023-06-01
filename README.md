@@ -84,7 +84,7 @@ Closest candidates are:
    @ DataValues ~/.julia/packages/DataValues/N7oeL/src/scalar/core.jl:293
   ...
 ```
-This is because all values in an **FD** expression must be known when the expression graph object is created. 
+This is because the call `f(x,y)` creates an expression graph and all values used in a conditional must be known when expression graphs are created. At graph creation time `x,y` are unevaluated variables with no specific value.
 
 The algorithm can be extended to work with conditionals but the processing time and graph size may grow exponentially with conditional nesting depth. A future version may allow for limited conditionals. See [Future Work](#FutureWork) for a potential long term solution to this problem.
 
