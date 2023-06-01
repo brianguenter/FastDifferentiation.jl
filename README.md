@@ -52,7 +52,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 
 </table>
 
-For applications of the Jᵀv, and Jv operations see this [paper](https://arxiv.org/abs/1812.01892). Hv computes the Hessian times a vector without explicitly forming the Hessian matrix. This can be useful when the Hessian matrix is large and sparse.
+Jᵀv and Jv compute the Jacobian transpose times a vector and the Jacobian times a vector, without explicitly forming the Jacobian matrix. For applications of the Jᵀv, and Jv operations see this [paper](https://arxiv.org/abs/1812.01892). Hv computes the Hessian times a vector without explicitly forming the Hessian matrix. This can be useful when the Hessian matrix is large and sparse.
 
 If you use FD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for others to determine if FD will help with their problem.
 
