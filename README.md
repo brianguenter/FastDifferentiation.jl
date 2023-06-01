@@ -102,15 +102,15 @@ If you need to do further analysis on the symbolic derivative converting between
 
 
 The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^c] to expressions:
-* x×0=>0
-* x×1=>x
-* x/1=>x
-* x+0=>x
-* c₁×c₂=>c₃ for c₁,c₂,c₃ constants
-* c₁+c₂=>c₃ for c₁,c₂,c₃ constants
-* c₁×(c₂×x) => (c₁×c₂)×x  for c₁,c₂ constants
+* `x×0=>0`
+* `x×1=>x`
+* `x/1=>x`
+* `x+0=>x`
+* `c₁×c₂=>c₃` for `c₁,c₂,c₃` constants
+* `c₁+c₂=>c₃` for `c₁,c₂,c₃` constants
+* `c₁×(c₂×x)` => `(c₁×c₂)×x`  for `c₁,c₂` constants
 
-These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
+These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of `x` happens to be NaN or Inf the **FD** expression `x*0` will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
 
 <details> 
  <summary> <b> Examples and basic usage </b> </summary>
