@@ -28,9 +28,9 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <tr>
 <td> <b> Compiled function </b> </td> 
 <td> ✅ </td>
-<td> ❌ </td>
 <td> ✅ </td>
-<td> ❌  </td>
+<td> ✅ </td>
+<td> ✅  </td>
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
@@ -41,7 +41,7 @@ This is the **FD** feature set (operations marked ❌ will be completed soon):
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
-<td> ❌  </td>
+<td> ✅  </td>
 <td> ✅ </td>
 <td> ✅ </td>
 <td> ✅ </td>
