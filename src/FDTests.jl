@@ -1435,41 +1435,20 @@ end
     end
 end
 
-@testitem "sparse_symbolic_jacobian!" begin
+@testitem "sparse_jacobian" begin
     using FastDifferentiation.FDTests
     using FastDifferentiation.FDInternals
 
 
     @variables x y z
 
-    FD_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
-    sprse = _sparse_symbolic_jacobian!(FD_graph, variables(FD_graph))
-    FD_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = _symbolic_jacobian!(FD_graph, variables(FD_graph))
-
-    # for index in CartesianIndices(sprse)
-    #     @test sprse[index] == dense[index]
-    # end
+    sph_order = 10
+    FD_graph = spherical_harmonics(sph_order, x, y, z)
+    sprse = sparse_jacobian(roots(FD_graph), [x, y, z])
+    dense = jacobian(roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
-        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} wherease zero elements in dense get value Node{Float64,0}. These are not == so need special case.
-            @test value(sprse[index]) == value(dense[index])
-        else
-            @test sprse[index] == dense[index]
-        end
-    end
-
-    FD_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z)
-    sprse = _sparse_symbolic_jacobian!(FD_graph, reverse(variables(FD_graph)))
-    FD_graph = spherical_harmonics(FastSymbolic(), 10, x, y, z) #because global cache has not been reset the sparse and dense graphs should have identical elements.
-    dense = _symbolic_jacobian!(FD_graph, reverse(variables(FD_graph)))
-
-    # for index in CartesianIndices(sprse)
-    #     @test sprse[index] == dense[index]
-    # end
-
-    for index in CartesianIndices(dense)
-        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} wherease zero elements in dense get value Node{Float64,0}. These are not == so need special case.
+        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
             @test value(sprse[index]) == value(dense[index])
         else
             @test sprse[index] == dense[index]
@@ -1477,12 +1456,34 @@ end
     end
 end
 
+@testitem "sparse jacobian exe" begin
+    using FastDifferentiation.FDTests
+    using FastDifferentiation.FDInternals
+
+
+    @variables x y z
+    input_vars = [x, y, z]
+    sph_order = 10
+    FD_graph = spherical_harmonics(sph_order, x, y, z)
+    sprse = sparse_jacobian(roots(FD_graph), input_vars)
+    dense = jacobian(roots(FD_graph), input_vars)
+    sprse_exe = make_function(sprse, input_vars)
+    dense_exe = make_function(dense, input_vars)
+
+    inputs = [1.0, 2.0, 3.0]
+
+    sprse_res = sprse_exe(inputs)
+    dense_res = dense_exe(inputs)
+
+    @test isapprox(sprse_res, dense_res)
+end
+
 @testitem "spherical harmonics jacobian evaluation test" begin
     using FastDifferentiation.FDTests
     import FiniteDifferences
     using FastDifferentiation.FDInternals
 
-    FD_graph = spherical_harmonics(FastSymbolic(), 10)
+    FD_graph = spherical_harmonics(10)
     mn_func = make_function(roots(FD_graph), variables(FD_graph))
     FD_func(vars...) = vec(mn_func(vars))
 
@@ -1565,7 +1566,7 @@ end
 
     order = 10
 
-    FD_graph = spherical_harmonics(FastSymbolic(), order)
+    FD_graph = spherical_harmonics(order)
     FD_func = roots(FD_graph)
     func_vars = variables(FD_graph)
 
@@ -1595,7 +1596,7 @@ end
 
     order = 10
 
-    FD_graph = spherical_harmonics(FastSymbolic(), order)
+    FD_graph = spherical_harmonics(order)
     FD_func = roots(FD_graph)
     func_vars = variables(FD_graph)
 
@@ -1633,6 +1634,32 @@ end
     )
 end
 
+@testitem "sparse hessian" begin
+    using SparseArrays
+
+    @variables x y z
+
+    h = sparse_hessian(x^2 * y^2 * z^2, [x, y, z])
+    h_exe = make_function(h, [x, y, z])
+    inp = sparse(ones(Float64, 3, 3))
+
+    @test isapprox(
+        h_exe([1, 2, 3]),
+        [
+            72.0 72.0 48.0
+            72.0 18.0 24.0
+            48.0 24.0 8.0]
+    )
+
+    h2_exe = make_function(h, [x, y, z], in_place=true)
+    h2_exe([1, 2, 3], inp)
+    @test isapprox(inp,
+        [
+            72.0 72.0 48.0
+            72.0 18.0 24.0
+            48.0 24.0 8.0])
+end
+
 @testitem "hessian_times_v" begin
     using StaticArrays
 
@@ -1657,6 +1684,24 @@ end
             end
         end
     end
+end
+
+@testitem "sparse runtime generated functions" begin
+    using SparseArrays
+
+    @variables a11 a12 a13 a21 a22 a23 a31 a32 a33
+
+    vars = vec([a11 a12 a13 a21 a22 a23 a31 a32 a33])
+    spmat = [a11 a12 a13; a21 a22 a23; a31 a32 a33]
+    f1 = make_function(spmat, vars)
+    inputs = [1 2 3 4 5 6 7 8 9]
+    correct = [1 2 3; 4 5 6; 7 8 9]
+    inp = similar(sprand(3, 3, 1.0))
+    f2 = make_function(spmat, vars, in_place=true)
+
+    @test f1(inputs) == correct
+    f2(inputs, inp)
+    @test inp == correct
 end
 
 

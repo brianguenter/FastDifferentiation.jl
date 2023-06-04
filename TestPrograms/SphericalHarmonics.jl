@@ -79,15 +79,18 @@ function SHFunctions(shfunc, max_l, x, y, z)
 end
 export SHFunctions
 
-function spherical_harmonics(::FastSymbolic, model_size, x, y, z)
+function spherical_harmonics(::FastSymbolic, model_size::Integer, x, y, z)
     graph = DerivativeGraph(SHFunctions(model_size, x, y, z))
     return graph
 end
 
-function spherical_harmonics(package::FastSymbolic, model_size)
+function spherical_harmonics(package::FastSymbolic, model_size::Integer)
     @variables x y z
     return spherical_harmonics(package, model_size, x, y, z)
 end
+
+spherical_harmonics(model_size::Integer) = spherical_harmonics(FastSymbolic(), model_size)
+spherical_harmonics(model_size::Integer, x, y, z) = spherical_harmonics(FastSymbolic(), model_size, x, y, z)
 export spherical_harmonics
 
 
