@@ -113,6 +113,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
     return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
 end
 
+"""Returns a sparse array containing the Jacobian of the function defined by `terms`"""
 sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_jacobian
 
@@ -256,8 +257,10 @@ end
 export hessian
 
 function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
-    gradient = sparse_jacobian(DerivativeGraph(expression), variable_order)
+    gradient = jacobian([expression], variable_order)
+    return sparse_jacobian(vec(gradient), variable_order)
 end
+export sparse_hessian
 
 
 
