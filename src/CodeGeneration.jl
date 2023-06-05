@@ -1,14 +1,15 @@
-function make_Expr(func_array::Array{T,N}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,N}
+return_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef))
+return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...)))
+
+return_expression(::SArray) = :(return SArray(result))
+return_expression(::Array) = :(return result)
+
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node}
     node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
-    sarray_cutoff = 100
+
     if !in_place
-        len = length(func_array)
-        if len ≤ sarray_cutoff
-            push!(body.args, :(result = MArray{Tuple{$(size(func_array)...)},promote_type(Float64, eltype(input_variables)),$(ndims(func_array)),$len}(undef)))
-        else
-            push!(body.args, :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...))))
-        end
+        push!(body.args, (return_declaration(func_array, input_variables)))
     end
 
     node_to_index = Dict{Node,Int64}()
@@ -22,10 +23,8 @@ function make_Expr(func_array::Array{T,N}, input_variables::AbstractVector{S}, i
         push!(body.args, node_body)
     end
 
-    if !in_place && length(func_array) ≤ sarray_cutoff
-        push!(body.args, :(return SArray(result)))
-    else
-        push!(body.args, :(return result))
+    if !in_place
+        push!(body.args, return_expression(func_array))
     end
 
     if in_place
@@ -85,5 +84,5 @@ export make_Expr
 
 make_function(func_array::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,Ti} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
 
-make_function(func_array::Array{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
+make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
 export make_function

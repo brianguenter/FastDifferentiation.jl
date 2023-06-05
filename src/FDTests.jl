@@ -1710,22 +1710,25 @@ end
     using FastDifferentiation.FDTests
 
     @variables x y
-
     j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
     j_exe = make_function(j, [x, y])
-    @test typeof(j_exe([1.0, 2.0])) <: StaticArray
+    @test typeof(j_exe([1.0, 2.0])) <: Array
+    j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
+    @test typeof(j_exe2([1.0, 2.0])) <: StaticArray
 
-
+    test_vec = [1.1, 2.3, 3.1]
     sph_func = spherical_harmonics(4)
-    sph_jac = jacobian(roots(sph_func), variables(sph_func)) #total size < 100 cutoff for static array output
-    mn_func = make_function(sph_jac, variables(sph_func))
-    @test typeof(mn_func([1.0, 2.0, 3.0])) <: StaticArray
+    sph_jac = jacobian(roots(sph_func), variables(sph_func))
+    mn_func1 = make_function(sph_jac, variables(sph_func)) #return type of executable should be Array
+    m, n = size(sph_jac)
+    mn_func2 = make_function(SMatrix{m,n}(sph_jac), variables(sph_func)) #return type of executable should be StaticArray
+    @test typeof(mn_func1(test_vec)) <: Array
+    @test typeof(mn_func2(test_vec)) <: StaticArray
 
-    sph_func2 = spherical_harmonics(6)
-    sph_jac2 = jacobian(roots(sph_func2), variables(sph_func2)) #total size > 100 cutoff for static array output
-    println(size(sph_jac2))
-    mn_func2 = make_function(sph_jac2, variables(sph_func2))
-    @test typeof(mn_func2([1.0, 2.0, 3.0])) <: Array
+    @test isapprox(mn_func1(test_vec), mn_func2(test_vec))
+    @test isapprox(mn_func1(SVector{3}(test_vec)), mn_func2(test_vec))
+    @test isapprox(mn_func1(SVector{3}(test_vec)), mn_func2(SVector{3}(test_vec)))
+    @test isapprox(mn_func1(test_vec), mn_func2(SVector{3}(test_vec)))
 end
 
 
