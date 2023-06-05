@@ -1575,7 +1575,7 @@ end
     #compute the product the slow way
     Jv_slow = convert.(Node, jacobian(FD_func, func_vars) * v_vars)
     both_vars = [func_vars; v_vars]
-    slow_symbolic = reshape(Jv_slow, (length(Jv_slow), 1))
+    slow_symbolic = vec(reshape(Jv_slow, (length(Jv_slow), 1)))
 
     slow = make_function(slow_symbolic, both_vars)
     fast = make_function(Jv, both_vars)
@@ -1604,7 +1604,7 @@ end
 
     Jᵀv_slow = convert.(Node, transpose(jacobian(FD_func, func_vars)) * r_vars)
     both_vars = [func_vars; r_vars]
-    slow_symbolic = reshape(Jᵀv_slow, (length(Jᵀv_slow), 1))
+    slow_symbolic = vec(reshape(Jᵀv_slow, (length(Jᵀv_slow), 1)))
 
     slow = make_function(slow_symbolic, both_vars)
     fast = make_function(Jᵀv, both_vars)
@@ -1702,6 +1702,30 @@ end
     @test f1(inputs) == correct
     f2(inputs, inp)
     @test inp == correct
+end
+
+@testitem "SArray return" begin
+    using StaticArrays
+    using FastDifferentiation.FDInternals
+    using FastDifferentiation.FDTests
+
+    @variables x y
+
+    j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
+    j_exe = make_function(j, [x, y])
+    @test typeof(j_exe([1.0, 2.0])) <: StaticArray
+
+
+    sph_func = spherical_harmonics(4)
+    sph_jac = jacobian(roots(sph_func), variables(sph_func)) #total size < 100 cutoff for static array output
+    mn_func = make_function(sph_jac, variables(sph_func))
+    @test typeof(mn_func([1.0, 2.0, 3.0])) <: StaticArray
+
+    sph_func2 = spherical_harmonics(6)
+    sph_jac2 = jacobian(roots(sph_func2), variables(sph_func2)) #total size > 100 cutoff for static array output
+    println(size(sph_jac2))
+    mn_func2 = make_function(sph_jac2, variables(sph_func2))
+    @test typeof(mn_func2([1.0, 2.0, 3.0])) <: Array
 end
 
 

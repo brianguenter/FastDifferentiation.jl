@@ -1,9 +1,14 @@
-function make_Expr(func_array::Array{T,N}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,N}
+function make_Expr(func_array::Array{T,N}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,N}
     node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
-
+    sarray_cutoff = 100
     if !in_place
-        push!(body.args, :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...))))
+        len = length(func_array)
+        if len ≤ sarray_cutoff
+            push!(body.args, :(result = MArray{Tuple{$(size(func_array)...)},promote_type(Float64, eltype(input_variables)),$(ndims(func_array)),$len}(undef)))
+        else
+            push!(body.args, :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...))))
+        end
     end
 
     node_to_index = Dict{Node,Int64}()
@@ -17,7 +22,11 @@ function make_Expr(func_array::Array{T,N}, input_variables::AbstractVector{S}; i
         push!(body.args, node_body)
     end
 
-    push!(body.args, :(return result))
+    if !in_place && length(func_array) ≤ sarray_cutoff
+        push!(body.args, :(return SArray(result)))
+    else
+        push!(body.args, :(return result))
+    end
 
     if in_place
         return :((input_variables, result) -> $body)
@@ -35,7 +44,7 @@ export make_Expr
 #     v_index = mat.colptr[i]
 #     nzval[i] = evaluate_path(gr, f_index, var_index) #not correct but closest
 # end
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,Ti}
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
@@ -74,7 +83,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S};
 end
 export make_Expr
 
-make_function(func_array::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,Ti} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
+make_function(func_array::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,Ti} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
 
-make_function(func_array::Array{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place=in_place))
+make_function(func_array::Array{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
 export make_function
