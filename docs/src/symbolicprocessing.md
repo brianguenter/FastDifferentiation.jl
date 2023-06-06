@@ -36,28 +36,26 @@ The recursive function returns an nth order polynomial in the variable x. The de
 
 Because **FD** doesn't do sophisticated symbolic simplification it generates a derivative with approximately 2.4x the number of operations in the original recursive expression regardless of n. This is a case where a good hand generated derivative would be more efficient than **FD**.
 
-The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order). For example, here is the graph of the 10th order expression: 
-<img src="src/Illustrations/chebyshev10.svg" alt="drawing" height="400">
-The complexity arises from the number of different paths from the root to the leaf of the graph.
+The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order).
 
 The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on. Performance is somewhat better in the latter case but still slower than the FD executable. Note that the y axis is logarithmic.
 
 #### Chebyshev benchmarks with simplification off
-![Symbolic processing, simplify=false](src/Illustrations/figure_chebyshev_Symbolic_simplify_false.svg) 
-<img src="src/Illustrations\figure_chebyshev_MakeFunction_simplify_false.svg" alt="drawing" width="50%"> 
-<img src="src/Illustrations\figure_chebyshev_Exe_simplify_false.svg" alt="drawing" width="50%">
+![Symbolic processing, simplify=false](Illustrations/figure_chebyshev_Symbolic_simplify_false.svg) 
+![MakeFunction, simplify=false](Illustrations/figure_chebyshev_MakeFunction_simplify_false.svg) 
+![Exe, simplify=false](Illustrations/figure_chebyshev_Exe_simplify_false.svg)
 
 
 
 #### Chebyshev benchmarks with simplification on
-<img src="src/Illustrations\figure_chebyshev_Exe_simplify_true.svg" alt="drawing" width="50%">
+![MakeFunction, simplify=false](Illustrations/figure_chebyshev_Exe_simplify_true.svg)
 
 With simplification on performance of the executable derivative function for Symbolics.jl is slightly better than with simplification off. But simplification processing time is longer.
  
 ### Spherical Harmonics
 
 The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
-<img src="src/Illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
+![MakeFunction, simplify=false](Illustrations/sphericalharmonics_8.svg)
 
 <details>
     <summary> Source for spherical harmonics benchmark </summary>
