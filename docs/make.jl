@@ -16,4 +16,5 @@ makedocs(
 
 deploydocs(
     repo="github.com/brianguenter/FastDifferentiation.jl.git",
+    devbranch="main"
 )
