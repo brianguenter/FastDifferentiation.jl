@@ -184,7 +184,7 @@ julia> jtv_exe([1.0,2.0,3.0,4.0])
  -0.04368042858415033
 ```
 
-Convert between FastDifferentiation and Symbolics representations (requires [FDConversion](https://github.com/brianguenter/FDConversion/tree/main) package, not released yet[^b]):
+Convert between FastDifferentiation and Symbolics representations (requires [FDConversion](https://github.com/brianguenter/FDConversion/tree/main) package, not released yet[^1]):
 ```
 julia> f = x^2+y^2 #Symbolics expression
 x^2 + y^2
@@ -204,3 +204,5 @@ julia> to_symbolics(node_exp)
 julia> typeof(ans)
 Symbolics.Num
 ```
+
+[^1]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.

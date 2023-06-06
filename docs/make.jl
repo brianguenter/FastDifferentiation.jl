@@ -4,11 +4,12 @@ makedocs(
     modules=FastDifferentiation,
     sitename="FastDifferentiation.jl",
     pages=[
-        "Introduction" => "introduction.md",
+        "index.md",
         "Limitations" => "limitations.md",
         "How it works" => "howitworks.md",
         "Examples" => "examples.md",
         "Benchmarks" => "benchmarks.md",
-        "Symbolic processing" => "symbolicprocessing.md"
+        "Symbolic processing" => "symbolicprocessing.md",
+        "API" => "api.md"
     ]
 )

@@ -1,4 +1,4 @@
-## Future work
+## Future Work
 The top priority work item is reducing memory allocations and improving performance of the preprocessing step.
 
 The **FD** algorithm is fast enough to preprocess expression graphs with ≈10⁵ operations in approximately 1 minute on a modern laptop. This is a one time step to generate compiled derivative functions which, of course, take far less than 1 minute to execute. Preprocessing time scales non-linearly with expression size so smaller graphs take much less time.
