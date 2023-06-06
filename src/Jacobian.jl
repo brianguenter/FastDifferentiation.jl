@@ -69,11 +69,6 @@ julia> jacobian([x*y,y*x],[y,x])
  x  y
  x  y
 
-julia> jacobian([x*y,y*x],[x,y])
-2×2 Matrix{Node}:
- y  x
- y  x
-
 julia> jacobian([x*y,y*x],[x])
 2×1 Matrix{Node}:
  y
