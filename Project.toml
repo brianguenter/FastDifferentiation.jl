@@ -6,6 +6,7 @@ version = "0.2.0"
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
