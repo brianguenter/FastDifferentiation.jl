@@ -1,4 +1,4 @@
-using Documenter, FastDifferentiation, ElectronDisplay
+using Documenter, FastDifferentiation
 
 makedocs(
     modules=FastDifferentiation,
