@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://github.com/brianguenter/FastDifferentiation.jl/tree/gh-pages/dev/index.html)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://github.com/brianguenter/FastDifferentiation.jl/dev)
 
 FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. 
 
