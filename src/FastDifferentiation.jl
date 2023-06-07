@@ -43,7 +43,6 @@ include("FactorableSubgraph.jl")
 include("Factoring.jl")
 include("Jacobian.jl")
 include("CodeGeneration.jl")
-include("GraphVisualization.jl")
 
 include("FDTests.jl")
 
