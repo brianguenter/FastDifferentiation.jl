@@ -543,7 +543,7 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
     node_value = root(graph, root_index)
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
-            if variable(graph, var_index) == node_value
+            if isequal(variable(graph, var_index), node_value)
                 return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
             else
                 return 0.0 #taking a derivative with respect to a different variable, which is 0.

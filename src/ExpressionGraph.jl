@@ -1,4 +1,4 @@
-
+using IfElse
 
 #until I can think of a better way of structuring the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately. Many other parts of the algorithm are difficult to multithread. Processing is also so quick that only large graphs would benefit from multithreading. Don't know how common these will be.
 EXPRESSION_CACHE = IdDict()
@@ -37,6 +37,7 @@ struct Node{T,N}
 
     Node(f::S, a) where {S} = new{S,1}(f, MVector{1}(Node(a)))
     Node(f::S, a, b) where {S} = new{S,2}(f, MVector{2}(Node(a), Node(b))) #if a,b not a Node convert them.
+    Node(f::S, a, b, c) where {S} = new{S,3}(f, MVector{3}(Node(a), Node(b), Node(c))) #if a,b,c not a Node convert them.
 
     Node(a::T) where {T<:Real} = new{T,0}(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
@@ -233,23 +234,42 @@ function simplify_check_cache(::typeof(-), a, cache)
     end
 end
 
+function simplify_check_cache(f::Union{typeof(<), typeof(>), typeof(!=)}, a, b, cache)
+    a === b ? Node(false) : check_cache((f, a, b), cache)
+end
+
+function simplify_check_cache(f::typeof(==), a, b, cache)
+    a === b ? Node(true) : check_cache((f, a, b), cache)
+end
+
+function simplify_check_cache(f::typeof(IfElse.ifelse), cond, a, b, cache)
+    if (c = value(cond)) isa Bool
+        return c ? a : b
+    else
+        check_cache((f, cond, a, b), cache)
+    end
+end
+
 SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
 
+Base.isequal(x::Node, y::Node) = x === y
 #TODO: probably want to add boolean operations so can sort Nodes.
 # binary ops that return Bool
-# for (f, Domain) in [(==) => Number, (!=) => Number,
-#     (<=) => Real,   (>=) => Real,
-#     (isless) => Real,
-#     (<) => Real,   (> ) => Real,
-#     (& ) => Bool,   (| ) => Bool,
-#     xor => Bool]
-# @eval begin
-# promote_symtype(::$(typeof(f)), ::Type{<:$Domain}, ::Type{<:$Domain}) = Bool
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::$Domain) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::$Domain, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# end
-# end
+for (f, Domain) in [(==) => Number, (!=) => Number,
+                    (<=) => Real,   (>=) => Real,
+                    (isless) => Real,
+                    (<) => Real,   (> ) => Real,
+                    (& ) => Bool,   (| ) => Bool,
+                    xor => Bool]
+    @eval begin
+        derivative(::$(typeof(f)), ::NTuple{N,Any}, ::Val{I}) where {N,I} = Node(0)
+        (::$(typeof(f)))(a::Node, b::$Domain) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+        (::$(typeof(f)))(a::Node, b::Node) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+        (::$(typeof(f)))(a::$Domain, b::Node) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+    end
+end
+IfElse.ifelse(cond::Node, a::Node, b::Node) = simplify_check_cache(IfElse.ifelse, cond, a, b, EXPRESSION_CACHE)
+Base.signbit(a::Node) = check_cache((signbit, a), EXPRESSION_CACHE)
 
 # struct Differential
 #     expression::FastDifferentiation.Node #expression to take derivative of
@@ -295,6 +315,15 @@ derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)
 export derivative
 
 
+function derivative(::typeof(IfElse.ifelse), (cond, a, b), ::Val{I}) where {I}
+    if I == 1
+        return Node(0)
+    elseif I == 2
+        return IfElse.ifelse(cond, Node(1), Node(0))
+    else
+        return IfElse.ifelse(cond, Node(0), Node(1))
+    end
+end
 function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
         return I == 1 ? args[2] : args[1]
@@ -304,6 +333,24 @@ function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
 end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
+derivative(::typeof(signbit), args::NTuple{1,Any}, ::Val{1}) = 0
+derivative(::typeof(abs), args::NTuple{1,Any}, ::Val{1}) = IfElse.ifelse(signbit(args[1]),-one(args[1]),one(args[1]))
+function derivative(::typeof(min), args::NTuple{2,Any}, ::Val{1})
+    x, y = args
+    IfElse.ifelse(x < y, one(x), zero(x))
+end
+function derivative(::typeof(min), args::NTuple{2,Any}, ::Val{2})
+    x, y = args
+    IfElse.ifelse(x < y, zero(y), one(y))
+end
+function derivative(::typeof(max), args::NTuple{2,Any}, ::Val{1})
+    x, y = args
+    IfElse.ifelse(x > y, one(x), zero(x))
+end
+function derivative(::typeof(max), args::NTuple{2,Any}, ::Val{2})
+    x, y = args
+    IfElse.ifelse(x > y, zero(y), one(y))
+end
 
 # Special cases for leaf nodes with no children.
 function derivative(a::Node{T,0}) where {T}
