@@ -3,9 +3,9 @@
 # You probably don't need to visualize graphs. This is primarily for debugging the FD code.
 #*******************************
 
-module Vis
-using ..FastDifferentiation
-using ..FastDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
+module FastDifferentiationVisualizationExt
+using FastDifferentiation
+using FastDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
 using ElectronDisplay
 
 function label_func(mask::BitVector, label_string::String)
