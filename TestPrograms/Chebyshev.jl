@@ -9,7 +9,7 @@
 end
 export Chebyshev
 
-@memoize function Chebyshev(n, x::Node{T,0}) where {T}
+@memoize function Chebyshev(n, x::FD.Node{T,0}) where {T}
     if n == 0
         return 1
     elseif n == 1
@@ -20,7 +20,7 @@ export Chebyshev
 end
 export Chebyshev
 
-Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
+Chebyshev_exe(n, x::FD.Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
 
 
 function chebyshev(::FastSymbolic, model_size)

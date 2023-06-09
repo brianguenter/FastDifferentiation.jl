@@ -47,7 +47,7 @@ function edges_from_node(graph, start_node_number::AbstractVector{Int})
     return collect(result)
 end
 
-function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, label::String, reachability_labels=true, value_labels=true, no_path_edges=false)
+function FastDifferentiation.make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, label::String, reachability_labels=true, value_labels=true, no_path_edges=false)
     if start_nodes !== nothing
         edges_to_draw = edges_from_node(graph, start_nodes)
     else
@@ -57,9 +57,9 @@ function make_dot_file(graph, start_nodes::Union{Nothing,AbstractVector{Int}}, l
     return make_dot_file(graph, edges_to_draw, label, reachability_labels, value_labels, no_path_edges)
 
 end
-export make_dot_file
 
-function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, reachability_labels=true, value_labels=true, no_path_edges=false) where {P<:PathEdge}
+
+function FastDifferentiation.make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, reachability_labels=true, value_labels=true, no_path_edges=false) where {P<:PathEdge}
     if !no_path_edges #only draw edges on path from root to variable
         edges_to_draw = collect(filter(x -> any(reachable_variables(x)) && any(reachable_roots(x)), edges_to_draw))
     end
@@ -115,7 +115,7 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
     return gr
 end
 
-function draw_dot(graph, edges_to_draw::AbstractVector{P}; graph_label::String="", reachability_labels=true, value_labels=true) where {P}
+function FastDifferentiation.draw_dot(graph, edges_to_draw::AbstractVector{P}; graph_label::String="", reachability_labels=true, value_labels=true) where {P}
     gr = make_dot_file(graph, edges_to_draw, graph_label, reachability_labels, value_labels)
     path, io = mktemp(cleanup=true)
     name, ext = splitext(path)
@@ -123,9 +123,9 @@ function draw_dot(graph, edges_to_draw::AbstractVector{P}; graph_label::String="
     svg = read(name * ".svg", String)
     display("image/svg+xml", svg)
 end
-export draw_dot
 
-function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
+
+function FastDifferentiation.draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true)
     path, io = mktemp(cleanup=true)
     name, ext = splitext(path)
     write_dot(name * ".svg", graph;
@@ -137,22 +137,22 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
     svg = read(name * ".svg", String)
     display("image/svg+xml", svg)
 end
-export draw_dot
 
-draw_dot(subgraph::FastDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
 
-function write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
+FastDifferentiation.draw_dot(subgraph::FastDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
+
+function FastDifferentiation.write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)
     write_dot(filename, gr)
 end
-export write_dot
 
-function write_dot(filename, graph::DerivativeGraph, edges_to_draw::AbstractVector{PathEdge}; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
+
+function FastDifferentiation.write_dot(filename, graph::DerivativeGraph, edges_to_draw::AbstractVector{PathEdge}; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, edges_to_draw, graph_label, reachability_labels, value_labels, no_path_edges)
     write_dot(filename, gr)
 end
-export write_dot
-function write_dot(filename, dot_string::String)
+
+function FastDifferentiation.write_dot(filename, dot_string::String)
     name, ext = splitext(filename)
     name = name * ".dot"
     ext = ext[2:end] #get rid of leading dot

@@ -26,8 +26,8 @@ macro invariant(ex, msgs...)
         return :(@assert $(esc(ex)) $(esc(msgs)))
     end
 end
-
-
+draw_dot() = nothing #define here so the extension can extend
+export draw_dot
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -43,7 +43,5 @@ include("FactorableSubgraph.jl")
 include("Factoring.jl")
 include("Jacobian.jl")
 include("CodeGeneration.jl")
-
-include("FDTests.jl")
 
 end # module
