@@ -2,7 +2,7 @@ module FDTests
 using TestItems
 using FiniteDifferences
 
-@testitem "FD.isa_connected_path 1" begin # case when path is one edge long
+@testitem "Fisa_connected_path 1" begin # case when path is one edge long
     using DataStructures
     import FastDifferentiation as FD
 
@@ -711,7 +711,6 @@ end
 
     @test computed[1] == v1_pdoms[1]
     @test computed[2] == v1_pdoms[2]
-
     r2_dom = (3, 1)
 
     computed = FD.dom_subgraph(graph, 2, 1, idoms[2])
