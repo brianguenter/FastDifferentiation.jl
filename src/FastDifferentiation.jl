@@ -44,6 +44,11 @@ include("Factoring.jl")
 include("Jacobian.jl")
 include("CodeGeneration.jl")
 
+# FastDifferentiationVisualizationExt overloads them
+function make_dot_file end
+function draw_dot end
+function write_dot end
+
 include("FDTests.jl")
 
 end # module
