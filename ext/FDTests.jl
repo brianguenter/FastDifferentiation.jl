@@ -1,6 +1,8 @@
 module FDTests
 using TestItems
+using FastDifferentiation
 using FiniteDifferences
+using Memoize
 
 @testitem "Fisa_connected_path 1" begin # case when path is one edge long
     using DataStructures
@@ -1227,8 +1229,9 @@ end
 
 
 @testitem "factor ℝ¹->ℝ¹ " begin
-    using FiniteDifferences: central_fdm
     import FastDifferentiation as FD
+    using FiniteDifferences: central_fdm
+
     include("../TestPrograms/GenericTest.jl")
 
     x, graph, _, _ = simple_dominator_graph()
@@ -1338,7 +1341,6 @@ end
 end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
-    import FiniteDifferences
     import FastDifferentiation as FD
     include("../TestPrograms/TestCode.jl")
 
