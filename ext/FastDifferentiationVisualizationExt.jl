@@ -6,7 +6,7 @@
 module FastDifferentiationVisualizationExt
 using FastDifferentiation
 import FastDifferentiation: make_dot_file, draw_dot, write_dot
-using FastDifferentiation: PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
+using FastDifferentiation: Node, PathEdge, nodes, postorder_number, is_root, is_variable, is_constant, value, unique_edges, top_vertex, bott_vertex, AutomaticDifferentiation, reachable_roots, reachable_variables, node, parent_edges, variable_postorder_to_index, root_postorder_to_index, DerivativeGraph
 using ElectronDisplay
 
 function label_func(mask::BitVector, label_string::String)
