@@ -122,7 +122,7 @@ end
 
 
 """returns edges emanating from a vertex which satisfy the PathConstraint"""
-function relation_edges!(a::PathConstraint{T}, node_index::Integer, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
+function relation_edges!(a::PathConstraint{T}, node_index::T, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
     if result === nothing
         result = PathEdge{T}[]
     else
@@ -209,7 +209,7 @@ end
 
 
 """Returns a vector of BitArray. The BitArray encodes the reachability of root (or leaf) nodes from a node `nᵢ`. Call the vector of BitArray `path_masks`: then `path_masks[i]` is the path mask for node `nᵢ`. If root(or leaf) `j` is reachable from node `nᵢ` then `path_masks[i][j] = 1` , 0 otherwise."""
-function compute_paths(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, origin_nodes::Vector{T}, relation_function::Function) where {T<:Integer}
+function compute_paths(num_nodes::T, graph_edges::Dict{T,EdgeRelations{T}}, origin_nodes::Vector{T}, relation_function::Function) where {T<:Integer}
     path_masks = [falses(length(origin_nodes)) for _ in 1:num_nodes]
 
     for ((origin_index, postorder_num)) in pairs(origin_nodes)
@@ -220,13 +220,13 @@ function compute_paths(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}
     return path_masks  #WARNING:TODO rewrite this code so don't create the array of path_masks. It is discarded after returning from the calling function compute_edge_paths! so this is wasteful and probably slow.
 end
 
-compute_paths_to_variables(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, var_indices) where {T} = compute_paths(num_nodes, graph_edges, var_indices, parents) #TODO: don't want to be converting to an array of integers everytime.
+compute_paths_to_variables(num_nodes::T, graph_edges::Dict{T,EdgeRelations{T}}, var_indices) where {T} = compute_paths(num_nodes, graph_edges, var_indices, parents) #TODO: don't want to be converting to an array of integers everytime.
 
-compute_paths_to_roots(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{T}}, indices_of_roots) where {T} = compute_paths(num_nodes, graph_edges, indices_of_roots, children)
+compute_paths_to_roots(num_nodes::T, graph_edges::Dict{T,EdgeRelations{T}}, indices_of_roots) where {T} = compute_paths(num_nodes, graph_edges, indices_of_roots, children)
 
 
 """This function computes reachable roots and reachable variable masks for each edge in the graph. It is called before the DerivativeGraph has been constructed. If you have a DerivativeGraph you can use compute_edge_paths!(a::DerivativeGraph) instead"""
-function compute_edge_paths!(num_nodes::Integer, graph_edges::Dict{T,EdgeRelations{S}}, var_indices, indices_of_roots) where {T,S<:Integer}
+function compute_edge_paths!(num_nodes::T, graph_edges::Dict{T,EdgeRelations{S}}, var_indices, indices_of_roots) where {T,S<:Integer}
     variable_paths = compute_paths_to_variables(num_nodes, graph_edges, var_indices)
     root_paths = compute_paths_to_roots(num_nodes, graph_edges, indices_of_roots)
 
@@ -246,7 +246,7 @@ end
 compute_edge_paths!(graph::DerivativeGraph) = compute_edge_paths!(length(nodes(graph)), edges(graph), variable_index_to_postorder_number(graph), root_index_to_postorder_number(graph))
 
 """"`start_index` argument is the index of the root or leaf node of the graph. Not strictly necessary. Only used so can assertion check this function and `intersection`."""
-function intersection(order_test, node1::Integer, node2::Integer, idoms::Dict{T,T}, start_index::T) where {T<:Integer}
+function intersection(order_test, node1::T, node2::T, idoms::Dict{T,T}, start_index::T) where {T<:Integer}
     count = 0
     max_count = length(idoms)
     while true
@@ -291,11 +291,11 @@ end
 """compute the idom or pidom table starting from root or variable corresponding to start_index."""
 function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
     if compute_dominators
-        next_vertices_relation = (gr, curr_node::Integer) -> children(gr, curr_node)
+        next_vertices_relation = (gr, curr_node::T) -> children(gr, curr_node)
         upward_path = true
         order_test = <
     else
-        next_vertices_relation = (gr, curr_node::Integer) -> parents(gr, curr_node)
+        next_vertices_relation = (gr, curr_node::T) -> parents(gr, curr_node)
         upward_path = false
         order_test = >
     end
