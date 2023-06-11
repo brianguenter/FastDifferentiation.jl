@@ -12,6 +12,8 @@ import Base: iterate
 using UUIDs
 using SparseArrays
 using DataStructures
+using IfElse
+
 module AutomaticDifferentiation
 struct NoDeriv
 end
@@ -43,6 +45,7 @@ include("FactorableSubgraph.jl")
 include("Factoring.jl")
 include("Jacobian.jl")
 include("CodeGeneration.jl")
+include("Jit.jl")
 
 # FastDifferentiationVisualizationExt overloads them
 function make_dot_file end

@@ -235,7 +235,7 @@ end
     function edge_fields_equal(edge1, edge2)
         return edge1.top_vertex == edge2.top_vertex &&
                edge1.bott_vertex == edge2.bott_vertex &&
-               edge1.edge_value == edge2.edge_value &&
+               edge1.edge_value === edge2.edge_value && #overrode == for Node type so need to use === here
                edge1.reachable_variables == edge2.reachable_variables &&
                edge1.reachable_roots == edge2.reachable_roots
     end
@@ -1115,7 +1115,7 @@ end
 
     #first verify all nodes have the postorder numbers we expect
     for (i, nd) in pairs(gnodes)
-        @test node(graph, i) == nd
+        @test node(graph, i) === nd
     end
 
     sub_heap = compute_factorable_subgraphs(graph)
@@ -1287,10 +1287,10 @@ end
     result = _symbolic_jacobian!(graph, [nx1, ny2])
 
     #symbolic equality will work here because of common subexpression caching.
-    @test result[1, 1] == cos(nx1 * ny2) * ny2
-    @test result[1, 2] == cos(nx1 * ny2) * nx1
-    @test result[2, 1] == -sin(nx1 * ny2) * ny2
-    @test result[2, 2] == (-sin(nx1 * ny2)) * nx1
+    @test result[1, 1] === cos(nx1 * ny2) * ny2
+    @test result[1, 2] === cos(nx1 * ny2) * nx1
+    @test result[2, 1] === -sin(nx1 * ny2) * ny2
+    @test result[2, 2] === (-sin(nx1 * ny2)) * nx1
 end
 
 
@@ -1318,8 +1318,8 @@ end
     graph = DerivativeGraph([x, zr])
     jac = _symbolic_jacobian!(graph, [x])
 
-    @test value(jac[1, 1]) == 1
-    @test value(jac[2, 1]) == 0
+    @test value(jac[1, 1]) === 1
+    @test value(jac[2, 1]) === 0
 end
 
 @testitem "times_used PathEdge" begin
@@ -1557,7 +1557,7 @@ end
     ]
 
     @test isapprox(zeros(2, 2), value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
-    @test DA == derivative(A, nq1)
+    @test DA === derivative(A, nq1)
 end
 
 @testitem "jacobian_times_v" begin

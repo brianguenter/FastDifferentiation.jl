@@ -26,10 +26,8 @@ macro variables(args...)
 end
 export @variables
 
-# #also add this inner constructor
-#
-#
-# #end of code block to add
+#Supported boolean operations 
+const BOOL_OPS = (==, !=, <, >, ≤, ≥, &, |, xor)
 
 struct Node{T,N}
     node_value::T
@@ -37,6 +35,7 @@ struct Node{T,N}
 
     Node(f::S, a) where {S} = new{S,1}(f, MVector{1}(Node(a)))
     Node(f::S, a, b) where {S} = new{S,2}(f, MVector{2}(Node(a), Node(b))) #if a,b not a Node convert them.
+    Node(f::S, a, b, c) where {S} = new{S,3}(f, MVector{3}(Node(a), Node(b), Node(c))) #if a,b,c not a Node convert them.
 
     Node(a::T) where {T<:Real} = new{T,0}(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
@@ -52,6 +51,8 @@ struct Node{T,N}
 
     Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
 end
+
+Base.isequal(x::Node, y::Node) = x === y
 
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
@@ -233,7 +234,45 @@ function simplify_check_cache(::typeof(-), a, cache)
     end
 end
 
+function simplify_check_cache(f::Union{typeof(<),typeof(>),typeof(!=)}, a, b, cache)
+    a === b ? Node(false) : check_cache((f, a, b), cache)
+end
+
+function simplify_check_cache(f::typeof(==), a, b, cache)
+    a === b ? Node(true) : check_cache((f, a, b), cache)
+end
+
+function simplify_check_cache(f::typeof(IfElse.ifelse), cond, a, b, cache)
+    if (c = value(cond)) isa Bool
+        return c ? a : b
+    else
+        check_cache((f, cond, a, b), cache)
+    end
+end
+
 SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
+
+for (f, Domain) in [(==) => Number, (!=) => Number,
+    (<=) => Real, (>=) => Real,
+    (isless) => Real,
+    (<) => Real, (>) => Real,
+    (&) => Bool, (|) => Bool,
+    xor => Bool]
+    @eval begin
+        (::$(typeof(f)))(a::Node, b::$Domain) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+        (::$(typeof(f)))(a::Node, b::Node) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+        (::$(typeof(f)))(a::$Domain, b::Node) = simplify_check_cache($f, a, b, EXPRESSION_CACHE)
+    end
+end
+
+#TODO define simplify_check_cache method with this many arguments
+function IfElse.ifelse(cond::Node, a::Node, b::Node)
+    @assert value(cond) in BOOL_OPS
+    return simplify_check_cache(IfElse.ifelse, cond, a, b, EXPRESSION_CACHE)
+end
+
+Base.signbit(a::Node) = check_cache((signbit, a), EXPRESSION_CACHE)
+
 
 #TODO: probably want to add boolean operations so can sort Nodes.
 # binary ops that return Bool
