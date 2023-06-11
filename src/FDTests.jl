@@ -361,10 +361,10 @@ end
 
 
     a = x * y
-    @test derivative(a, Val(1)) == y
-    @test derivative(a, Val(2)) == x
-    @test derivative(x) == Node(1)
-    @test derivative(Node(1)) == Node(0)
+    @test derivative(a, Val(1)) === y
+    @test derivative(a, Val(2)) === x
+    @test derivative(x) === Node(1)
+    @test derivative(Node(1)) === Node(0)
 end
 
 @testitem "compute_factorable_subgraphs test order" begin
@@ -1318,8 +1318,8 @@ end
     graph = DerivativeGraph([x, zr])
     jac = _symbolic_jacobian!(graph, [x])
 
-    @test value(jac[1, 1]) === 1
-    @test value(jac[2, 1]) === 0
+    @test value(jac[1, 1]) == 1
+    @test value(jac[2, 1]) == 0
 end
 
 @testitem "times_used PathEdge" begin
@@ -1421,7 +1421,7 @@ end
     copy_jac = _symbolic_jacobian(graph, [x, y])
     jac = _symbolic_jacobian!(graph, [x, y])
 
-    @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
+    @test all(copy_jac .=== jac) #make sure the jacobian computed by copying the graph has the same variables as the one computed by destructively modifying the graph
 
     computed_jacobian = make_function(jac, [x, y])
 
@@ -1448,10 +1448,10 @@ end
     dense = jacobian(roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
-        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
+        if sprse[index] !== dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
             @test value(sprse[index]) == value(dense[index])
         else
-            @test sprse[index] == dense[index]
+            @test sprse[index] === dense[index]
         end
     end
 end
@@ -1557,7 +1557,7 @@ end
     ]
 
     @test isapprox(zeros(2, 2), value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
-    @test DA === derivative(A, nq1)
+    @test all(DA .=== derivative(A, nq1))
 end
 
 @testitem "jacobian_times_v" begin

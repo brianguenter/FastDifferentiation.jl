@@ -473,6 +473,37 @@ function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::Ab
     return nothing
 end
 
+
+# """Used to postorder function with multiple outputs"""
+# function postorder(roots::AbstractVector{T}, conditionals::AbstractVector{S}) where {T<:Node,S<:Bool}
+#     node_to_index = IdDict{Node,Int64}()
+#     nodes = Vector{Node}(undef, 0)
+#     variables = Vector{Node}(undef, 0)
+
+#     for root in roots
+#         _postorder_nodes!(root, nodes, variables, node_to_index, conditionals)
+#     end
+#     return node_to_index, nodes, variables
+# end
+
+# #remove branches and pop conditionals
+# """returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
+# function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}, conditionals::AbstractVector{P}) where {T,N,S<:Node,P<:Bool}
+#     if get(visited, a, nothing) === nothing
+#         if a.children !== nothing
+#             if is_conditional(a)
+#             for child in a.children
+#                 _postorder_nodes!(child, nodes, variables, visited)
+#             end
+#         elseif is_variable(a)
+#             push!(variables, a)
+#         end
+#         push!(nodes, a)
+#         visited[a] = length(keys(visited)) + 1 #node has not been added to visited yet so the count will be one less than needed.
+#     end
+#     return nothing
+# end
+
 """finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
     visited = Dict{Node,index_type}()

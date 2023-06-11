@@ -116,16 +116,10 @@ struct DerivativeGraph{T<:Integer}
     expression_cache::IdDict
 
     """postorder numbers the nodes in the roots vector using a global numbering, i.e., the first root gets the numbers 1:length(roots[1]), the second root gets the numbers length(roots[1])+1:length(roots[2])+1, etc. This makes it possible to compute dominance relations, factorization subgraphs, etc., for each ℝ¹→ℝ¹ derivative subgraph using the global postorder numbers, without having to renumber each subgraph with a local set of postorder numbers."""
-    function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64, conditionals=Union{Nothing,Vector{Bool}})
+    function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64)
         postorder_number = IdDict{Node,index_type}()
 
-
         (postorder_number, nodes, var_array) = postorder(roots)
-
-        if conditionals !== nothing
-            bools = bool_nodes(nodes)
-            ifelses = ifelse_nodes(nodes)
-        end
 
         expression_cache = IdDict()
 
@@ -172,6 +166,17 @@ struct DerivativeGraph{T<:Integer}
 end
 
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
+
+# """traverses the graph to find conditional and ifelse nodes. If they exist then generates a conditional evaluation symbolic expression as well as a DerivativeGraph"""
+# function dgraph(roots::AbstractVector{Node}, variable_ordering::AbstractVector{Node})
+
+#     @assert length(ifelse_nodes(nodes)) == 0 && length(cond_nodes(nodes)) == 0 #if no conditional boolean values passed in then the graph must not contain boolean or ifelse nodes
+#     (postorder_number, nodes, var_array) = postorder(roots)
+
+
+# end
+
+
 
 nodes(a::DerivativeGraph) = a.nodes
 node(a::DerivativeGraph, node_index) = nodes(a)[node_index]
