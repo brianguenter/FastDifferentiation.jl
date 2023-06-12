@@ -167,15 +167,6 @@ end
 
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
 
-# """traverses the graph to find conditional and ifelse nodes. If they exist then generates a conditional evaluation symbolic expression as well as a DerivativeGraph"""
-# function dgraph(roots::AbstractVector{Node}, variable_ordering::AbstractVector{Node})
-
-#     @assert length(ifelse_nodes(nodes)) == 0 && length(cond_nodes(nodes)) == 0 #if no conditional boolean values passed in then the graph must not contain boolean or ifelse nodes
-#     (postorder_number, nodes, var_array) = postorder(roots)
-
-
-# end
-
 
 
 nodes(a::DerivativeGraph) = a.nodes

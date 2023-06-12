@@ -242,13 +242,7 @@ function simplify_check_cache(f::typeof(==), a, b, cache)
     a === b ? Node(true) : check_cache((f, a, b), cache)
 end
 
-function simplify_check_cache(f::typeof(IfElse.ifelse), cond, a, b, cache)
-    if (c = value(cond)) isa Bool
-        return c ? a : b
-    else
-        check_cache((f, cond, a, b), cache)
-    end
-end
+simplify_check_cache(f::typeof(IfElse.ifelse), cond::Node, a, b, cache) = check_cache((f, cond, a, b), cache)
 
 SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
 
