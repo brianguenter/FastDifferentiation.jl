@@ -59,21 +59,21 @@ This is **beta** software being modified on a daily basis. Expect bugs and frequ
 
 ## FAQ
 
-Q: Does **FD** support complex numbers? 
+**Q**: Does **FD** support complex numbers? 
 
-A: Not currently.
+**A**: Not currently.
 
-Q: You say **FD** computes efficient derivatives but the printed version of my symbolic derivatives is very long. How can that be efficient?
+**Q**: You say **FD** computes efficient derivatives but the printed version of my symbolic derivatives is very long. How can that be efficient?
 
-A: **FD** stores and evaluates the common subexpressions in your function just once. But, the print function recursively descends through all expressions in the directed acyclic graph representing your function, including nodes that have already been visited. The printout can be exponentially larger than the internal **FD** representation.
+**A**: **FD** stores and evaluates the common subexpressions in your function just once. But, the print function recursively descends through all expressions in the directed acyclic graph representing your function, including nodes that have already been visited. The printout can be exponentially larger than the internal **FD** representation.
 
-Q: How about matrix and tensor expressions?
+**Q**: How about matrix and tensor expressions?
 
-A: Evaluation of an **FD** expression returns a graph, not a number. If you multiply a matrix of **FD** variables times a vector of **FD** variables the matrix vector multiplication loop is effectively unrolled into scalar expressions. Matrix operations on large matrices will generate large executables and long preprocessing time. **FD** functions with up 10⁵ operations should still have reasonable preprocessing/compilation times (approximately 1 minute on a modern laptop) and good run time performance.
+**A**: Evaluation of an **FD** expression returns a graph, not a number. If you multiply a matrix of **FD** variables times a vector of **FD** variables the matrix vector multiplication loop is effectively unrolled into scalar expressions. Matrix operations on large matrices will generate large executables and long preprocessing time. **FD** functions with up 10⁵ operations should still have reasonable preprocessing/compilation times (approximately 1 minute on a modern laptop) and good run time performance.
 
-Q: Does **FD** support conditionals?
+**Q**: Does **FD** support conditionals?
 
-A: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
+**A**: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
 ```
 @variables x y #create FD variables
 
