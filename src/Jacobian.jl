@@ -84,7 +84,6 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
     row_indices = Int64[]
     col_indices = Int64[]
     values = Node[]
-    @assert length(partial_variables) == domain_dimension(graph)
 
     factor!(graph)
 
@@ -106,7 +105,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
         end
     end
 
-    return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
+    return sparse(row_indices, col_indices, values, codomain_dimension(graph), length(partial_variables))
 end
 
 """Returns a sparse array containing the Jacobian of the function defined by `terms`"""
