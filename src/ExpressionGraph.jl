@@ -265,6 +265,7 @@ Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there s
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
 
+Base.adjoint(a::Node) = a
 
 # Pre-defined derivatives
 import DiffRules
