@@ -2,7 +2,9 @@
 
 [![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain) [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/dev)
 
-FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to D* in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
+FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
+
+Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to D* in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
 
 For f:ℝⁿ->ℝᵐ with n,m large FD may have better performance than conventional AD algorithms because the **FD** algorithm finds expressions shared between partials and computes them only once. In some cases **FD** derivatives can be as efficient as manually coded derivatives[^d]. Benchmarks are in the works and should be added to the documentation soon.
 
