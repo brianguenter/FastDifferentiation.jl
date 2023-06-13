@@ -1,6 +1,6 @@
 # Symbolic Processing
 
-Because **FD** can generate true symbolic derivatives it can easily be used in conjunction with Symbolics.jl.
+Because **FD** can generate true symbolic derivatives it can easily be used in conjunction with Symbolics.jl using the package [FDConversion.jl](https://github.com/brianguenter/FDConversion.jl) (still under development).
 
 A rule of thumb is that if your function is small (a few hundred operations or less) or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform or equal **FD**. For more complex functions with many common subexpressions **FD** may substantially outperform Symbolics.jl.
  
