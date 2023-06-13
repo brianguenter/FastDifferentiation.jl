@@ -11,8 +11,8 @@ struct Conditionals <: SymbolicWrapper
 
     function Conditionals(roots, input_variables)
         cond_func = make_conditional_function(roots, input_variables)
-        cached_deriv = Dict{Vector{Bool},DerivativeGraph}(undef, 0)
-        return new(cached_deriv, roots, cond_func)
+        cached_graph = Dict{Vector{Bool},DerivativeGraph}(undef, 0)
+        return new(cached_graph, roots, cond_func)
     end
 end
 
@@ -49,6 +49,9 @@ function dgraph(roots::AbstractVector{Node}, input_variables::AbstractVector{Nod
     end
 end
 
+function jacobian(a::SymbolicWrapper)
+    
+    dgraph
 
 derivative_graph(wrapper::NoConditionals) = wrapper.cached_derivative
 function derivative_graph!(wrapper::Conditionals, input_values::T) where {T<:Real}
