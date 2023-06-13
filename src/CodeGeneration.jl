@@ -82,7 +82,5 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
-make_function(func_array::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node,Ti} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
-
 make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{S}; in_place=false) where {T<:Node,S<:Node} = @RuntimeGeneratedFunction(make_Expr(func_array, input_variables, in_place))
 export make_function
