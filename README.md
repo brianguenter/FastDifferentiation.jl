@@ -4,7 +4,7 @@
 
 FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
 
-Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to D* in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
+Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
 
 For f:ℝⁿ->ℝᵐ with n,m large FD may have better performance than conventional AD algorithms because the **FD** algorithm finds expressions shared between partials and computes them only once. In some cases **FD** derivatives can be as efficient as manually coded derivatives[^d]. Benchmarks are in the works and should be added to the documentation soon.
 
