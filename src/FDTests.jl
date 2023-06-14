@@ -1437,19 +1437,18 @@ end
 
 @testitem "sparse_jacobian" begin
     using FastDifferentiation.FDTests
-    using FastDifferentiation.FDInternals
-
+    import FastDifferentiation as FD
 
     @variables x y z
 
     sph_order = 10
     FD_graph = spherical_harmonics(sph_order, x, y, z)
-    sprse = sparse_jacobian(roots(FD_graph), [x, y, z])
-    dense = jacobian(roots(FD_graph), [x, y, z])
+    sprse = sparse_jacobian(FD.roots(FD_graph), [x, y, z])
+    dense = jacobian(FD.roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
         if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
-            @test value(sprse[index]) == value(dense[index])
+            @test FD.value(sprse[index]) == FD.value(dense[index])
         else
             @test sprse[index] == dense[index]
         end
