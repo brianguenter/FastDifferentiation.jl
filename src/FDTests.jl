@@ -1730,5 +1730,27 @@ end
     @test isapprox(mn_func1(test_vec), mn_func2(SVector{3}(test_vec)))
 end
 
+@testitem "dot bug and others" begin
+    x = make_variables(:x, 2)
+    mu = make_variables(:mu, 2)
+    using LinearAlgebra: dot
+
+    function no_exceptions()
+        x'mu
+        dot(x, mu)
+        ex = sum(abs2, x .* mu)
+
+        h = sparse_hessian(ex, x)
+        hs = sparse_hessian(ex, x)
+
+
+        fun = make_function(h, [x; mu])
+        fun = make_function(hs, [x; mu])
+        return true
+    end
+
+    @test no_exceptions()
+end
+
 
 end #module
