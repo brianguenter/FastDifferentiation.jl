@@ -104,14 +104,14 @@ julia> jacobian!(g)
 ```
 """
 struct DerivativeGraph{T<:Integer}
-    postorder_number::Dict{Node,T}
+    postorder_number::IdDict{Node,T}
     nodes::Vector{Node}
     roots::Vector{Node}
     variables::Vector{Node}
     root_index_to_postorder_number::Vector{T}
-    root_postorder_to_index::Dict{T,T}
+    root_postorder_to_index::IdDict{T,T}
     variable_index_to_postorder_number::Vector{T}
-    variable_postorder_to_index::Dict{T,T}
+    variable_postorder_to_index::IdDict{T,T}
     edges::Dict{T,EdgeRelations{T}}
     expression_cache::IdDict
 
@@ -134,13 +134,13 @@ struct DerivativeGraph{T<:Integer}
             root_index_to_postorder_number[i] = postorder_number[x]
         end
 
-        root_postorder_to_index = Dict{index_type,index_type}()
+        root_postorder_to_index = IdDict{index_type,index_type}()
         for (i, postorder_number) in pairs(root_index_to_postorder_number)
             root_postorder_to_index[postorder_number] = i
         end
 
         variable_index_to_postorder_number = [postorder_number[x] for x in var_array]
-        variable_postorder_to_index = Dict{index_type,index_type}()
+        variable_postorder_to_index = IdDict{index_type,index_type}()
         for (i, postorder_number) in pairs(variable_index_to_postorder_number)
             variable_postorder_to_index[postorder_number] = i
         end

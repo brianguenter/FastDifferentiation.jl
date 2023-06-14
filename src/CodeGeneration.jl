@@ -5,14 +5,14 @@ return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
 function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node}
-    node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
+    node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
     if !in_place
         push!(body.args, (return_declaration(func_array, input_variables)))
     end
 
-    node_to_index = Dict{Node,Int64}()
+    node_to_index = IdDict{Node,Int64}()
     for (i, node) in pairs(input_variables)
         node_to_index[node] = i
     end
@@ -48,7 +48,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
     vals = nonzeros(A)
     _, n = size(A)
     body = Expr(:block)
-    node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
+    node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
 
     if !in_place #have to store the sparse vector indices in the generated code to know how to create sparsity pattern
         push!(body.args, :(element_type = promote_type(Float64, eltype(input_variables))))
@@ -57,7 +57,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
     push!(body.args, :(vals = nonzeros(result)))
 
-    node_to_index = Dict{Node,Int64}()
+    node_to_index = IdDict{Node,Int64}()
     for (i, node) in pairs(input_variables)
         node_to_index[node] = i
     end
