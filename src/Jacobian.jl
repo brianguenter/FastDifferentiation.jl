@@ -275,7 +275,7 @@ julia> derivative(A,t)
  (6 * t)  0.0
 
 julia> derivative(A,t,t)  
- 2×2 Matrix{Node{T, 0} where T}:
+2×2 Matrix{Node{T, 0} where T}:
  0.0  2
  6    0.0
  ```
