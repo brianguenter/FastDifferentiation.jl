@@ -31,7 +31,7 @@ export @variables
 #
 # #end of code block to add
 
-struct Node{T,N}
+struct Node{T,N} <: Number
     node_value::T
     children::Union{MVector{N,Node},Nothing} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
 
@@ -96,7 +96,7 @@ function constant_value(a::Node)
     end
 end
 
-
+Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
 function is_zero(a::Node)
     if is_tree(a) || is_variable(a)
         return false
@@ -258,14 +258,22 @@ SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE)
 
 # derivative(f, args, v) = NoDeriv()
 
+Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
+
 rules = Any[]
 
-Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
+# Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
 
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
 
-Base.adjoint(a::Node) = a
+#convert two nodes with different number types to the correct new type. Various math functions will crash if this isn't defined.
+function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
+    ptype = promote_type(T, S)
+    return Node(ptype(value(a))), Node(ptype(value(b)))
+end
+
+Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
 
 # Pre-defined derivatives
 import DiffRules
@@ -352,7 +360,7 @@ function to_string(a::Node)
     end
 end
 
-function node_symbol(a::Node, variable_to_index::Dict{Node,Int64})
+function node_symbol(a::Node, variable_to_index::IdDict{Node,Int64})
     if is_tree(a)
         result = gensym() #create a symbol to represent the node
     elseif is_variable(a)
@@ -380,9 +388,9 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, variable_to_index::Dict{Node,Int64}, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real,Expr}}}=nothing)
+function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing)
     if node_to_var === nothing
-        node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
+        node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
 
     body = Expr(:block)
