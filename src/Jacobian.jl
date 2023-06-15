@@ -260,8 +260,7 @@ export sparse_hessian
 
 
 
-"""computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
-
+"""computes ∂A/(∂variables[1],...,∂variables[n]). Repeated differentiation rather than computing different columns of the Jacobian. Example:
 ```julia_repl
 
 julia> A = [t t^2;3t^2 5]  
