@@ -445,14 +445,14 @@ end
 
 """finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
-    visited = Dict{Node,index_type}()
+    visited = IdDict{Node,index_type}()
     nodes = Vector{Node}(undef, 0)
 
     _all_nodes!(a, visited, nodes)
     return nodes
 end
 
-function _all_nodes!(node::Node, visited::Dict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
+function _all_nodes!(node::Node, visited::IdDict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
     tmp = get(visited, node, nothing)
     if tmp === nothing
         push!(nodes, node) #only add node to nodes once.
