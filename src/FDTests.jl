@@ -1750,6 +1750,11 @@ end
     end
 
     @test no_exceptions()
+
+    x′ = FastDifferentiation.Node.(x) #this will change the type of the vector
+    fn = make_function([x′'mu], x′, mu)
+
+    @test isapprox(fn([1, 2, 3, 4])[1], 11)
 end
 
 
