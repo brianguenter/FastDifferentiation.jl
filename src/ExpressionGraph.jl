@@ -329,11 +329,6 @@ end
 variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node)) #SymbolicUtils changed, used to use SymbolicUtils.Sym for this test.
 
 
-# isvariable(a::Node) = SymbolicUtils.issym(node_value(a))
-# # isvariable(::Node{T,0}) where {T<:SymbolicUtils.Sym} = true
-# export isvariable
-# # isvariable(::Node) = false
-
 children(a::Node) = a.children
 
 

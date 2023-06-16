@@ -278,9 +278,6 @@ _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer
 node_edges(a::DerivativeGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 node_edges(a::DerivativeGraph, node_index::Integer) = _node_edges(edges(a), node_index)
 
-# node_edges(a::RnToRmGraph, node_index::Integer) = get(a.edges, node_index, nothing) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
-# #version that doesn't require having the entire graph constructed
-
 function reachable_variables(a::DerivativeGraph, node_index::Integer)
     if get(edges(a), node_index, nothing) === nothing
         return falses(domain_dimension(a))

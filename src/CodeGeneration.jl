@@ -35,14 +35,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 end
 export make_Expr
 
-
-# function update_sparse(mat::SparseMatrixCSC, partial_variables)
-#need map from var_index index of function variable that is in this column
-# for i in 1:length(mat.colptr)
-#     f_index = mat.rowval[i]
-#     v_index = mat.colptr[i]
-#     nzval[i] = evaluate_path(gr, f_index, var_index) #not correct but closest
-# end
 function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)

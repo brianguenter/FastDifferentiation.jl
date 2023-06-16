@@ -37,17 +37,6 @@ function print_subgraph(io, a, rv_string, subgraph_type)
     print(io, ", $(a.subgraph) , $(times_used(a)))")
 end
 
-# function Base.show(io::IO, a::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-#     root_string = [bvar == 0 ? "" : "r$i" for (i, bvar) in pairs(dom_mask(a))]
-#     print_subgraph(io, a, root_string, "D")
-
-# end
-
-# function Base.show(io::IO, a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-#     var_string = [bvar == 0 ? "" : "v$i" for (i, bvar) in pairs(pdom_mask(a))]
-#     print_subgraph(io, a, var_string, "P")
-# end
-
 """Holds information for factorable subgraph that is both a dom and pdom."""
 
 
@@ -502,13 +491,11 @@ function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list = compute_factorable_subgraphs(a)
 
     while !isempty(subgraph_list)
-        # @info "Processed $count subgraphs out of $total"
+
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
-        #test
-        # Vis.draw_dot(graph(subgraph), start_nodes=[93], graph_label="factored subgraph $(vertices(subgraph))", value_labels=false)
-        #end test
+
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
