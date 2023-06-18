@@ -366,50 +366,6 @@ function node_symbol(a::Node, variable_to_index::IdDict{Node,Int64})
     return result
 end
 
-
-"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
-```
-quote
-    var"##343" = 2x
-    var"##342" = var"##343" + y
-    var"##341" = var"##342" + 1
-end
-```
-The last automatically generated name (in this example var"##341") is the second return value of `function_body`. This variable will hold the value of evaluating the dag at runtime.
-If the dag is a constant then the function body will be empty:
-```
-quote
-end
-```
-and the second return value will be the constant value.
-"""
-function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing)
-    if node_to_var === nothing
-        node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
-    end
-
-    body = Expr(:block)
-
-    function _dag_to_function(node)
-
-        tmp = get(node_to_var, node, nothing)
-
-        if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
-            node_to_var[node] = node_symbol(node, variable_to_index)
-
-            if is_tree(node)
-                args = _dag_to_function.(children(node))
-                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
-                push!(body.args, statement)
-            end
-        end
-
-        return node_to_var[node]
-    end
-
-    return body, _dag_to_function(dag)
-end
-
 """Used to postorder function with multiple outputs"""
 function postorder(roots::AbstractVector{T}) where {T<:Node}
     node_to_index = IdDict{Node,Int64}()
