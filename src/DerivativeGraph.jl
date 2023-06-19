@@ -542,12 +542,15 @@ end
 export sparsity
 
 function number_of_operations(graph::DerivativeGraph)
-    nodes_in_graph = Set{Node}()
+    #Set makes more sense but causes a weird type promotion error.
+    nodes_in_graph = IdDict{Node,Bool}()
     for root in roots(graph)
-        push!(nodes_in_graph, all_nodes(root)...)
+        for node in all_nodes(root)
+            nodes_in_graph[node] = true
+        end
     end
 
-    return length(filter(x -> is_tree(x), nodes_in_graph))
+    return length(filter(x -> is_tree(x), collect(keys(nodes_in_graph))))
 end
 
 """Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
