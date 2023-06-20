@@ -1437,18 +1437,17 @@ end
 
 @testitem "sparse_jacobian" begin
     using FastDifferentiation.FDTests
-    using FastDifferentiation.FDInternals
-
+    import FastDifferentiation as FD
 
     @variables x y z
 
     sph_order = 10
     FD_graph = spherical_harmonics(sph_order, x, y, z)
-    sprse = sparse_jacobian(roots(FD_graph), [x, y, z])
-    dense = jacobian(roots(FD_graph), [x, y, z])
+    sprse = sparse_jacobian(FD.roots(FD_graph), [x, y, z])
+    dense = jacobian(FD.roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
-        if sprse[index] !== dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
+        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
             @test value(sprse[index]) == value(dense[index])
         else
             @test sprse[index] === dense[index]
@@ -1729,6 +1728,33 @@ end
     @test isapprox(mn_func1(SVector{3}(test_vec)), mn_func2(test_vec))
     @test isapprox(mn_func1(SVector{3}(test_vec)), mn_func2(SVector{3}(test_vec)))
     @test isapprox(mn_func1(test_vec), mn_func2(SVector{3}(test_vec)))
+end
+
+@testitem "dot bug and others" begin
+    x = make_variables(:x, 2)
+    mu = make_variables(:mu, 2)
+    using LinearAlgebra: dot
+
+    function no_exceptions()
+        x'mu
+        dot(x, mu)
+        ex = sum(abs2, x .* mu)
+
+        h = sparse_hessian(ex, x)
+        hs = sparse_hessian(ex, x)
+
+
+        fun = make_function(h, [x; mu])
+        fun = make_function(hs, [x; mu])
+        return true
+    end
+
+    @test no_exceptions()
+
+    x′ = FastDifferentiation.Node.(x) #this will change the type of the vector
+    fn = make_function([x′'mu], x′, mu)
+
+    @test isapprox(fn([1, 2, 3, 4])[1], 11)
 end
 
 

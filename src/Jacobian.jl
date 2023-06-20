@@ -84,7 +84,6 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
     row_indices = Int64[]
     col_indices = Int64[]
     values = Node[]
-    @assert length(partial_variables) == domain_dimension(graph)
 
     factor!(graph)
 
@@ -106,7 +105,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
         end
     end
 
-    return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
+    return sparse(row_indices, col_indices, values, codomain_dimension(graph), length(partial_variables))
 end
 
 """Returns a sparse array containing the Jacobian of the function defined by `terms`"""
@@ -261,25 +260,25 @@ export sparse_hessian
 
 
 
-"""computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
+"""computes ∂A/(∂variables[1],...,∂variables[n]). Repeated differentiation rather than computing different columns of the Jacobian. Example:
 
-```julia_repl
+```julia-repl
 
-julia> A = [t t^2;3t^2 5]
+julia> A = [t t^2;3t^2 5]  
 2×2 Matrix{Node}:
  t              (t ^ 2)
  (3 * (t ^ 2))  5
 
-julia> derivative(A,t)
+julia> derivative(A,t)  
 2×2 Matrix{Node}:
  1.0      (2 * t)
  (6 * t)  0.0
 
- julia> derivative(A,t,t)
- 2×2 Matrix{Node{T, 0} where T}:
+julia> derivative(A,t,t)  
+2×2 Matrix{Node{T, 0} where T}:
  0.0  2
  6    0.0
- ```
+```
  """
 function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]

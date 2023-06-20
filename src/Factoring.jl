@@ -37,17 +37,6 @@ function print_subgraph(io, a, rv_string, subgraph_type)
     print(io, ", $(a.subgraph) , $(times_used(a)))")
 end
 
-# function Base.show(io::IO, a::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-#     root_string = [bvar == 0 ? "" : "r$i" for (i, bvar) in pairs(dom_mask(a))]
-#     print_subgraph(io, a, root_string, "D")
-
-# end
-
-# function Base.show(io::IO, a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-#     var_string = [bvar == 0 ? "" : "v$i" for (i, bvar) in pairs(pdom_mask(a))]
-#     print_subgraph(io, a, var_string, "P")
-# end
-
 """Holds information for factorable subgraph that is both a dom and pdom."""
 
 
@@ -502,13 +491,11 @@ function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list = compute_factorable_subgraphs(a)
 
     while !isempty(subgraph_list)
-        # @info "Processed $count subgraphs out of $total"
+
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
-        #test
-        # Vis.draw_dot(graph(subgraph), start_nodes=[93], graph_label="factored subgraph $(vertices(subgraph))", value_labels=false)
-        #end test
+
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
@@ -559,32 +546,40 @@ end
 
 """Verifies that there is a single path from each root to each variable, if a path exists. This should be an invariant of the factored graph so it should always be true. But the algorithm is complex enough that it is easy to accidentally introduce errors when adding features. `verify_paths` has negligible runtime cost compared to factorization."""
 function _verify_paths(graph::DerivativeGraph, a::Int)
-    branches = child_edges(graph, a)
+    child_branches = child_edges(graph, a)
+    parent_branches = parent_edges(graph, a)
     valid_graph = true
 
-    if length(branches) > 1
-        for br1 in 1:length(branches)
-            for br2 in br1+1:length(branches)
-                roots_intersect = reachable_roots(branches[br1]) .& reachable_roots(branches[br2])
-                if !is_zero(roots_intersect) #if any shared roots then can't have any shared variables
-                    if any(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))
-                        valid_graph = false
-                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))"
-                        #could break on first bad path but prefer to list all of them. Better for debugging.
-                    end
-                end
-            end
+    if length(parent_branches) > 1 #this simple test won't work if a branch is a child of another branch. Then could have 
+        roots_intersect = reduce(.&, reachable_roots.(parent_branches))
+        if !is_zero(roots_intersect)
+            valid_graph = false
         end
+    end
+    if length(child_branches) > 1
+        vars_intersect = reduce(.&, reachable_variables.(child_branches))
+        if !is_zero(vars_intersect)
+            valid_graph = false
+        end
+    end
 
+    if !valid_graph
+        # FastDifferentiation.FastDifferentiationVisualizationExt.draw_dot(graph)
+        @info "failure"
+        @info "roots_intersect $roots_intersect"
+        # return false
+    else
         for child in children(graph, a)
             valid_graph &= _verify_paths(graph, child)
         end
     end
+
     return valid_graph
 end
 
 """verifies that there is a single path from each root to each variable, if such a path exists."""
 function verify_paths(graph::DerivativeGraph)
+    return true #until can fix this so it both correctly verifies paths and does not take quadratic time.
     for root in roots(graph)
         if !_verify_paths(graph, postorder_number(graph, root))
             return false

@@ -12,7 +12,7 @@ function check_cache(a::Tuple{Vararg}, cache)
     return cache[a]
 end
 
-"""Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for there existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
+"""Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for their existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
 clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
@@ -29,7 +29,7 @@ export @variables
 #Supported boolean operations 
 const BOOL_OPS = (==, !=, <, >, ≤, ≥, &, |, xor)
 
-struct Node{T,N}
+struct Node{T,N} <: Number
     node_value::T
     children::Union{MVector{N,Node},Nothing} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
 
@@ -97,7 +97,7 @@ function constant_value(a::Node)
     end
 end
 
-
+Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
 function is_zero(a::Node)
     if is_tree(a) || is_variable(a)
         return false
@@ -291,13 +291,22 @@ Base.signbit(a::Node) = check_cache((signbit, a), EXPRESSION_CACHE)
 
 # derivative(f, args, v) = NoDeriv()
 
+Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
+
 rules = Any[]
 
-Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
+# Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
 
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
 
+#convert two nodes with different number types to the correct new type. Various math functions will crash if this isn't defined.
+function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
+    ptype = promote_type(T, S)
+    return Node(ptype(value(a))), Node(ptype(value(b)))
+end
+
+Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
 
 # Pre-defined derivatives
 import DiffRules
@@ -353,11 +362,6 @@ end
 variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node)) #SymbolicUtils changed, used to use SymbolicUtils.Sym for this test.
 
 
-# isvariable(a::Node) = SymbolicUtils.issym(node_value(a))
-# # isvariable(::Node{T,0}) where {T<:SymbolicUtils.Sym} = true
-# export isvariable
-# # isvariable(::Node) = false
-
 children(a::Node) = a.children
 
 
@@ -384,7 +388,7 @@ function to_string(a::Node)
     end
 end
 
-function node_symbol(a::Node, variable_to_index::Dict{Node,Int64})
+function node_symbol(a::Node, variable_to_index::IdDict{Node,Int64})
     if is_tree(a)
         result = gensym() #create a symbol to represent the node
     elseif is_variable(a)
@@ -393,50 +397,6 @@ function node_symbol(a::Node, variable_to_index::Dict{Node,Int64})
         result = value(a) #not a tree not a variable so is some kind of constant.
     end
     return result
-end
-
-
-"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
-```
-quote
-    var"##343" = 2x
-    var"##342" = var"##343" + y
-    var"##341" = var"##342" + 1
-end
-```
-The last automatically generated name (in this example var"##341") is the second return value of `function_body`. This variable will hold the value of evaluating the dag at runtime.
-If the dag is a constant then the function body will be empty:
-```
-quote
-end
-```
-and the second return value will be the constant value.
-"""
-function function_body!(dag::Node, variable_to_index::Dict{Node,Int64}, node_to_var::Union{Nothing,Dict{Node,Union{Symbol,Real,Expr}}}=nothing)
-    if node_to_var === nothing
-        node_to_var = Dict{Node,Union{Symbol,Real,Expr}}()
-    end
-
-    body = Expr(:block)
-
-    function _dag_to_function(node)
-
-        tmp = get(node_to_var, node, nothing)
-
-        if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
-            node_to_var[node] = node_symbol(node, variable_to_index)
-
-            if is_tree(node)
-                args = _dag_to_function.(children(node))
-                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
-                push!(body.args, statement)
-            end
-        end
-
-        return node_to_var[node]
-    end
-
-    return body, _dag_to_function(dag)
 end
 
 """Used to postorder function with multiple outputs"""
@@ -500,14 +460,14 @@ end
 
 """finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
-    visited = Dict{Node,index_type}()
+    visited = IdDict{Node,index_type}()
     nodes = Vector{Node}(undef, 0)
 
     _all_nodes!(a, visited, nodes)
     return nodes
 end
 
-function _all_nodes!(node::Node, visited::Dict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
+function _all_nodes!(node::Node, visited::IdDict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
     tmp = get(visited, node, nothing)
     if tmp === nothing
         push!(nodes, node) #only add node to nodes once.

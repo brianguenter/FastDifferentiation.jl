@@ -104,14 +104,14 @@ julia> jacobian!(g)
 ```
 """
 struct DerivativeGraph{T<:Integer}
-    postorder_number::Dict{Node,T}
+    postorder_number::IdDict{Node,T}
     nodes::Vector{Node}
     roots::Vector{Node}
     variables::Vector{Node}
     root_index_to_postorder_number::Vector{T}
-    root_postorder_to_index::Dict{T,T}
+    root_postorder_to_index::IdDict{T,T}
     variable_index_to_postorder_number::Vector{T}
-    variable_postorder_to_index::Dict{T,T}
+    variable_postorder_to_index::IdDict{T,T}
     edges::Dict{T,EdgeRelations{T}}
     expression_cache::IdDict
 
@@ -134,13 +134,13 @@ struct DerivativeGraph{T<:Integer}
             root_index_to_postorder_number[i] = postorder_number[x]
         end
 
-        root_postorder_to_index = Dict{index_type,index_type}()
+        root_postorder_to_index = IdDict{index_type,index_type}()
         for (i, postorder_number) in pairs(root_index_to_postorder_number)
             root_postorder_to_index[postorder_number] = i
         end
 
         variable_index_to_postorder_number = [postorder_number[x] for x in var_array]
-        variable_postorder_to_index = Dict{index_type,index_type}()
+        variable_postorder_to_index = IdDict{index_type,index_type}()
         for (i, postorder_number) in pairs(variable_index_to_postorder_number)
             variable_postorder_to_index[postorder_number] = i
         end
@@ -279,9 +279,6 @@ _node_edges(edge_map::Dict{T,EdgeRelations{T}}, node_index::T) where {T<:Integer
 
 node_edges(a::DerivativeGraph, node::Node) = _node_edges(edges(a), postorder_number(a, node)) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
 node_edges(a::DerivativeGraph, node_index::Integer) = _node_edges(edges(a), node_index)
-
-# node_edges(a::RnToRmGraph, node_index::Integer) = get(a.edges, node_index, nothing) #if the node doesn't exist in the graph return nothing rather than throwing exception. 
-# #version that doesn't require having the entire graph constructed
 
 function reachable_variables(a::DerivativeGraph, node_index::Integer)
     if get(edges(a), node_index, nothing) === nothing
@@ -547,12 +544,15 @@ end
 export sparsity
 
 function number_of_operations(graph::DerivativeGraph)
-    nodes_in_graph = Set{Node}()
+    #Set makes more sense but causes a weird type promotion error.
+    nodes_in_graph = IdDict{Node,Bool}()
     for root in roots(graph)
-        push!(nodes_in_graph, all_nodes(root)...)
+        for node in all_nodes(root)
+            nodes_in_graph[node] = true
+        end
     end
 
-    return length(filter(x -> is_tree(x), nodes_in_graph))
+    return length(filter(x -> is_tree(x), collect(keys(nodes_in_graph))))
 end
 
 """Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""

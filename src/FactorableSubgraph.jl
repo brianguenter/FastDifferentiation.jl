@@ -10,9 +10,6 @@ struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
     reachable_variables::BitVector
     dom_mask::Union{Nothing,BitVector}
     pdom_mask::Union{Nothing,BitVector}
-    #if these two numbers are unchanged since the creation of the subgraph then the subgraph still exists. Quick test for subgraph destruction.
-    # num_dominator_edges::T #number of edges from the dominator node that satisfy the subgraph relation.
-    # num_dominated_edges::T #number of edges from the dominated node that satisfy the subgraph relation
 
     function FactorableSubgraph{T,DominatorSubgraph}(graph::DerivativeGraph{T}, dominating_node::T, dominated_node::T, dom_mask::BitVector, roots_reachable::BitVector, variables_reachable::BitVector) where {T<:Integer}
         @assert dominating_node > dominated_node
@@ -59,29 +56,6 @@ end
 
 reachable(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_variables(a)
 reachable(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
-
-
-# """Returns reachable roots of the node at `node_index`"""
-# function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
-#     gr = graph(a)
-#     result = falses(codomain_dimension(a))
-
-#     for edge in parent_edges(graph, node_index)
-#         @. result |= reachable_roots(edge)
-#     end
-#     return result
-# end
-
-# """Returns reachable variables of the node at `node_index`"""
-# function reachable(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T}
-#     gr = graph(a)
-#     result = falses(codomain_dimension(a))
-
-#     for edge in child_edges(graph, node_index)
-#         @. result |= reachable_variables(edge)
-#     end
-#     return result
-# end
 
 reachable_dominance(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = a.dom_mask
 reachable_dominance(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = a.pdom_mask
