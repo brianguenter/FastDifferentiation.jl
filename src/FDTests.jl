@@ -1447,8 +1447,9 @@ end
     dense = jacobian(FD.roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
-        if sprse[index] != dense[index] #empty elements in sprse get value Node{Int64,0} whereas zero elements in dense get value Node{Float64,0}. These are not == so need special case.
-            @test value(sprse[index]) == value(dense[index])
+        if FD.is_leaf(dense[index])
+            @test FD.is_leaf(sprse[index])
+            @test isequal(FD.value(sprse[index]), FD.value(dense[index]))
         else
             @test sprse[index] === dense[index]
         end

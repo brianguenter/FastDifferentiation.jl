@@ -30,6 +30,7 @@ end
 function (a::ConditionalsRuntime)(input_values::T) where {T<:Real}
     tmp = a.dgraph_cache
     a.cached_derivatives[a.conditional_function(input_values)](input_values)
+end
 
 """Creates a cache object for derivative graphs with conditionals. To evaluate the derivative for inputs `𝐱` you use the object as a function. Example:
 
@@ -50,8 +51,9 @@ function dgraph(roots::AbstractVector{Node}, input_variables::AbstractVector{Nod
 end
 
 function jacobian(a::SymbolicWrapper)
-    
-    dgraph
+
+
+end
 
 derivative_graph(wrapper::NoConditionals) = wrapper.cached_derivative
 function derivative_graph!(wrapper::Conditionals, input_values::T) where {T<:Real}
