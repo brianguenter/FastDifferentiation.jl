@@ -1449,7 +1449,7 @@ end
     for index in CartesianIndices(dense)
         if FD.is_leaf(dense[index])
             @test FD.is_leaf(sprse[index])
-            @test isequal(FD.value(sprse[index]), FD.value(dense[index]))
+            @test isequal(FD.value(sprse[index]), FD.value(dense[index])) #because Node(1) !== Node(1.0) but their values are equal for the purposes of this test. sprse 0's are Node(1) which dense zeros are Node(1.0).
         else
             @test sprse[index] === dense[index]
         end
