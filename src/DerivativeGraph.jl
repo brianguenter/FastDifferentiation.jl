@@ -400,29 +400,30 @@ function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{No
     else
         visited[current_node] = true #mark as visited
 
+        if !is_boolean_op(current_node) #no edges in derivative graph for children of a boolean operation. These are leaf nodes as far as derivative calculations are concerned.
+            current_index = postorder_number[current_node]
+            for (i, child) in pairs(children(current_node))
+                child_index = postorder_number[child]
 
-        current_index = postorder_number[current_node]
-        for (i, child) in pairs(children(current_node))
-            child_index = postorder_number[child]
+                edge = PathEdge(current_index, child_index, derivative(current_node, Val(i)), domain_dim, codomain_dim) #Val can be very slow. TODO see if this is affecting speed.
 
-            edge = PathEdge(current_index, child_index, derivative(current_node, Val(i)), domain_dim, codomain_dim) #Val can be very slow. TODO see if this is affecting speed.
+                if get(edges, current_index, nothing) === nothing
+                    edges[current_index] = EdgeRelations()
+                end
 
-            if get(edges, current_index, nothing) === nothing
-                edges[current_index] = EdgeRelations()
+                @assert !in(edge, edges[current_index].children) #should never be possible to add an edge that is already there but make sure this won't happen.
+                push!(edges[current_index].children, edge)
+
+
+                if get(edges, child_index, nothing) === nothing
+                    edges[child_index] = EdgeRelations()
+                end
+                @assert !in(edge, edges[child_index].parents) #should never be possible to add an edge that is already there but make sure this won't happen.
+                push!(edges[child_index].parents, edge)
+
+
+                _partial_edges(postorder_number, visited, child, edges, expression_cache, domain_dim, codomain_dim)
             end
-
-            @assert !in(edge, edges[current_index].children) #should never be possible to add an edge that is already there but make sure this won't happen.
-            push!(edges[current_index].children, edge)
-
-
-            if get(edges, child_index, nothing) === nothing
-                edges[child_index] = EdgeRelations()
-            end
-            @assert !in(edge, edges[child_index].parents) #should never be possible to add an edge that is already there but make sure this won't happen.
-            push!(edges[child_index].parents, edge)
-
-
-            _partial_edges(postorder_number, visited, child, edges, expression_cache, domain_dim, codomain_dim)
         end
     end
 end

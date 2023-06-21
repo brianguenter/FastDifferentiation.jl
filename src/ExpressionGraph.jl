@@ -54,6 +54,9 @@ end
 
 Base.isequal(x::Node, y::Node) = x === y
 
+is_boolean_op(x::Node{T,2}) where {T<:Union{(typeof.(BOOL_OPS))...}} = true
+is_boolean_op(::Node{T,N}) where {T,N} = false
+
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
     if children(a) !== nothing
@@ -268,32 +271,9 @@ end
 Base.signbit(a::Node) = check_cache((signbit, a), EXPRESSION_CACHE)
 
 
-#TODO: probably want to add boolean operations so can sort Nodes.
-# binary ops that return Bool
-# for (f, Domain) in [(==) => Number, (!=) => Number,
-#     (<=) => Real,   (>=) => Real,
-#     (isless) => Real,
-#     (<) => Real,   (> ) => Real,
-#     (& ) => Bool,   (| ) => Bool,
-#     xor => Bool]
-# @eval begin
-# promote_symtype(::$(typeof(f)), ::Type{<:$Domain}, ::Type{<:$Domain}) = Bool
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::$Domain) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::$Domain, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# end
-# end
-
-# struct Differential
-#     expression::FastDifferentiation.Node #expression to take derivative of
-#     with_respect_to::FastDifferentiation.Node #variable or internal node to take derivative wrt
-# end
-
-# derivative(f, args, v) = NoDeriv()
-
 Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
 
-rules = Any[]
+rules = Any[] #TODO determine if this array is necessary.
 
 # Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
 
@@ -335,7 +315,6 @@ derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(value(a), (childr
 derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(value(a), (children(a)[1], children(a)[2]), index)
 derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
 export derivative
-
 
 function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
