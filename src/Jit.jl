@@ -1,85 +1,33 @@
-abstract type SymbolicWrapper end
-abstract type RuntimeWrapper end
-struct NoConditionals <: SymbolicWrapper
-    cached_derivative::DerivativeGraph
-end
+# struct FunctionCache{A<:AbstractArray{<:Node},N}
+#     function_cache::Dict{BitVector,RuntimeGeneratedFunction}
+#     original_function::A
+#     inputs::NTuple{Vector{Node}}
+#     operation::Function #or could do Union of the various functions that are legal
+#     function_arguments::B #vector(vector(node)) but type may change
+#     in_place::Bool
 
-struct Conditionals <: SymbolicWrapper
-    cached_derivatives::Dict{Vector{Bool},DerivativeGraph}
-    root_functions::Vector{Bool}
-    conditional_function::RuntimeGeneratedFunction
+#     FunctionCache(orig_func::AbstractArray{<:Node}, operation::Function, function_args::AbstractVector{<:AbstractVector{<:Node}}, in_place::Bool)
+# end
 
-    function Conditionals(roots, input_variables)
-        cond_func = make_conditional_function(roots, input_variables)
-        cached_graph = Dict{Vector{Bool},DerivativeGraph}(undef, 0)
-        return new(cached_graph, roots, cond_func)
-    end
-end
+# (a::FunctionCache)(inputs::AbstractVector{T}) where {T<:Real}
+# function make_function(func_array::AbstractArray{<:Node}, inputs::AbstractVector{<:Node}..., in_place=true)
+#     if has_ifelse(func_array)
+#         _make_conditional_function(func_array, inputs, in_place)
+#     else
+#         _make_function(func_array, inputs, in_place) #this is what I currently have.
+#     end
+# end
 
-struct NoConditionalsRuntime <: RuntimeWrapper
-    cached_function::RuntimeGeneratedFunction
-end
+# function _make_conditional_function(func_array::T, inputs::AbstractVector{<:Node}..., in_place=true) where {T<:AbstractArray{<:Node}}
+#     cache = FunctionCache{BitVector,T}()
+#     return FunctionCache{T,length(inputs)}(cache, func_array, inputs)
 
-struct ConditionalsRuntime <: RuntimeWrapper
-    dgraph_cache::Conditionals
-    cached_functions::Dict{DerivativeGraph,RuntimeGeneratedFunction}
-end
+# end
 
-#make_function returns these instead of a RuntimeGeneratedFunction
-(a::NoConditionalsRuntime)(input_values::T) where {T<:Real} = a.cached_derivative(input_values)
-function (a::ConditionalsRuntime)(input_values::T) where {T<:Real}
-    tmp = a.dgraph_cache
-    a.cached_derivatives[a.conditional_function(input_values)](input_values)
-end
+# is_conditional(a::Node) = is_tree(a) && value(a) in BOOL_OPS
 
-"""Creates a cache object for derivative graphs with conditionals. To evaluate the derivative for inputs `𝐱` you use the object as a function. Example:
+# ifelse_nodes(nodes::Vector{Node}) = filter(x -> x === ifelse, nodes) #nodes(gr) is sorted by postorder number for results are as well.
 
-```@variables x y
-
-    gr = dgraph([x^2,y^3],[x,y])
-    jacobian(gr)"""
-function dgraph(roots::AbstractVector{Node}, input_variables::AbstractVector{Node})
-    postorder_number = IdDict{Node,index_type}()
-
-    (postorder_number, nodes, _) = postorder(roots)
-
-    if length(ifelse_nodes(nodes)) == 0 && length(cond_nodes(nodes)) == 0 #if no conditional boolean values passed in then the graph must not contain boolean or ifelse nodes
-        return NoConditionals(DerivativeGraph(roots))
-    else
-        return Conditionals(roots, input_variables)
-    end
-end
-
-function jacobian(a::SymbolicWrapper)
-
-
-end
-
-derivative_graph(wrapper::NoConditionals) = wrapper.cached_derivative
-function derivative_graph!(wrapper::Conditionals, input_values::T) where {T<:Real}
-    conds = wrapper.conditional_function(input_values)
-    tmp = get_index(wrapper.cached_derivatives, conds, nothing)
-
-    if tmp !== nothing
-        return tmp
-    else
-        gr = DerivativeGraph(instantiate_conditionals(wrapper.root_functions, conds))
-        wrapper.cached_derivatives[conds] = gr
-        return gr
-    end
-end
-
-"""Traverse the dag defined by `func` """
-function instantiate_conditionals(func::Vector{Node}, conditional_values::AbstractVector{T}) where {T<:Bool}
-end
-
-function make_conditional_function(roots, input_variables)
-end
-
-is_conditional(a::Node) = is_tree(a) && value(a) in BOOL_OPS
-
-ifelse_nodes(nodes::Vector{Node}) = filter(x -> x === ifelse, nodes) #nodes(gr) is sorted by postorder number for results are as well.
-
-bool_nodes(nodes::Vector{Node}) = filter(x -> x in BOOL_OPS, nodes) #nodes(gr) is sorted by postorder number for results are as well. 
+# bool_nodes(nodes::Vector{Node}) = filter(x -> x in BOOL_OPS, nodes) #nodes(gr) is sorted by postorder number for results are as well. 
 
 
