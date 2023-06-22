@@ -1755,5 +1755,24 @@ end
     @test isapprox(fn([1, 2, 3, 4])[1], 11)
 end
 
+@testitem "reverse_AD" begin
+    using FastDifferentiation.FDTests
+    import FastDifferentiation as FD
+
+    sph_func = spherical_harmonics(7)
+    sph_jac = jacobian(FD.roots(sph_func), FD.variables(sph_func))
+    mn_func1 = make_function(sph_jac, FD.variables(sph_func))
+
+    rev_jac = similar(sph_jac)
+    for (i, root) in pairs(FD.roots(sph_func))
+        rev_jac[i, :] .= reverse_AD(root, FD.variables(sph_func))
+    end
+
+    mn_func2 = make_function(rev_jac, FD.variables(sph_func))
+
+    test_vector = rand(3)
+    @test isapprox(mn_func1(test_vector), mn_func2(test_vector), atol=1e-11)
+
+end
 
 end #module
