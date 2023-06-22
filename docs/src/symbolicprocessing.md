@@ -4,6 +4,8 @@ Because **FD** can generate true symbolic derivatives it can easily be used in c
 
 A rule of thumb is that if your function is small (a few hundred operations or less) or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform or equal **FD**. For more complex functions with many common subexpressions **FD** may substantially outperform Symbolics.jl.
  
+Take these benchmarks with a large grain of salt since there are so few of them. Whether your function will have this kind of performance improvement relative to Symbolics.jl is hard to predict until the benchmark set gets much bigger.
+
 These benchmarks should give you a sense of what performance you might achieve for symbolic processing. There are three types of benchmarks: **Symbolic**, **MakeFunction**, and **Exe**.
 
 * The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
