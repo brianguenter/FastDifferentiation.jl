@@ -1,4 +1,10 @@
 
+"""Used to determine whether to fill zero array elements with an assignment statement or to fill the array in the declaration. Function arrays with many zero elements generate many zero assignment statements which can make compilation time slow. But Need a heuristic to determine when to choose one or the other."""
+function sparsity(sym_func::AbstractArray{<:Node})
+    zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
+    tot = prod(size(sym_func))
+    return zeros == 0 ? 1.0 : (tot - zeros) / tot
+end
 
 """Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
 ```
@@ -127,6 +133,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
+"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` the generated code will not set identically zero elements of the array to zero because this leads to code bloat and slow execution. You should properly initialize your array to zero before passing it to the runtime generated function.
+
+If `in_place=false` then the returned array will be properly initialized with zeros."""
 function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place=false) where {T<:Node}
     @RuntimeGeneratedFunction(make_Expr(func_array, vcat(input_variables...), in_place))
 end
