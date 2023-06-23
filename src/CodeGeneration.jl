@@ -73,9 +73,13 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     end
 
     if in_place
-        return :((input_variables, result) -> $body)
+        return :((input_variables, result) -> @inbounds begin
+            $body
+        end)
     else
-        return :((input_variables) -> $body)
+        return :((input_variables) -> @inbounds begin
+            $body
+        end)
     end
 end
 export make_Expr

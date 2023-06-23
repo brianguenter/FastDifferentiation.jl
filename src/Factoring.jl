@@ -590,13 +590,31 @@ end
 
 
 function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
-    nodes = Set{Node}()
+    nodes = IdDict{Node,Bool}()
+
     for index in eachindex(jacobian)
         oned = all_nodes(jacobian[index])
-        union!(nodes, oned)
+        for node in oned
+            nodes[node] = true
+        end
     end
-    return nodes
+    # nodes = Set{Node}()
+    # for index in eachindex(jacobian)
+    #     oned = all_nodes(jacobian[index])
+    #     union!(nodes, oned)
+    # end
+    # return nodes
+    return keys(nodes)
 end
 
 """Count of number of operations in graph."""
-number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
+function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
+    count = 0
+
+    for node in unique_nodes(jacobian)
+        if is_tree(node)
+            count += 1
+        end
+    end
+    return count
+end
