@@ -61,7 +61,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
-    if !in_place
+    if in_place
+        push!(body.args, (:result .= zero(eltype(input_variables))))
+    else
         push!(body.args, (return_declaration(func_array, input_variables)))
     end
 
