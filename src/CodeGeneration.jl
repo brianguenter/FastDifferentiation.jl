@@ -52,7 +52,7 @@ end
 return_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef))
 # return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = Array{promote_type(Float64, eltype(input_variables)),$N}(undef, $(size(func_array)...)))
 """fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
-return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = fill(zero(promote_type(Float64, eltype(input_variables))), $(size(func_array))))
+return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = zeros(promote_type(Float64, eltype(input_variables)), $(size(func_array)...)))
 
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
@@ -133,7 +133,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
-"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` the generated code will not set identically zero elements of the array to zero because this leads to code bloat and slow execution. You should properly initialize your array to zero before passing it to the runtime generated function.
+"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` it will generate code to fill a user supplied array with the result. In this case if an element of `func_array` is identically zero the generated code will not set the result to zero to zero because this leads to code bloat and slow execution. If you need these array elements to be zero instead of `undef` you should properly initialize your array to zero before passing it to the runtime generated function.
 
 If `in_place=false` then the returned array will be properly initialized with zeros."""
 function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place=false) where {T<:Node}
