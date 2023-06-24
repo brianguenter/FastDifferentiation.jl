@@ -1765,7 +1765,7 @@ end
 
     rev_jac = similar(sph_jac)
     for (i, root) in pairs(FD.roots(sph_func))
-        rev_jac[i, :] .= reverse_AD(root, FD.variables(sph_func))
+        rev_jac[i, :] .= FD.reverse_AD(root, FD.variables(sph_func))
     end
 
     mn_func2 = make_function(rev_jac, FD.variables(sph_func))
