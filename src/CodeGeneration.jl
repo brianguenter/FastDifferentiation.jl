@@ -62,7 +62,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     body = Expr(:block)
 
     if in_place
-        push!(body.args, (:result .= zero(eltype(input_variables))))
+        push!(body.args, :(result .= zero(eltype(input_variables))))
     else
         push!(body.args, (return_declaration(func_array, input_variables)))
     end
