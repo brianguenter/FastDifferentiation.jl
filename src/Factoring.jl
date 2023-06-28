@@ -531,12 +531,12 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
             if variable(graph, var_index) == node_value
-                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
+                return one(Node) #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
             else
-                return 0.0 #taking a derivative with respect to a different variable, which is 0.
+                return zero(Node) #taking a derivative with respect to a different variable, which is 0.
             end
         else
-            return 0.0 #root is a constant
+            return zero(Node) #root is a constant
         end
     else #root contains a graph which has been factored so that there should be a single linear path from each root to each variable with no branching
         return follow_path(graph, root_index, var_index)
