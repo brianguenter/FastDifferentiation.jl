@@ -1655,6 +1655,11 @@ end
             72.0 72.0 48.0
             72.0 18.0 24.0
             48.0 24.0 8.0])
+
+    #test to make sure sparse_hessian/evaluate_path bug is not reintroduced (ref commit 4b4aeeb1990a15443ca87c15638dcaf7bd9d34d1)
+    a = hessian(x * y, [x, y])
+    b = sparse_hessian(x * y, [x, y])
+    @test all(a .== b)
 end
 
 @testitem "hessian_times_v" begin
