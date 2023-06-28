@@ -1,5 +1,21 @@
 # Comparison of FD with other AD algorithms
 See [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) for the benchmark code used to generate this table.
+
+I believe the benchmarks reflect the best way to use each package. However, I am not an expert in any of these packages. For some of the benchmarks I have not yet figured out how to correctly and efficiently compute all the derivatives.
+
+A notable case is Zygote which has unusually slow timings. It is possible it is not being used as efficiently as possible. 
+
+If you are expert in any of these packages please submit a PR to fill in, improve, or correct a benchmark.
+
+The benchmarks test the speed of gradients, Jacobians, Hessians, and the ability to exploit sparsity in the derivative. The last problem, `ODE`, also compares the AD algorithms to a hand optimized Jacobian.
+
+When determining which AD algorithm to use keep in mind the limitations of **FD**. The total operation count of your expression should be less than 10⁵. You may get reasonable performance for expressions as large as 10⁶ operations but expect very long compile times. FD does not support conditionals which involve the differentiation variables (yet). The other algorithms do not have these limitations.
+
+These timings are just for evaluating the derivative function. They do not include preprocessing time to generate either the function or auxiliary data structures that make the evaluation more efficient.
+
+The times in each row are normalized to the shortest time in that row. The fastest algorithm will have a relative time of 1.0 and all other algorithms will have a time ≥ 1.0. Smaller numbers are better.
+
+
 | Function | FD sparse | FD dense | ForwardDiff | ReverseDiff | Enzyme | Zygote |
 |---------|-----------|----------|-------------|-------------|--------|--------|
 | Rosenbrock Hessian | **1.00** | 75.60 | 571669.52 | 423058.61 | [^notes] | 1015635.96 |
