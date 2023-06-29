@@ -1,4 +1,4 @@
-# Comparison of FD with other AD algorithms
+# Benchmarks
 See [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) for the benchmark code used to generate these results.
 
 The benchmarks test the speed of gradients, Jacobians, Hessians, and the ability to exploit sparsity in the derivative. The last problem, `ODE`, also compares the AD algorithms to a hand optimized Jacobian. Take these with a grain of salt; they may be useful for order of magnitude comparisons but not much more.
