@@ -231,19 +231,7 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 end
 export jacobian_transpose_v
 
-"""Returns the dense symbolic Hessian matrix."""
-function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
-    tmp = DerivativeGraph(expression)
-    jac = _symbolic_jacobian!(tmp, variable_order)
-    tmp2 = DerivativeGraph(vec(jac))
-    return _symbolic_jacobian!(tmp2, variable_order)
-end
-export hessian
-
-"""Compute the symbolic Hessian. Returns a sparse matrix of symbolic expressions. 
-Can be used in combination with `make_function` to generate an executable that
- will return a sparse matrix or take one as an in-place argument. 
-Example:
+"""Returns the dense symbolic Hessian matrix. Example:
 ```
 julia> @variables x y
 
@@ -252,6 +240,55 @@ julia> hessian(x^2*y^2,[x,y])
  (2 * (y ^ 2))  (4 * (y * x))
  (4 * (x * y))  (2 * (x ^ 2))
 ```
+"""
+function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
+    tmp = DerivativeGraph(expression)
+    jac = _symbolic_jacobian!(tmp, variable_order)
+    tmp2 = DerivativeGraph(vec(jac))
+    return _symbolic_jacobian!(tmp2, variable_order)
+end
+export hessian
+
+"""Compute a sparse symbolic Hessian. Returns a sparse matrix of symbolic expressions. 
+Can be used in combination with `make_function` to generate an executable that
+ will return a sparse matrix or take one as an in-place argument. Example:
+
+ ```
+julia> @variables x y
+
+julia> a = sparse_hessian(x*y,[x,y])
+2×2 SparseArrays.SparseMatrixCSC{FastDifferentiation.Node, Int64} with 2 stored entries:
+ ⋅  1
+ 1  ⋅
+
+julia> f1 = make_function(a,[x,y])
+...
+
+julia> f1([1.0,2.0])
+2×2 SparseArrays.SparseMatrixCSC{Float64, Int64} with 2 stored entries:
+  ⋅   1.0
+ 1.0   ⋅
+
+julia> tmp = similar(a,Float64)
+2×2 SparseArrays.SparseMatrixCSC{Float64, Int64} with 2 stored entries:
+  ⋅            4.24399e-314
+ 4.24399e-314   ⋅
+
+julia> f2 = make_function(a,[x,y],in_place=true)
+...
+
+julia> f2([1.0,2.0],tmp)
+2×2 SparseArrays.SparseMatrixCSC{Float64, Int64} with 2 stored entries:
+  ⋅   1.0
+ 1.0   ⋅
+
+julia> tmp
+2×2 SparseArrays.SparseMatrixCSC{Float64, Int64} with 2 stored entries:
+  ⋅   1.0
+ 1.0   ⋅
+
+```
+
 """
 function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
     gradient = jacobian([expression], variable_order)
