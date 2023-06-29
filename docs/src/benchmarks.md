@@ -1,7 +1,7 @@
 # Comparison of FD with other AD algorithms
 See [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) for the benchmark code used to generate this table.
 
-I believe the benchmarks reflect the best way to use each package. However, I am not an expert in any of these packages. For some of the benchmarks I have not yet figured out how to correctly and efficiently compute all the derivatives.
+I believe the benchmark code reflects the best way to use each package. However, I am not an expert in any of these packages. For some of the benchmarks I have not yet figured out how to correctly and efficiently compute all the derivatives.
 
 A notable case is Zygote which has unusually slow timings. It is possible it is not being used as efficiently as possible. 
 
