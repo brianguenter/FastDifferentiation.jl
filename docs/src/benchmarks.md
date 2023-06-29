@@ -37,7 +37,7 @@ It is also intersting to note the ratio of the number of operations of the FD Ja
 
 Problem sizes in approximately the ratio 1:10:100 were computed for several of the benchmarks. The parameters which give these ratios were: ((10,4,2),(100,11,4),(1000,35,9)) for (Rosenbrock Jacobian, Spherical harmonics Jacobian, Simple matrix ops Jacobian), respectively. 
 
-The ratio (jacobian operations)/(original function operations) stays close to a constant over 2 orders of magnitude of problem size.
+The ratio (jacobian operations)/(original function operations) stays close to a constant over 2 orders of magnitude of problem size. In the case of the simple matrix ops Jacobian both the input and output dimensions scale from 4 to 81, a 20x increase. But the Jacobian computation relative to the original function computation only scales by 1.5x.
 
 |Relative problem size | Rosenbrock Jacobian | Spherical harmonics Jacobian | Simple matrix ops Jacobian |
 |-------|---------------------|------------------------------|------------------------|
