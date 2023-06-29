@@ -254,7 +254,7 @@ julia> hessian(x^2*y^2,[x,y])
 ```
 """
 function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
-    gradient = sparse_jacobian([expression], variable_order)
+    gradient = jacobian([expression], variable_order)
     return sparse_jacobian(vec(gradient), variable_order)
 end
 export sparse_hessian
