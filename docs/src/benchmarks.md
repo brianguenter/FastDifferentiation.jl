@@ -32,12 +32,19 @@ The times in each row are normalized to the shortest time in that row. The faste
 
 It is worth nothing that both FD sparse and FD dense are faster than the hand optimized Jacobian.
 
-It is also intersting to note the ratio of the number of operations of the Jacobian or Hessian of a function to the number of operations in the original function. For FD these ratios are:
 
-|Ratios | Rosenbrock Jacobian | Rosenbrock Hessian | Spherical harmonics Jacobian | Simple matrix function | hand optimized function |
-|-------|---------------------|--------------------|------------------------------|------------------------|-------------------------|
-|       | 1.13                | 1.13               | 2.4                          |          4.0           |     .59                 |
+It is also intersting to note the ratio of the number of operations of the FD Jacobian of a function to the number of operations in the original function. 
 
-Contrary to expectation in most of these benchmarks the computation count of the Jacobian or Hessian is a small constant times larger than the computation count of the original function. This is a very small sample of functions but it will be interesting to see if this generalizes to all functions or just functions with special graph structure.
+Problem sizes in approximately the ratio 1:10:100 were computed for several of the benchmarks. The parameters which give these ratios were: ((10,4,2),(100,11,4),(1000,35,9)) for (Rosenbrock Jacobian, Spherical harmonics Jacobian, Simple matrix ops Jacobian), respectively. 
+
+The ratio (jacobian operations)/(original function operations) stays close to a constant over 2 orders of magnitude of problem size.
+
+|Relative problem size | Rosenbrock Jacobian | Spherical harmonics Jacobian | Simple matrix ops Jacobian |
+|-------|---------------------|------------------------------|------------------------|
+|  1x     | 1.13                | 2.2                          |          2.6           |
+|  10x     | 1.13                | 2.34                          |          3.5          |
+|  100x     | 1.13                | 2.4                          |          3.8          |
+
+This is a very small sample of functions but it will be interesting to see if this generalizes to all functions or only applies to functions with special graph structure.
 
 [^notes]: For the FD sparse column, FD sparse was slower than FD dense so times are not listed for this column. For all other columns either the benchmark code crashes or I haven't yet figured out how to make it work correctly.
