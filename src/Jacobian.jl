@@ -233,16 +233,7 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 end
 export jacobian_transpose_v
 
-
-
-
-"""Computes the full symbolic Hessian matrix"""
-function hessian(graph::DerivativeGraph, variable_order)
-    @assert codomain_dimension(graph) == 1
-    return hessian(roots(graph)[1], variable_order)
-end
-
-"""Computes the full symbolic Hessian matrix"""
+"""Returns the dense symbolic Hessian matrix."""
 function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
     tmp = DerivativeGraph(expression)
     jac = _symbolic_jacobian!(tmp, variable_order)
@@ -255,11 +246,19 @@ export hessian
 Can be used in combination with `make_function` to generate an executable that
  will return a sparse matrix or take one as an in-place argument. 
 Example:
+```
+julia> @variables x y
+
+julia> hessian(x^2*y^2,[x,y])
+2×2 Matrix{FastDifferentiation.Node}:
+       (2 * (y ^ 2))  ((2 * x) * (2 * y))
+ ((2 * y) * (2 * x))        (2 * (x ^ 2))
+```
+
 """
 function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
     gradient = jacobian([expression], variable_order)
     return sparse_jacobian(vec(gradient), variable_order)
-end
 export sparse_hessian
 
 
