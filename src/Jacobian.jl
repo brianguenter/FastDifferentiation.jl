@@ -52,8 +52,6 @@ function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVecto
     return _symbolic_jacobian!(tmp, variable_ordering)
 end
 
-# _symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
-
 """Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Examples:
 ```julia-repl
 
@@ -254,11 +252,11 @@ julia> hessian(x^2*y^2,[x,y])
        (2 * (y ^ 2))  ((2 * x) * (2 * y))
  ((2 * y) * (2 * x))        (2 * (x ^ 2))
 ```
-
 """
 function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
-    gradient = jacobian([expression], variable_order)
+    gradient = sparse_jacobian([expression], variable_order)
     return sparse_jacobian(vec(gradient), variable_order)
+end
 export sparse_hessian
 
 
