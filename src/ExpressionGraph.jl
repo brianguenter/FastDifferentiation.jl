@@ -434,14 +434,36 @@ function graph_leaves(node::Node)
     return result
 end
 
-function make_variables(name::Symbol, how_many::Int64)
-    result = Vector{Node}(undef, how_many)
+"""Returns an Array of variables with names corresponding to their indices in the Array. Example:
+```julia
+julia> make_variables(:x,3)
+3-element Vector{FastDifferentiation.Node}:
+ x1
+ x2
+ x3
 
-    for i in 1:how_many
-        result[i] = Node(Symbol(name, i))
+julia> make_variables(:x,2,3)
+2×3 Matrix{FastDifferentiation.Node}:
+ x1_1  x1_2  x1_3
+ x2_1  x2_2  x2_3
+
+julia> make_variables(:x,2,3,2)
+2×3×2 Array{FastDifferentiation.Node, 3}:
+[:, :, 1] =
+ x1_1_1  x1_2_1  x1_3_1
+ x2_1_1  x2_2_1  x2_3_1
+
+[:, :, 2] =
+ x1_1_2  x1_2_2  x1_3_2
+ x2_1_2  x2_2_2  x2_3_2
+ ```
+ """
+function make_variables(name::Symbol, array_size::T...) where {T}
+    result = Array{Node,length(array_size)}(undef, array_size...)
+
+    for i in CartesianIndices((UnitRange.(1, array_size)))
+        result[i] = Node(Symbol(name, join(i.I, "_")))
     end
     return result
 end
 export make_variables
-
-
