@@ -13,13 +13,28 @@ using FastDifferentiation
 @variables x y z
 
 ```
- Make a vector of variables
+ Make arrays of variables of various dimensions
 ```julia
-julia> X = make_variables(:x,3)
-3-element Vector{Node}:
+julia> make_variables(:x,3)
+3-element Vector{FastDifferentiation.Node}:
  x1
  x2
  x3
+
+julia> make_variables(:x,2,3)
+2×3 Matrix{FastDifferentiation.Node}:
+ x1_1  x1_2  x1_3
+ x2_1  x2_2  x2_3
+
+julia> make_variables(:x,2,3,2)
+2×3×2 Array{FastDifferentiation.Node, 3}:
+[:, :, 1] =
+ x1_1_1  x1_2_1  x1_3_1
+ x2_1_1  x2_2_1  x2_3_1
+
+[:, :, 2] =
+ x1_1_2  x1_2_2  x1_3_2
+ x2_1_2  x2_2_2  x2_3_2
 ```
 
 Make an executable function
@@ -99,7 +114,7 @@ Executable with in\_place matrix evaluation to avoid allocation of a matrix for 
 ```julia
 julia> jac_exe = make_function(symb,[x,y], in_place=true)
 ...
-julia> a = Matrix{Float64}(undef,2,2)
+julia> a = similar(symb,Float64)
 2×2 Matrix{Float64}:
  0.0  0.0
  0.0  6.93532e-310
