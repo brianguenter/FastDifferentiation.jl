@@ -60,12 +60,11 @@ julia> jacobian(ans,vcat(vec(A),b))
 
 Because the variable indices are carried in the variable names it should be relatively easy to spot tensor contraction sequences like this `(a1_1 * b1) + (a1_2 * b2))` and replace them with a tensor contraction operator on matrix elements.
 
-In the short term reducing memory allocations during the derivative computation stage should substantially improve performance.
 
-Another possibility is to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) instead of LLVM compilation of large runtime generated programs. When graph size goes above 10^5 nodes LLVM compilation time can increase dramatically, but DynamicExpressions can be quite fast at even larger scales and have reasonable performance. 
+Another possibility is to use [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) instead of LLVM compilation of large runtime generated programs. When graph size goes above 10^5 nodes LLVM compilation time can increase dramatically, but DynamicExpressions can be quite fast at even larger scales and have reasonable performance. This would be especially useful when the function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
 
 Some hybrid of loop rerolling and DynamicExpressions may make it possible to scale **FD** to expressions several orders of magnitude larger than the current practical limit.
 
-However, LLVM compile time can be significant at this scale. For expressions this size and larger [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. This would be especially useful when your function is changing frequently so compilation overhead cannot be amortized across many derivative evaluations.
+In the short term reducing memory allocations during the derivative computation stage should substantially improve performance.
 
 
