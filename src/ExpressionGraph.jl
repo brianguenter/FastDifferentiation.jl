@@ -276,6 +276,8 @@ function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
 end
 
 Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
+Base.adjoint(a::Node) = a
+Base.transpose(a::Node) = a
 
 # Pre-defined derivatives
 import DiffRules
