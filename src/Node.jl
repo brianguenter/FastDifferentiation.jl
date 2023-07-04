@@ -92,8 +92,8 @@ function constant_value(a::Node)
     end
 end
 
-Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
-function is_zero(a::Node)
+# Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
+function Base.iszero(a::Node)
     if is_tree(a) || is_variable(a)
         return false
     elseif value(a) == 0
@@ -144,11 +144,11 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
     #c1*c2 = c3, (c1*x)*(c2*x) = c3*x
-    if is_zero(a) && is_zero(b)
+    if iszero(a) && iszero(b)
         return Node(value(a) + value(b)) #user may have mixed types for numbers so use automatic promotion to widen the type.
-    elseif is_zero(a) #b is not zero
+    elseif iszero(a) #b is not zero
         return a #use this node rather than creating a zero since a has the type encoded in it
-    elseif is_zero(b) #a is not zero
+    elseif iszero(b) #a is not zero
         return b #use this node rather than creating a zero since b has the type encoded in it
     elseif is_one(a)
         return b #At this point in processing the type of b may be impossible to determine, for example if b = sin(x) and the value of x won't be known till the expression is evaluated. No easy way to promote the type of b here if a has a wider type than b will eventually be determined to have. Example: a = BigFloat(1.0), b = sin(x). If the value of x is Float32 when the function is evaluated then would expect the type of the result to be BigFloat. But it will be Float32. Need to figure out a type of Node that will eventually generate code something like this: b = promote_type(a,b)(b) where the types of a,b will be known because this will be called in the generated Julia function for the derivative.
@@ -179,9 +179,9 @@ function simplify_check_cache(::typeof(+), na, nb, cache)
     #TODO add another check that moves all contants to the left and then does constant propagation
     #c1 + c2 = c3, (c1 + x)+(c2 + x) = c3+2*x
 
-    if is_zero(a)
+    if iszero(a)
         return b
-    elseif is_zero(b)
+    elseif iszero(b)
         return a
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) + value(b))
@@ -206,9 +206,9 @@ end
 function simplify_check_cache(::typeof(-), na, nb, cache)
     a = Node(na)
     b = Node(nb)
-    if is_zero(b)
+    if iszero(b)
         return a
-    elseif is_zero(a)
+    elseif iszero(a)
         return -b
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) - value(b))

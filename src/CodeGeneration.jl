@@ -1,7 +1,7 @@
 
 """Computes (number of non_zeros)/(number of array elements). Measure of sparsity of the array `sym_func`"""
 function sparsity(sym_func::AbstractArray{<:Node})
-    zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
+    zeros = mapreduce(x -> iszero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
     return zeros == 0 ? 1.0 : (tot - zeros) / tot
 end
@@ -74,7 +74,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     end
 
     for (i, node) in pairs(func_array)
-        if !is_zero(node)
+        if !iszero(node)
             node_body, variable = function_body!(node, node_to_index, node_to_var)
             push!(node_body.args, :(result[$i] = $variable))
             push!(body.args, node_body)

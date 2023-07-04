@@ -94,7 +94,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
             partial_index = variable_node_to_index(graph, partial_var) #make sure variable is in the domain of the graph
             if partial_index !== nothing
                 tmp = evaluate_path(graph, root, partial_index)
-                if !is_zero(tmp)
+                if !iszero(tmp)
                     push!(row_indices, root)
                     push!(col_indices, i)
                     push!(values, tmp)
