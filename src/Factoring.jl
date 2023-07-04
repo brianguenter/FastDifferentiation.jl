@@ -445,7 +445,6 @@ function vertex_counts(subgraph::FactorableSubgraph{T}) where {T}
 end
 
 function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
-    global num_times += 1
     sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
     counts = vertex_counts(subgraph)
     counts[dominated_node(subgraph)] = 1
@@ -455,8 +454,6 @@ function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
 
     return vertex_sums[dominating_node(subgraph)]
 end
-
-num_times = 0
 
 function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, sub_edges, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
     if get(vertex_sums, current_vertex, nothing) === nothing
