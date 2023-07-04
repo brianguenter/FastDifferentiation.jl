@@ -1,5 +1,5 @@
 
-"""Used to determine whether to fill zero array elements with an assignment statement or to fill the array in the declaration. Function arrays with many zero elements generate many zero assignment statements which can make compilation time slow. But Need a heuristic to determine when to choose one or the other."""
+"""Computes (number of non_zeros)/(number of array elements). Measure of sparsity of the array `sym_func`"""
 function sparsity(sym_func::AbstractArray{<:Node})
     zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
