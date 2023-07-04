@@ -1,8 +1,6 @@
 module FastDifferentiation
 
 using TermInterface
-import SymbolicUtils
-using SymbolicUtils: arguments
 using StaticArrays
 using SpecialFunctions
 using NaNMath
@@ -35,6 +33,10 @@ const DefaultNodeIndexType = Int64
 
 include("Utilities.jl")
 include("BitVectorFunctions.jl")
+
+include("Node.jl")
+include("Methods.jl")
+
 include("ExpressionGraph.jl")
 include("PathEdge.jl")
 include("DerivativeGraph.jl")

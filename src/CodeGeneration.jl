@@ -49,6 +49,7 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
     return body, _dag_to_function(dag)
 end
 
+#TODO need to figure out if it is okay to call promote_type in this case. The docs say should use promote_rule instead but that doesn't seem to apply here.
 return_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef); result .= 0) #need to initialize array to zero because this is no longer being done by simple assignment statements.
 
 """fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
