@@ -288,7 +288,12 @@ function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothin
         curr_node = dominated_node(subgraph)
     end
 
-    for fedge in forward_edges(subgraph, curr_node)
+    fwd_edges = forward_edges(subgraph, curr_node)
+    if length(fwd_edges) == 0
+        @assert curr_node == dominating_node(subgraph) "num edges forward $(length(fwd_edges)) curr_node $curr_node dom node $(dominating_node(subgraph))"
+    end#ensure that all paths go from dominated node to dominating node with no broken paths
+
+    for fedge in fwd_edges
         if test_edge(subgraph, fedge) && !in(fedge, visited)
             push!(sub_edges, fedge)
             fvert = forward_vertex(subgraph, fedge)
@@ -312,6 +317,20 @@ function deconstruct_subgraph(subgraph::FactorableSubgraph)
         push!(sub_nodes, dominating_node(subgraph))
     else
         push!(sub_nodes, dominated_node(subgraph))
+    end
+
+    for edge in sub_edges
+        if !(top_vertex(edge) ∈ sub_nodes)
+            println(vertices.(sub_edges))
+            println("subgraph type: $(typeof(subgraph))")
+            println(sort(unique(sub_nodes)))
+            println("sub_nodes from top_vertex $(sort(unique(map(x -> top_vertex(x), collect(sub_edges)))))")
+            println("dominating_node $(dominating_node(subgraph))")
+            println("top vertex of edge $(top_vertex(edge))")
+            println("bott vertex of edge $(bott_vertex(edge))")
+        end
+        @assert top_vertex(edge) in sub_nodes
+        @assert bott_vertex(edge) in sub_nodes
     end
 
     return sub_edges, unique(sub_nodes)

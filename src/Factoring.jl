@@ -447,15 +447,16 @@ end
 function evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}) where {T}
     sub_edges, sub_nodes = deconstruct_subgraph(subgraph)
     counts = vertex_counts(subgraph)
+
     counts[dominated_node(subgraph)] = 1
     vertex_sums = Dict{T,Node}()
-    # Vis.draw_dot(subgraph)
-    _evaluate_branching_subgraph(subgraph, Node(1), dominated_node(subgraph), sub_edges, counts, vertex_sums)
+
+    _evaluate_branching_subgraph(subgraph, Node(1), dominated_node(subgraph), sub_edges, sub_nodes, counts, vertex_sums)
 
     return vertex_sums[dominating_node(subgraph)]
 end
 
-function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, sub_edges, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
+function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node, current_vertex::T, sub_edges, sub_nodes, counts::Dict{T,T}, vertex_sums::Dict{T,Node}) where {T}
     if get(vertex_sums, current_vertex, nothing) === nothing
         vertex_sums[current_vertex] = sum
     else
@@ -468,7 +469,9 @@ function _evaluate_branching_subgraph(subgraph::FactorableSubgraph{T}, sum::Node
             if !in(edge, sub_edges)
                 continue
             else
-                _evaluate_branching_subgraph(subgraph, vertex_sums[current_vertex] * value(edge), forward_vertex(subgraph, edge), sub_edges, counts, vertex_sums)
+                tmp = forward_vertex(subgraph, edge)
+                @assert tmp in sub_nodes
+                _evaluate_branching_subgraph(subgraph, vertex_sums[current_vertex] * value(edge), forward_vertex(subgraph, edge), sub_edges, sub_nodes, counts, vertex_sums)
             end
         end
     end
