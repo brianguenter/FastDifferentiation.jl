@@ -1437,7 +1437,7 @@ end
 
 @testitem "sparse_jacobian" begin
     using FastDifferentiation.FDTests
-    import FastDifferentiation as FD
+    using FastDifferentiation.FDInternals
 
     @variables x y z
 
@@ -1762,7 +1762,7 @@ end
 
 @testitem "reverse_AD" begin
     using FastDifferentiation.FDTests
-    import FastDifferentiation as FD
+    using FastDifferentiation.FDInternals
 
     sph_func = spherical_harmonics(7)
     sph_jac = jacobian(FD.roots(sph_func), FD.variables(sph_func))
