@@ -53,6 +53,13 @@ struct Node{T,N} <: Number
     Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
 end
 
+
+#need these methods because the linear algebra operations (and maybe others) call oneunit(a) which does something like T(one(T)). If these methods aren't defined oneunit will crash.
+Node{T,0}(a) where {T} = Node(a) #not entirely sure why this needs to be defined but the linear algebra functions complain if it isn't.
+Node{T,0}(a::Node{T,0}) where {T<:Any} = Node(a)
+Node{T,1}(a::Node{T,1}) where {T<:Any} = Node(a)
+Node{T,2}(a::Node{T,2}) where {T<:Any} = Node(a)
+
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node{T,N}, cache) where {T,N}
     if children(a) !== nothing
