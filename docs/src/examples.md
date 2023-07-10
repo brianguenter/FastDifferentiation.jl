@@ -1,12 +1,20 @@
 # Examples
 
-The first step is to create **FD** variables which are then passed to the function you want to differentiate. The return value is a graph structure which **FD** will analyze to generate efficient executables or symbolic expressions.
- 
-**FD** uses a global cache for common subexpression elimination so the **FD** expression preprocessing step is not thread safe. 
+
+**FD** uses a global cache for common subexpression elimination so the **FD** symbolics preprocessing step is not thread safe. 
 
 Under ordinary conditions the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function `clear_cache` after you have completely processed your expression.
 
-Set up variables:
+The most common way to use **FD** is this:
+* create variables
+* do operations on those variables to create the function you want to differentiate
+* compute a symbolic derivative of the function
+* pass the symbolic derivative to `make_function` to generate a function to efficiently evaluate the derivative
+
+
+##### Creating Variables
+
+Make scalar variables
 ```julia
 using FastDifferentiation
 
@@ -36,6 +44,9 @@ julia> make_variables(:x,2,3,2)
  x1_1_2  x1_2_2  x1_3_2
  x2_1_2  x2_2_2  x2_3_2
 ```
+##### Generate functions to evaluate symbolic expressions
+
+You can use `make_function` to generate a function to efficiently evaluate any symbolic input:
 
 Make an executable function
 ```julia
@@ -46,15 +57,36 @@ julia> xy_exe([1.0,2.0])
  4.0
  1.4142135623730951
 ```
-Compute Hessian:
-```julia
-@variables x y z
+##### Compute derivatives
 
-julia> h_symb = hessian(x^2+y^2+z^2,[x,y,z])
-3×3 Matrix{Node}:
- 2    0.0  0.0
- 0.0  2    0.0
- 0.0  0.0  2
+Compute derivative of a function and make executable
+
+```julia
+# compute Jacobian and generate function to evaluate it
+julia> f1 = cos(x) * y
+(cos(x) * y)
+
+julia> f2 = sin(y) * x
+(sin(y) * x)
+
+julia> symb = jacobian([f1, f2], [x, y]) #the vector [x,y] tells make_function 
+# how to order the arguments to the generated function
+2×2 Matrix{Node}:
+ (y * -(sin(x)))  cos(x)
+ sin(y)           (x * cos(y))
+
+julia> jac_exe = make_function(symb,[x,y]) 
+...
+julia> jac_exe([1.0,2.0]) #jac_exe was created with variable ordering [x,y] 
+# so x will get the value 1.0, y 2.0
+2×2 Matrix{Float64}:
+ -1.68294    0.540302
+  0.909297  -0.416147
+```
+
+```julia
+# compute Hessian and generate function to evaluate it
+@variables x y z
 
 julia> h_symb1 = hessian(x^2*y^2*z^2,[x,y,z])
 3×3 Matrix{FastDifferentiation.Node}:
@@ -62,55 +94,41 @@ julia> h_symb1 = hessian(x^2*y^2*z^2,[x,y,z])
  (((2 * y) * (2 * x)) * (z ^ 2))  (2 * ((z ^ 2) * (x ^ 2)))        (((2 * y) * (2 * z)) * (x ^ 2))
  (((2 * z) * (2 * x)) * (y ^ 2))  (((2 * z) * (2 * y)) * (x ^ 2))  (2 * ((x ^ 2) * (y ^ 2)))
 
-julia> hexe_1 = make_function(h_symb1,[x,y,z])
+julia> hexe_1 = make_function(h_symb1,[x,y,z]) #the vector [x,y,z] tells make_function 
+# how to order the arguments to the generated function
 ...
-julia> hexe_1([1.0,2.0,3.0])
+julia> hexe_1([1.0,2.0,3.0]) #hexe_1 was created with variable ordering [x,y,z] 
+# so x will get the value 1.0, y 2.0, and z 3.0
 3×3 Matrix{Float64}:
  72.0  72.0  48.0
  72.0  18.0  24.0
  48.0  24.0   8.0
 ```
-Compute `Hv` without forming the full Hessian matrix. This is useful if the Hessian is very large
+
+
+You can compute any subset of the columns of the Jacobian:
 ```julia
-julia> @variables x y
-y
+julia> symb = jacobian([x*y,y*z,x*z],[x,y,z]) #all columns
+3×3 Matrix{Node}:
+ y    x    0.0
+ 0.0  z    y
+ z    0.0  x
 
-julia> f = x^2 * y^2
-((x ^ 2) * (y ^ 2))
+julia> symb = jacobian([x*y,y*z,x*z],[x,y]) #first two columns
+3×2 Matrix{Node}:
+ y    x
+ 0.0  z
+ z    0.0
 
-julia> hv_fast, v_vec2 = hessian_times_v(f, [x, y])
-...
-
-julia> hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2]) #need v_vec2 because hv_fast is a function of x,y,v1,v2 and have to specify the order of all inputs to the executable
-...
-julia> hv_fast_exe([1.0,2.0,3.0,4.0]) #first two vector elements are x,y last two are v1,v2
-2-element Vector{Float64}:
- 56.0
- 32.0
+julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, reversed so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
+3×2 Matrix{Node}:
+ 0.0  x
+ y    z
+ x    0.0
 ```
-Compute Jacobian:
-```julia
-julia> f1 = cos(x) * y
-(cos(x) * y)
+##### More on make_function
+There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a vector of input variable values and a matrix to hold the result. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
 
-julia> f2 = sin(y) * x
-(sin(y) * x)
-
-julia> symb = jacobian([f1, f2], [x, y]) #non-destructive
-2×2 Matrix{Node}:
- (y * -(sin(x)))  cos(x)
- sin(y)           (x * cos(y))
-```
-Create executable to evaluate Jacobian:
-```julia
-julia> jac_exe = make_function(symb,[x,y])
-...
-julia> jac_exe([1.0,2.0])
-2×2 Matrix{Float64}:
- -1.68294    0.540302
-  0.909297  -0.416147
-```
-Executable with in\_place matrix evaluation to avoid allocation of a matrix for the Jacobian (in\_place option available on all executables including Jᵀv,Jv,Hv):
 ```julia
 julia> jac_exe = make_function(symb,[x,y], in_place=true)
 ...
@@ -130,7 +148,7 @@ julia> a
   0.909297  -0.416147
 ```
 
-For out of place evaluation (matrix created and returned by executable function) input vector and return matrix of executable can be any mix of StaticArray and Vector. If the first argument to `make_function` is a subtype of StaticArray then the compiled executable will return a StaticArray value. The compiled executable can be called with either an `SVector` or `Vector` argument. For small input sizes the `SVector` should be faster, essentially the same as passing the input as scalar values.
+For out of place evaluation (matrix created and returned by the executable function) the input vector and return matrix of the executable can be any mix of StaticArray and Vector. If the first argument to `make_function` is a subtype of StaticArray then the compiled executable will return a StaticArray value. The compiled executable can be called with either an `SVector` or `Vector` argument. For small input sizes the `SVector` should be faster, essentially the same as passing the input as scalar values.
 
 For functions with low input and output dimensions the fastest executable will be generated by calling `make_function` with first argument a subtype of StaticArray and calling the executable with an SVector argument. The usual cautions of StaticArrays apply, that total length of the return value < 100 or so and total length of the input < 100 or so.
 
@@ -149,26 +167,50 @@ julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y]);
 julia> @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) <: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.
 ```
 
+##### Sparse Jacobians and Hessians
+The functions `sparse_jacobian, sparse_hessian` compute sparse symbolic derivatives. When you pass a sparse symbolic function matrix to `make_function` it will generate an executable which expects an in place sparse matrix to hold the result. For functions with sparse Jacobians or Hessians this can be orders of magnitude faster than using a dense in place matrix.
 
-Compute any subset of the columns of the Jacobian:
 ```julia
-julia> symb = jacobian([x*y,y*z,x*z],[x,y,z]) #all columns
-3×3 Matrix{Node}:
- y    x    0.0
- 0.0  z    y
- z    0.0  x
+julia> hess = sparse_hessian(x^3 + y^3 + z^3, [x,y,z])        
+3×3 SparseArrays.SparseMatrixCSC{FastDifferentiation.Node, Int64} with 3 stored entries:
+ (6 * x)        ⋅        ⋅
+       ⋅  (6 * y)        ⋅
+       ⋅        ⋅  (6 * z)
 
-julia> symb = jacobian([x*y,y*z,x*z],[x,y]) #first two columns
-3×2 Matrix{Node}:
- y    x
- 0.0  z
- z    0.0
 
-julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, reversed so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
-3×2 Matrix{Node}:
- 0.0  x
- y    z
- x    0.0
+julia> res = similar(hess,Float64) #make sparse matrix with proper sparsity to pass to the generated function
+3×3 SparseArrays.SparseMatrixCSC{Float64, Int64} with 3 stored entries:
+ 0.0   ⋅    ⋅ 
+  ⋅   0.0   ⋅
+  ⋅    ⋅   0.0
+
+julia> sp_f = make_function(hess,[x,y,z])
+...
+
+julia> sp_f([1.0,2.0,3.0],res)
+3×3 SparseArrays.SparseMatrixCSC{Float64, Int64} with 3 stored entries:
+ 6.0    ⋅     ⋅
+  ⋅   12.0    ⋅
+  ⋅     ⋅   18.0
+```
+##### Less commonly used functions
+Compute `Hv` without forming the full Hessian matrix. This is useful if the Hessian is very large
+```julia
+julia> @variables x y
+y
+
+julia> f = x^2 * y^2
+((x ^ 2) * (y ^ 2))
+
+julia> hv_fast, v_vec2 = hessian_times_v(f, [x, y])
+...
+
+julia> hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2]) #need v_vec2 because hv_fast is a function of x,y,v1,v2 and have to specify the order of all inputs to the executable
+...
+julia> hv_fast_exe([1.0,2.0,3.0,4.0]) #first two vector elements are x,y last two are v1,v2
+2-element Vector{Float64}:
+ 56.0
+ 32.0
 ```
 
 Symbolic and executable Jᵀv and Jv (see this [paper](https://arxiv.org/abs/1812.01892) for applications of this operation).
