@@ -1,13 +1,15 @@
 # Benchmarks
 See [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) for the benchmark code used to generate these results.
 
-The benchmarks test the speed of gradients, Jacobians, Hessians, and the ability to exploit sparsity in the derivative. The last problem, `ODE`, also compares the AD algorithms to a hand optimized Jacobian. There are not many benchmarks so take these results with a grain of salt; they may be useful for order of magnitude comparisons but not much more.
+The benchmarks test the speed of gradients, Jacobians, Hessians, and the ability to exploit sparsity in the derivative. The last problem, `ODE`, also compares the AD algorithms to a hand optimized Jacobian. There are not many benchmarks so take these results with a grain of salt; they may be useful for order of magnitude comparisons but not much more. Also, two of these packages, FastDifferentiation and Enzyme, are under active development. These benchmarks could change materially in the near future.
 
-I am not an expert in any of these packages except for **FD**. For some of the benchmarks I have not yet figured out how to correctly and efficiently compute all the derivatives. Several of the AD algorithms have unexpectedly slow timings; perhaps the benchmarks can be rewritten to be more efficient. If you are expert in any of these packages please submit a PR to fix, improve, or correct a benchmark.
+I am not an expert in any of these packages except for **FD**. For some of the benchmarks I have not yet figured out how to correctly and efficiently compute all the derivatives. I am indebted to Yingbo Ma and Billy Moses for their help debugging and improving the benchmark code for ForwardDiff and Enzyme, respectively. 
+
+Several of the AD algorithms have unexpectedly slow timings; the Enzyme Rosenbrock Hessian timings are notable in this respect since for the other benchmarks Enzyme has excellent performance. Perhaps these codes can be rewritten to be more efficient. If you are expert in any of these packages please submit a PR to fix, improve, or correct a benchmark.
 
 When determining which AD algorithm to use keep in mind the limitations of **FD**: operation count and conditionals. The total operation count of your expression should be less than 10⁵. You may get reasonable performance for expressions as large as 10⁶ operations but expect very long compile times. FD does not support conditionals which involve the differentiation variables (yet). The other algorithms do not have these limitations.
 
-To generate the markdown for the results in this section execute the function `write_markdown()` in the file `Benchmarks.jl`.
+To generate the markdown for the results in this section execute the function `write_markdown()` in the file `Benchmarks.jl` at the [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) repo.
     
 These timings are just for evaluating the derivative function. They do not include preprocessing time required to generate and compile the function nor any time needed to generate auxiliary data structures that make the evaluation more efficient.
 
