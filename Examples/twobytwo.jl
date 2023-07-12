@@ -11,7 +11,7 @@ func = make_function(symb, [x, y])
 func([1.0, 2.0])
 
 """
-```
+```julia
 julia> @variables x y
 y
 

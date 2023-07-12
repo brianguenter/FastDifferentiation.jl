@@ -14,14 +14,14 @@ The most common way to use **FD** is this:
 
 ##### Creating Variables
 
-Make scalar variables
+Scalar variables
 ```julia
 using FastDifferentiation
 
 @variables x y z
 
 ```
- Make arrays of variables of various dimensions
+Arrays of variables of arbitrary dimension
 ```julia
 julia> make_variables(:x,3)
 3-element Vector{FastDifferentiation.Node}:
@@ -44,19 +44,7 @@ julia> make_variables(:x,2,3,2)
  x1_1_2  x1_2_2  x1_3_2
  x2_1_2  x2_2_2  x2_3_2
 ```
-##### Generate functions to evaluate symbolic expressions
 
-You can use `make_function` to generate a function to efficiently evaluate any symbolic input:
-
-Make an executable function
-```julia
-julia> xy_exe = make_function([x^2*y^2,sqrt(x*y)],[x,y]) #[x,y] vector specifies the order of the arguments to the exe
-...
-julia> xy_exe([1.0,2.0])
-2-element Vector{Float64}:
- 4.0
- 1.4142135623730951
-```
 ##### Compute derivatives
 
 Compute derivative of a function and make executable
@@ -106,7 +94,7 @@ julia> hexe_1([1.0,2.0,3.0]) #hexe_1 was created with variable ordering [x,y,z]
 ```
 
 
-You can compute any subset of the columns of the Jacobian:
+Compute any subset of the columns of the Jacobian:
 ```julia
 julia> symb = jacobian([x*y,y*z,x*z],[x,y,z]) #all columns
 3×3 Matrix{Node}:
@@ -120,13 +108,50 @@ julia> symb = jacobian([x*y,y*z,x*z],[x,y]) #first two columns
  0.0  z
  z    0.0
 
-julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, reversed so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
+julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, ordered so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
 3×2 Matrix{Node}:
  0.0  x
  y    z
  x    0.0
 ```
 ##### More on make_function
+Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the arguement to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
+
+```julia
+julia> f = [x^2*y^2,sqrt(x*y)]
+2-element Vector{FastDifferentiation.Node}:
+ ((x ^ 2) * (y ^ 2))
+       sqrt((x * y))
+
+julia> jac = jacobian(f,[x,y])
+2×2 Matrix{FastDifferentiation.Node}:
+             ((y ^ 2) * (2 * x))              ((x ^ 2) * (2 * y))
+ ((1 / (2 * sqrt((x * y)))) * y)  ((1 / (2 * sqrt((x * y)))) * x)
+
+
+julia> f_and_jac = make_function([vec(jac);f],[x,y])
+...
+
+julia> tmp = f_and_jac([1.1,2.1])
+6-element Vector{Float64}:
+ 9.702000000000002
+ 0.6908492797077573
+ 5.082000000000001
+ 0.36187343222787294
+ 5.336100000000001
+ 1.5198684153570665
+
+julia> jac_eval = reshape(view(tmp,1:4),2,2)
+2×2 reshape(view(::Vector{Float64}, 1:4), 2, 2) with eltype Float64:
+ 9.702     5.082
+ 0.690849  0.361873
+
+julia> f_eval = view(tmp,5:6)
+2-element view(::Vector{Float64}, 5:6) with eltype Float64:
+ 5.336100000000001
+ 1.5198684153570665
+```
+
 There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a vector of input variable values and a matrix to hold the result. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
 
 ```julia

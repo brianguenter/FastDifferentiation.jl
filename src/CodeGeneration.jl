@@ -7,7 +7,7 @@ function sparsity(sym_func::AbstractArray{<:Node})
 end
 
 """Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
-```
+```julia
 quote
     var"##343" = 2x
     var"##342" = var"##343" + y
@@ -16,7 +16,7 @@ end
 ```
 The last automatically generated name (in this example var"##341") is the second return value of `function_body`. This variable will hold the value of evaluating the dag at runtime.
 If the dag is a constant then the function body will be empty:
-```
+```julia
 quote
 end
 ```

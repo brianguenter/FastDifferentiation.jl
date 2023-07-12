@@ -21,7 +21,7 @@ All benchmarks were run on an AMD Ryzen 9 7950X 16-Core Processor with 32GB RAM 
 The first example is a recursive function for 
 the Chebyshev polynomial of order n:
 
-```
+```julia
 @memoize function Chebyshev(n, x)
     if n == 0
         return 1
@@ -59,7 +59,7 @@ With simplification on performance of the executable derivative function for Sym
 The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
 ![MakeFunction, simplify=false](Illustrations/sphericalharmonics_8.svg)
 
-```
+```julia
 @memoize function P(l, m, z)
     if l == 0 && m == 0
         return 1.0

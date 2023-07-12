@@ -72,7 +72,7 @@ This is **beta** software being modified on a daily basis. Expect bugs and frequ
 
 **Q**: Does **FD** support conditionals?  
 **A**: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
-```
+```julia
 @variables x y #create FD variables
 
 julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
@@ -85,7 +85,7 @@ julia> f(1.0,x,y)
 sin(y)
 ```
 but you can't do this:
-```
+```julia
 julia> f(a,b) = a < b ? cos(a) : sin(b)
 f (generic function with 2 methods)
 

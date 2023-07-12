@@ -1,5 +1,5 @@
 """Factors the graph then computes the Jacobian matrix. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed. Example:
-```
+```julia
 julia> @variables x y
 
 julia> jacobian([x*y,y*x],[x,y])
@@ -232,7 +232,7 @@ end
 export jacobian_transpose_v
 
 """Returns the dense symbolic Hessian matrix. Example:
-```
+```julia
 julia> @variables x y
 
 julia> hessian(x^2*y^2,[x,y])
@@ -253,7 +253,7 @@ export hessian
 Can be used in combination with `make_function` to generate an executable that
  will return a sparse matrix or take one as an in-place argument. Example:
 
- ```
+ ```julia
 julia> @variables x y
 
 julia> a = sparse_hessian(x*y,[x,y])

@@ -10,7 +10,7 @@ derivative(A, t, t)
 
 
 """
-```
+```julia
 julia> A = [t t^2; 3t^2 5]
 2×2 Matrix{Node}:
  t              (t ^ 2)

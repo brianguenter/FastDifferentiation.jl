@@ -7,7 +7,7 @@ hessian(x^2 + y^2 + z^2, [x, y, z])
 hessian(x * y * z, [x, y, z])
 
 """
-```
+```julia
 julia> x,y,z = Node.((x,y,z))
 (x, y, z)
 
