@@ -200,6 +200,8 @@ function simplify_check_cache(::typeof(+), na, nb, cache)
         return a
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) + value(b))
+    elseif is_constant(a) && typeof(+) == typeof(value(b)) && is_constant(children(b)[1]) #C1 + (C2 + x) => ((C1+C2)+x)
+        return Node(value(a) + value(children(b)[1])) + children(b)[2]
     else
         return check_cache((+, a, b), cache)
     end
@@ -236,11 +238,14 @@ simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 
 """Special case only for unary -. No simplifications are currently applied to any other unary functions"""
 function simplify_check_cache(::typeof(-), a, cache)
+    println("here")
     na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
         return children(na)[1]
     elseif constant_value(na) !== nothing
         return Node(-value(na))
+    elseif typeof(*) == typeof(value(na)) && constant_value(children(na)[1]) !== nothing
+        return Node(-value(children(na)[1])) * children(na)[2]
     else
         return check_cache((-, na), cache)
     end
