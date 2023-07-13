@@ -181,15 +181,73 @@ For functions with low input and output dimensions the fastest executable will b
 julia> @variables x y
 y
 
-julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y]);
+julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
 
-julia> j_exe = make_function(j, [x, y]);
+julia> j_exe = make_function(j, [x, y])
 
 julia> @assert typeof(j_exe([1.0, 2.0])) <: Array #return type is Array and input type is Vector
 
-julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y]);
+julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
 
 julia> @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) <: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.
+```
+If you need to generate code that can be cut and pasted into another application then you can use `make_Expr` instead of `make_function`. It has the same arguments except the `in_place` boolean argument is not optional.
+```julia
+julia> @variables x y
+y
+
+julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
+
+3×2 Matrix{FastDifferentiation.Node}:
+ ((y ^ 2) * (2 * x))           ((x ^ 2) * (2 * y))
+     -(sin((x + y)))               -(sin((x + y)))
+ ((y / x) * (1 / y))  ((y / x) * -(((x / y) / y)))
+
+#create code to evaluate the jacobian with in place matrix
+julia> make_Expr(j,[x,y],true)
+:((input_variables, result)->begin
+          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =#
+          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =# @inbounds begin
+                  #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:89 =#
+                  begin
+                      result .= zero(eltype(input_variables))
+                      begin
+                          var"##303" = input_variables[2] ^ 2
+                          var"##304" = 2 * input_variables[1]
+                          var"##302" = var"##303" * var"##304"
+                          result[CartesianIndex(1, 1)] = var"##302"
+                      end
+                      begin
+                          var"##307" = input_variables[1] + input_variables[2]
+                          var"##306" = sin(var"##307")
+                          var"##305" = -var"##306"
+                          result[CartesianIndex(2, 1)] = var"##305"
+                      end
+                      begin
+                          var"##309" = input_variables[2] / input_variables[1]
+                          var"##310" = 1 / input_variables[2]
+                          var"##308" = var"##309" * var"##310"
+                          result[CartesianIndex(3, 1)] = var"##308"
+                      end
+                      begin
+                          var"##312" = input_variables[1] ^ 2
+                          var"##313" = 2 * input_variables[2]
+                          var"##311" = var"##312" * var"##313"
+                          result[CartesianIndex(1, 2)] = var"##311"
+                      end
+                      begin
+                          result[CartesianIndex(2, 2)] = var"##305"
+                      end
+                      begin
+                          var"##317" = input_variables[1] / input_variables[2]
+                          var"##316" = var"##317" / input_variables[2]
+                          var"##315" = -var"##316"
+                          var"##314" = var"##309" * var"##315"
+                          result[CartesianIndex(3, 2)] = var"##314"
+                      end
+                  end
+              end
+      end)
 ```
 
 ##### Sparse Jacobians and Hessians

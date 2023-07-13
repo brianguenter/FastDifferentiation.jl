@@ -238,7 +238,6 @@ simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 
 """Special case only for unary -. No simplifications are currently applied to any other unary functions"""
 function simplify_check_cache(::typeof(-), a, cache)
-    println("here")
     na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
         return children(na)[1]
