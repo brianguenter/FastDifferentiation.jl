@@ -181,13 +181,13 @@ For functions with low input and output dimensions the fastest executable will b
 julia> @variables x y
 y
 
-julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y]);
+julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
 
-julia> j_exe = make_function(j, [x, y]);
+julia> j_exe = make_function(j, [x, y])
 
 julia> @assert typeof(j_exe([1.0, 2.0])) <: Array #return type is Array and input type is Vector
 
-julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y]);
+julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
 
 julia> @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) <: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.
 ```
