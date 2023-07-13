@@ -32,7 +32,7 @@ Environment:
 
 | Function | FD sparse | FD dense | ForwardDiff | ReverseDiff | Enzyme | Zygote |
 |---------|-----------|----------|-------------|-------------|--------|--------|
-| Rosenbrock Hessian | **1.00** | 8.31 | 33455.33 | 99042.70 | 819.80 | 85003.60 |
+| Rosenbrock Hessian | **1.00** | 8.31 | 33455.33 | 99042.70 | 194.5 | 85003.60 |
 | Rosenbrock gradient | [^1] | 1.29 | 674.82 | 299.67 | **1.00** | 4208.30 |
 | Simple matrix Jacobian | [^1] | **1.00** | 34.09 | 51.25 | [^50] | 125.26 |
 | Spherical harmonics Jacobian | [^1] | **1.00** | 29.25 | [^40] | [^51] | [^6] |
