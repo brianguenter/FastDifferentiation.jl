@@ -130,7 +130,61 @@ julia&gt; @assert typeof(j_exe([1.0, 2.0])) &lt;: Array #return type is Array an
 
 julia&gt; j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
 
-julia&gt; @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) &lt;: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.</code></pre><h5 id="Sparse-Jacobians-and-Hessians"><a class="docs-heading-anchor" href="#Sparse-Jacobians-and-Hessians">Sparse Jacobians and Hessians</a><a id="Sparse-Jacobians-and-Hessians-1"></a><a class="docs-heading-anchor-permalink" href="#Sparse-Jacobians-and-Hessians" title="Permalink"></a></h5><p>The functions <code>sparse_jacobian, sparse_hessian</code> compute sparse symbolic derivatives. When you pass a sparse symbolic function matrix to <code>make_function</code> it will generate an executable which expects an in place sparse matrix to hold the result. For functions with sparse Jacobians or Hessians this can be orders of magnitude faster than using a dense in place matrix.</p><pre><code class="language-julia hljs">julia&gt; hess = sparse_hessian(x^3 + y^3 + z^3, [x,y,z])        
+julia&gt; @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) &lt;: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.</code></pre><p>If you need to generate code that can be cut and pasted into another application then you can use <code>make_Expr</code> instead of <code>make_function</code>. It has the same arguments except the <code>in_place</code> boolean argument is not optional.</p><pre><code class="language-julia hljs">julia&gt; @variables x y
+y
+
+julia&gt; j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
+
+3×2 Matrix{FastDifferentiation.Node}:
+ ((y ^ 2) * (2 * x))           ((x ^ 2) * (2 * y))
+     -(sin((x + y)))               -(sin((x + y)))
+ ((y / x) * (1 / y))  ((y / x) * -(((x / y) / y)))
+
+#create code to evaluate the jacobian with in place matrix
+julia&gt; make_Expr(j,[x,y],true)
+:((input_variables, result)-&gt;begin
+          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =#
+          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =# @inbounds begin
+                  #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:89 =#
+                  begin
+                      result .= zero(eltype(input_variables))
+                      begin
+                          var&quot;##303&quot; = input_variables[2] ^ 2
+                          var&quot;##304&quot; = 2 * input_variables[1]
+                          var&quot;##302&quot; = var&quot;##303&quot; * var&quot;##304&quot;
+                          result[CartesianIndex(1, 1)] = var&quot;##302&quot;
+                      end
+                      begin
+                          var&quot;##307&quot; = input_variables[1] + input_variables[2]
+                          var&quot;##306&quot; = sin(var&quot;##307&quot;)
+                          var&quot;##305&quot; = -var&quot;##306&quot;
+                          result[CartesianIndex(2, 1)] = var&quot;##305&quot;
+                      end
+                      begin
+                          var&quot;##309&quot; = input_variables[2] / input_variables[1]
+                          var&quot;##310&quot; = 1 / input_variables[2]
+                          var&quot;##308&quot; = var&quot;##309&quot; * var&quot;##310&quot;
+                          result[CartesianIndex(3, 1)] = var&quot;##308&quot;
+                      end
+                      begin
+                          var&quot;##312&quot; = input_variables[1] ^ 2
+                          var&quot;##313&quot; = 2 * input_variables[2]
+                          var&quot;##311&quot; = var&quot;##312&quot; * var&quot;##313&quot;
+                          result[CartesianIndex(1, 2)] = var&quot;##311&quot;
+                      end
+                      begin
+                          result[CartesianIndex(2, 2)] = var&quot;##305&quot;
+                      end
+                      begin
+                          var&quot;##317&quot; = input_variables[1] / input_variables[2]
+                          var&quot;##316&quot; = var&quot;##317&quot; / input_variables[2]
+                          var&quot;##315&quot; = -var&quot;##316&quot;
+                          var&quot;##314&quot; = var&quot;##309&quot; * var&quot;##315&quot;
+                          result[CartesianIndex(3, 2)] = var&quot;##314&quot;
+                      end
+                  end
+              end
+      end)</code></pre><h5 id="Sparse-Jacobians-and-Hessians"><a class="docs-heading-anchor" href="#Sparse-Jacobians-and-Hessians">Sparse Jacobians and Hessians</a><a id="Sparse-Jacobians-and-Hessians-1"></a><a class="docs-heading-anchor-permalink" href="#Sparse-Jacobians-and-Hessians" title="Permalink"></a></h5><p>The functions <code>sparse_jacobian, sparse_hessian</code> compute sparse symbolic derivatives. When you pass a sparse symbolic function matrix to <code>make_function</code> it will generate an executable which expects an in place sparse matrix to hold the result. For functions with sparse Jacobians or Hessians this can be orders of magnitude faster than using a dense in place matrix.</p><pre><code class="language-julia hljs">julia&gt; hess = sparse_hessian(x^3 + y^3 + z^3, [x,y,z])        
 3×3 SparseArrays.SparseMatrixCSC{FastDifferentiation.Node, Int64} with 3 stored entries:
  (6 * x)        ⋅        ⋅
        ⋅  (6 * y)        ⋅
@@ -204,4 +258,4 @@ julia&gt; to_symbolics(node_exp)
 (x^3) / (y^4)
 
 julia&gt; typeof(ans)
-Symbolics.Num</code></pre><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>I am working with the SciML team to see if it is possible to integrate <strong>FD</strong> differentiation directly into Symbolics.jl.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howitworks/">« How it works</a><a class="docs-footer-nextpage" href="../benchmarks/">Benchmarks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 13 July 2023 02:29">Thursday 13 July 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Symbolics.Num</code></pre><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>I am working with the SciML team to see if it is possible to integrate <strong>FD</strong> differentiation directly into Symbolics.jl.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howitworks/">« How it works</a><a class="docs-footer-nextpage" href="../benchmarks/">Benchmarks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 13 July 2023 02:35">Thursday 13 July 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
