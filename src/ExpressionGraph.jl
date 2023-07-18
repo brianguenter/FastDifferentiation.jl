@@ -418,18 +418,18 @@ function all_nodes(a::Node, index_type=DefaultNodeIndexType)
     visited = IdDict{Node,index_type}()
     nodes = Vector{Node}(undef, 0)
 
-    _all_nodes!(a, visited, nodes)
+    all_nodes!(a, visited, nodes)
     return nodes
 end
 
-function _all_nodes!(node::Node, visited::IdDict{Node,T}, nodes::Vector{Node}) where {T<:Integer}
+function all_nodes!(node::N, visited::IdDict{Node,T}, nodes::Vector{Node}) where {T<:Integer,N<:Node}
     tmp = get(visited, node, nothing)
     if tmp === nothing
         push!(nodes, node) #only add node to nodes once.
-        if node.children !== nothing
-            _all_nodes!.(node.children, Ref(visited), Ref(nodes))
-        end
         visited[node] = 1
+        if node.children !== nothing
+            all_nodes!.(node.children, Ref(visited), Ref(nodes))
+        end
     else #already visited this node so don't have to recurse to children
         visited[node] += 1
     end

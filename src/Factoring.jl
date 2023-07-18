@@ -610,8 +610,10 @@ end
 """Count of number of operations in graph."""
 function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
     count = 0
-
-    for node in unique_nodes(jacobian)
+    visited = IdDict{Node,Int64}()
+    nodes = Node[]
+    all_nodes!.(jacobian, Ref(visited), Ref(nodes))
+    for node in nodes
         if is_tree(node) && !isa(node, Node{typeof(-),1}) #don't count negate as an operation
             count += 1
         end
