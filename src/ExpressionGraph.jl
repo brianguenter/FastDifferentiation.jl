@@ -322,12 +322,13 @@ derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(value(a), (childr
 derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
 export derivative
 
+derivative(::typeof(abs), arg::Tuple{T}, ::Val{1}) where {T} = arg[1] / abs(arg[1])
 
 function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
         return I == 1 ? args[2] : args[1]
     else
-        return Node(*, deleteat!(collect(args), I)...) #simplify_check_cache will only be called for 2 arguments or less. Need to extedn to nary *, n> 2, if this is necessary.
+        return Node(*, deleteat!(collect(args), I)...) #TODO: simplify_check_cache will only be called for 2 arguments or less. Need to extedn to nary *, n> 2, if this is necessary.
     end
 end
 

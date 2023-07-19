@@ -212,8 +212,6 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
         result[i] = Node(0.0)
     end
 
-
-
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
     for (i, var) in pairs(partial_variables)

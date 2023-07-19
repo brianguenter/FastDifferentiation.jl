@@ -33,6 +33,9 @@ If you use FD in your work please share the functions you differentiate with me.
 
 This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
+## Notes about special derivatives
+The derivative of `|u|` is `u/|u|` which is NaN when `u==0`. This is not a bug. The derivative of the absolute value function is undefined at 0 and the way **FD** signals this is by returning NaN.
+
 
 [^1]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.
 
