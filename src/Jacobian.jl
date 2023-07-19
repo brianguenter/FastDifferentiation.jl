@@ -317,7 +317,7 @@ julia> derivative(A,t,t)
  6    0.0
 ```
  """
-function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
+function derivative(A::AbstractArray{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]
     mat = _derivative(A, var)
     rest = variables[2:end]
@@ -330,7 +330,7 @@ end
 export derivative
 
 """Computes the derivative of the function matrix `A` with respect to  `variable`."""
-function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
+function _derivative(A::AbstractArray{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)
     graph = DerivativeGraph(vecA)
