@@ -47,6 +47,27 @@ julia> make_variables(:x,2,3,2)
 
 ##### Compute derivatives
 
+Compute higher order derivatives
+```julia
+julia> @variables x y
+y
+
+julia> f = x^3*y^3
+((x ^ 3) * (y ^ 3))
+
+julia> derivative([f],x,y,x) #take derivative wrt x, then y, then x
+1-element Vector{FastDifferentiation.Node{typeof(*), 2}}:
+ (18 * (x * (y ^ 2)))
+
+ julia> derivative([cos(x*y);;;exp(x*y)],x,y,x) #derivative accepts input arrays of any dimension
+1×1×2 Array{FastDifferentiation.Node{typeof(+), 2}, 3}:
+[:, :, 1] =
+ ((-(y) * cos((x * y))) + ((((x * -(y)) * -(sin((x * y)))) + -(cos((x * y)))) * y))
+
+[:, :, 2] =
+ (((((x * y) + 1) * exp((x * y))) * y) + (y * exp((x * y))))
+ ```
+
 Compute derivative of a function and make executable
 
 ```julia
@@ -115,7 +136,7 @@ julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, ordered s
  x    0.0
 ```
 ##### More on make_function
-Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the arguement to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
+Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
 
 ```julia
 julia> f = [x^2*y^2,sqrt(x*y)]
