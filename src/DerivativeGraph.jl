@@ -189,8 +189,7 @@ parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a)
 """returns iterator of indices of children of node"""
 children(a::DerivativeGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
 
-root_path_masks(a::DerivativeGraph) = a.root_path_masks
-variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
+
 
 each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
 roots(a::DerivativeGraph) = a.roots
