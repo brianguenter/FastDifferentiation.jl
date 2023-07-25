@@ -189,8 +189,7 @@ parents(a::DerivativeGraph, node_index::T) where {T<:Integer} = parents(edges(a)
 """returns iterator of indices of children of node"""
 children(a::DerivativeGraph, node_index::T) where {T<:Integer} = children(edges(a), node_index)
 
-root_path_masks(a::DerivativeGraph) = a.root_path_masks
-variable_path_masks(a::DerivativeGraph) = a.variable_path_masks
+
 
 each_vertex(a::DerivativeGraph) = 1:length(nodes(a))
 roots(a::DerivativeGraph) = a.roots
@@ -205,7 +204,7 @@ is_root(graph::DerivativeGraph, postorder_index::Integer) = get(graph.root_posto
 
 
 function is_root(graph::DerivativeGraph, node::Node)
-    num = postorder_number(graph, node)
+    num = postorder_number(graph, node) #see if node is in the graph
     if num === nothing
         return false
     else
@@ -296,21 +295,18 @@ function reachable_variables(a::DerivativeGraph, node_index::Integer)
 end
 
 function reachable_roots(a::DerivativeGraph, node_index::Integer)
-    if get(edges(a), node_index, nothing) === nothing
-        return falses_codomain_dimension(a)
-    else
-        node_edges = parents(edges(a)[node_index])
-        path_mask = falses(codomain_dimension(a))
-        for edge in node_edges
-            path_mask .= path_mask .| reachable_roots(edge)
-        end
 
-        #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
-        if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
-            path_mask[root_postorder_to_index(a, node_index)] = 1
-        end
-        return path_mask
+    node_edges = parents(edges(a)[node_index])
+    path_mask = falses(codomain_dimension(a))
+    for edge in node_edges
+        path_mask .= path_mask .| reachable_roots(edge)
     end
+
+    #If node is a root then no edges will have it as a bott_vertex. A root is reachable from itself.
+    if is_root(a, node_index) #if node_index is a root then need to set its reachable bit
+        path_mask[root_postorder_to_index(a, node_index)] = 1
+    end
+    return path_mask
 end
 
 

@@ -180,7 +180,7 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
     elseif is_constant(a) && typeof(*) == typeof(value(b)) && is_constant(children(b)[1])
         return Node(value(children(b)[1]) * value(a)) * children(b)[2]
     elseif typeof(*) == typeof(value(a)) && typeof(*) == typeof(value(b)) && is_constant(children(b)[1]) && is_constant(children(a)[1])
-        return Node(value(children(a)[1] * value(children(b)[1]))) * (children(b)[2] * children(a)[2])
+        return Node(value(children(a)[1]) * value(children(b)[1])) * (children(b)[2] * children(a)[2])
     else
         return check_cache((*, a, b), cache)
     end
