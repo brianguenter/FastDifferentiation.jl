@@ -283,12 +283,24 @@ rules = Any[]
 
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
+Base.promote_rule(::Type{<:Node}, ::Type{<:Node}) = Node
+
+#surpisingly all these promote...,convert,struct type called as converter all seem to be necssary to keep 
+function Base.promote_rule(::Type{Node{T,0}}, ::Type{Node{S,0}}) where {T<:Real,S<:Real}
+    ptype = promote_type(T, S)
+    return Node{ptype}
+end
+
+Base.convert(::Type{Node{T,0}}, x::Node{S,0}) where {T<:Real,S<:Real} = Node{T,0}(convert(T, value(x)))
+function (Node{T})(y::Node{S}) where {T<:Real,S<:Real}
+    convert(Node{T,0}, y)
+end
 
 #convert two nodes with different number types to the correct new type. Various math functions will crash if this isn't defined.
-function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
-    ptype = promote_type(T, S)
-    return Node(ptype(value(a))), Node(ptype(value(b)))
-end
+# function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
+#     ptype = promote_type(T, S)
+#     return Node(ptype(value(a))), Node(ptype(value(b)))
+# end
 
 Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
 Base.adjoint(a::Node) = a
@@ -314,6 +326,9 @@ end
 #need to define because derivative functions can return inv
 Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
 Base.inv(a::Node) = 1 / a
+
+#need special case for sincos because it returns a 2 tuple. Also Diffrules.jl does not define a differentiation rule for sincos.
+Base.sincos(x::Node) = (sin(x), cos(x)) #this will be less efficient than sincos. TODO figure out a better way.
 
 #efficient explicit methods for most common cases
 derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1],), index)
