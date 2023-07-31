@@ -97,6 +97,10 @@ function constant_value(a::Node)
     end
 end
 
+Base.isless(a::Node, b::Number) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
+Base.isless(a::Number, ::Node) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
+Base.isless(a::Node, b::Node) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
+
 Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
 
 function is_zero(a::Node)
@@ -132,8 +136,7 @@ is_times(a::Node) = value(a) == *
 
 is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
 
-Base.:>(a::Node, b::Node) = false
-Base.:<(a::Node, b::Node) = false
+
 
 function simplify_check_cache(::typeof(^), a, b, cache)
     na = Node(a)
