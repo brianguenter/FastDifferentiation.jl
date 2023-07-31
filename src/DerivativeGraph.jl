@@ -388,8 +388,8 @@ partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:I
 
 
 """Computes partial values for all edges in the graph"""
-function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{Node,Bool}, current_node::Node{T,N}, edges::Dict{Int64,EdgeRelations{Int64}}, expression_cache::IdDict{Any,Any}, domain_dim, codomain_dim) where {T,N}
-    if get(visited, current_node, nothing) !== nothing || N == 0
+function _partial_edges(postorder_number::IdDict{Node,Int64}, visited::IdDict{Node,Bool}, current_node::Node, edges::Dict{Int64,EdgeRelations{Int64}}, expression_cache::IdDict{Any,Any}, domain_dim, codomain_dim)
+    if get(visited, current_node, nothing) !== nothing || is_leaf(current_node)
         return
     else
         visited[current_node] = true #mark as visited

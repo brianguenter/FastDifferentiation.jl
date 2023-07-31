@@ -1447,9 +1447,11 @@ end
     dense = jacobian(FD.roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
-        @test sprse[index] == dense[index] #this works because of promotion rules. See https://vscode.dev/github/brianguenter/FastDifferentiation.jl/blob/main/src/ExpressionGraph.jl#L271. sprse zero elements
-        # are Node{Int64,0} while dense elements are Node{Float64,0}. The promotion rule that is applied when doing
-        # ==(Node{Int64,0},Node{Float64,0}) converts them both to Node{Float64,0}. The converted values are ===.
+        @test !xor(FD.is_zero(sprse[index]), FD.is_zero(dense[index])) #See https://vscode.dev/github/brianguenter/FastDifferentiation.jl/blob/main/src/ExpressionGraph.jl#L271. sprse zero elements
+        # are Node{Int64,0} while dense elements are Node{Float64,0}.
+        if !FD.is_zero(sprse[index])
+            @test sprse[index] === dense[index]
+        end
     end
 end
 

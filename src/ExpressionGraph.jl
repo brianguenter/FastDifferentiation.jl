@@ -31,41 +31,30 @@ export @variables
 #
 # #end of code block to add
 
-struct Node{T,N} <: Number
-    node_value::T
-    children::Union{MVector{N,Node},Nothing} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
+struct Node <: Number
+    node_value
+    children::Union{Nothing,MVector{N,Node}} where {N} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
 
-    Node(f::S, a) where {S} = new{S,1}(f, MVector{1}(Node(a)))
-    Node(f::S, a, b) where {S} = new{S,2}(f, MVector{2}(Node(a), Node(b))) #if a,b not a Node convert them.
 
-    Node(a::T) where {T<:Real} = new{T,0}(a, nothing) #convert numbers to Node
+    Node(f::S, a) where {S} = new(f, MVector{1,Node}(Node(a)))
+    Node(f::S, a, b) where {S} = new(f, MVector{2,Node}(Node(a), Node(b))) #if a,b not a Node convert them.
+
+    Node(a::T) where {T<:Real} = new(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
 
-    Node(a::AutomaticDifferentiation.NoDeriv) = new{AutomaticDifferentiation.NoDeriv,0}(a, nothing) #TODO: this doesn't seem like it should ever be called.
-
     function Node(operation, args::MVector{N,T}) where {T<:Node,N} #use MVector rather than Vector. 40x faster.
-        ntype = typeof(operation)
-        return new{ntype,N}(operation, args)
+        return new(operation, args)
     end
 
-    Node(a::SymbolicUtils.BasicSymbolic{Real}) = new{typeof(a),0}(a, nothing)
+    Node(a::SymbolicUtils.BasicSymbolic{Real}) = new(a, nothing)
 
-    Node(a::S) where {S<:Symbol} = new{S,0}(a, nothing)
+    Node(a::S) where {S<:Symbol} = new(a, nothing)
 end
 
 
-#need these methods because the linear algebra operations (and maybe others) call oneunit(a), and maybe other methods which do similar things. oneunit does something like T(one(T)). If these methods aren't defined oneunit will crash.
-Node{T,0}(a) where {T} = Node(a) #not entirely sure why this needs to be defined but the linear algebra functions complain if it isn't.
-Node{T,0}(a::Node{T,0}) where {T<:Any} = Node(a)
-Node{T,1}(a::Node{T,1}) where {T<:Any} = Node(a)
-Node{T,2}(a::Node{T,2}) where {T<:Any} = Node(a)
-#you might think you could do this instead and save a few lines of code but this is ambiguous for the case Node{Int64,0}(a::nt64):
-# Node{T,N}(a::Node{S,N2}) where {T,S,N,N2} = a
-# Node{T,0}(a) where {T} = Node(a)
-
 
 #convenience function to extract the fields from Node object to check cache
-function check_cache(a::Node{T,N}, cache) where {T,N}
+function check_cache(a::Node, cache)
     if children(a) !== nothing
         check_cache((value(a), children(a)...), cache)
     else
@@ -74,7 +63,7 @@ function check_cache(a::Node{T,N}, cache) where {T,N}
 end
 
 
-SymbolicUtils.islike(::Node{T}, ::Type{Number}) where {T} = true
+SymbolicUtils.islike(::Node, ::Type{Number}) = true
 Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
@@ -84,13 +73,12 @@ Broadcast.broadcastable(a::Node) = (a,)
 
 value(a::Node) = a.node_value
 
-arity(::Node{T,N}) where {T,N} = N
+arity(a::Node) = a.children === nothing ? 0 : length(a.children)
 
 
-is_leaf(::Node{T,0}) where {T} = true
-is_leaf(::Node{T,N}) where {T,N} = false
+is_leaf(a::Node) = arity(a) == 0
 
-is_tree(::Node{T,N}) where {T,N} = N >= 1
+is_tree(a::Node) = arity(a) >= 1
 
 
 is_variable(a::Node) = isa(value(a), Symbol)
@@ -98,6 +86,8 @@ is_variable(a::Node) = isa(value(a), Symbol)
 
 is_constant(a::Node) = !is_variable(a) && !is_tree(a)
 
+is_negate(a::Node) = typeof(value(a)) == typeof(-) && arity(a) == 1
+export is_negate
 
 function constant_value(a::Node)
     if is_constant(a)
@@ -108,7 +98,9 @@ function constant_value(a::Node)
 end
 
 Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
+
 function is_zero(a::Node)
+    #this: value(a) == 0 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
     if is_tree(a) || is_variable(a)
         return false
     elseif value(a) == 0
@@ -120,6 +112,7 @@ end
 
 
 function is_one(a::Node)
+    #this: value(a) == 1 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
     if is_tree(a) || is_variable(a)
         return false
     elseif value(a) == 1
@@ -134,10 +127,13 @@ end
 
 simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
 
-is_nary(a::Node{T,N}) where {T,N} = N > 2
+is_nary(a::Node) = arity(a) > 2
 is_times(a::Node) = value(a) == *
 
 is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
+
+Base.:>(a::Node, b::Node) = false
+Base.:<(a::Node, b::Node) = false
 
 function simplify_check_cache(::typeof(^), a, b, cache)
     na = Node(a)
@@ -283,23 +279,17 @@ rules = Any[]
 
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
-Base.promote_rule(::Type{<:Node}, ::Type{<:Node}) = Node
-
-#surpisingly all these promote...,convert,struct type called as converter all seem to be necssary to keep 
-function Base.promote_rule(::Type{Node{T,0}}, ::Type{Node{S,0}}) where {T<:Real,S<:Real}
-    ptype = promote_type(T, S)
-    return Node{ptype}
+function Base.:-(a::AbstractArray{<:Node,N}) where {N}
+    if length(a) == 0
+        return a
+    else
+        return .-(a)
+    end
 end
 
-Base.convert(::Type{Node{T,0}}, x::Node{S,0}) where {T<:Real,S<:Real} = Node{T,0}(convert(T, value(x)))
-function (Node{T})(y::Node{S}) where {T<:Real,S<:Real}
-    convert(Node{T,0}, y)
-end
-
-#convert two nodes with different number types to the correct new type. Various math functions will crash if this isn't defined.
-# function Base.promote(a::Node{T,0}, b::Node{S,0}) where {T<:Real,S<:Real}
-#     ptype = promote_type(T, S)
-#     return Node(ptype(value(a))), Node(ptype(value(b)))
+# Base.convert(::Type{Node{T,0}}, x::Node{S,0}) where {T<:Real,S<:Real} = Node{T,0}(convert(T, value(x)))
+# function (Node{T})(y::Node{S}) where {T<:Real,S<:Real}
+#     convert(Node{T,0}, y)
 # end
 
 Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
@@ -324,18 +314,20 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
 end
 
 #need to define because derivative functions can return inv
-Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
-Base.inv(a::Node) = 1 / a
+# Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
+# Base.inv(a::Node) = 1 / a
+
+function Base.inv(a::Node)
+    if typeof(value(a)) === /
+        return children(a)[2] / children(a)[1]
+    else
+        return 1 / a
+    end
+end
+
 
 #need special case for sincos because it returns a 2 tuple. Also Diffrules.jl does not define a differentiation rule for sincos.
 Base.sincos(x::Node) = (sin(x), cos(x)) #this will be less efficient than sincos. TODO figure out a better way.
-
-#efficient explicit methods for most common cases
-derivative(a::Node{T,1}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1],), index)
-derivative(a::Node{T,2}, index::Val{1}) where {T} = derivative(value(a), (children(a)[1], children(a)[2]), index)
-derivative(a::Node{T,2}, index::Val{2}) where {T} = derivative(value(a), (children(a)[1], children(a)[2]), index)
-derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
-export derivative
 
 derivative(::typeof(abs), arg::Tuple{T}, ::Val{1}) where {T} = arg[1] / abs(arg[1])
 
@@ -349,14 +341,39 @@ end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
-# Special cases for leaf nodes with no children.
-function derivative(a::Node{T,0}) where {T}
-    if is_variable(a)
-        return Node(1)
+function derivative(a::Node, index::Val{1})
+    if arity(a) == 1
+        return derivative(value(a), (children(a)[1],), index)
+    elseif arity(a) == 2
+        return derivative(value(a), (children(a)[1], children(a)[2]), index)
     else
-        return Node(0)
+        throw(ErrorException("should never get here"))
     end
 end
+
+function derivative(a::Node, index::Val{2})
+    if arity(a) == 2
+        return derivative(value(a), (children(a)[1], children(a)[2]), index)
+    else
+        throw(ErrorException("should never get here"))
+    end
+end
+
+derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
+
+# Special cases for leaf nodes with no children.
+function derivative(a::Node)
+    if is_leaf(a)
+        if is_variable(a)
+            return one(Node)
+        else
+            return zero(Node)
+        end
+    else
+        throw(ErrorException("should never reach this point in the code"))
+    end
+end
+export derivative
 
 
 
@@ -414,9 +431,9 @@ function postorder(roots::AbstractVector{T}) where {T<:Node}
 end
 
 """returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
-function _postorder_nodes!(a::Node{T,N}, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {T,N,S<:Node}
+function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {S<:Node}
     if get(visited, a, nothing) === nothing
-        if a.children !== nothing
+        if arity(a) != 0
             for child in a.children
                 _postorder_nodes!(child, nodes, variables, visited)
             end
@@ -443,7 +460,7 @@ function all_nodes!(node::N, visited::IdDict{Node,T}, nodes::Vector{Node}) where
     if tmp === nothing
         push!(nodes, node) #only add node to nodes once.
         visited[node] = 1
-        if node.children !== nothing
+        if arity(node) != 0
             all_nodes!.(node.children, Ref(visited), Ref(nodes))
         end
     else #already visited this node so don't have to recurse to children

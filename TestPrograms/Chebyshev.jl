@@ -9,7 +9,9 @@
 end
 export Chebyshev
 
-@memoize function Chebyshev(n, x::Node{T,0}) where {T}
+@memoize function Chebyshev(n, x::Node)
+    @assert is_variable(x)
+
     if n == 0
         return 1
     elseif n == 1

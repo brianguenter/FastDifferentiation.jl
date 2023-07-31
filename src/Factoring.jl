@@ -614,7 +614,7 @@ function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
     nodes = Node[]
     all_nodes!.(jacobian, Ref(visited), Ref(nodes))
     for node in nodes
-        if is_tree(node) && !isa(node, Node{typeof(-),1}) #don't count negate as an operation
+        if is_tree(node) && !is_negate(node) #don't count negate as an operation
             count += 1
         end
     end
