@@ -1,7 +1,7 @@
 name = "FastDifferentiation"
 uuid = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
 authors = ["BrianGuenter"]
-version = "0.2.9"
+version = "0.2.10"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
