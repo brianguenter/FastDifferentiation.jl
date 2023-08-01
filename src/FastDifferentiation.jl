@@ -1,8 +1,6 @@
 module FastDifferentiation
 
-using TermInterface
-import SymbolicUtils
-using SymbolicUtils: arguments
+# using TermInterface
 using StaticArrays
 using SpecialFunctions
 using NaNMath
@@ -33,6 +31,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 const DefaultNodeIndexType = Int64
 
+include("Methods.jl")
 include("Utilities.jl")
 include("BitVectorFunctions.jl")
 include("ExpressionGraph.jl")

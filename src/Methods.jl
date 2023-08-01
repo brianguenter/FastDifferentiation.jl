@@ -78,10 +78,5 @@ macro number_methods(T, rhs1, rhs2, options=nothing)
 end
 
 
-Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
-Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
 
-
-#create methods that accept Node arguments for all mathematical functions.
-@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
 

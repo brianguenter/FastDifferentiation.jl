@@ -9,7 +9,6 @@ end #module
 module FDTests
 using DiffRules
 using TermInterface
-import SymbolicUtils
 using StaticArrays
 using Memoize
 using DataStructures
@@ -41,14 +40,6 @@ function compute_dominance_tables(graph::DerivativeGraph{T}, compute_dominators:
 end
 export compute_dominance_tables
 
-""" Utility function for working with symbolic expressions as Symbolics.jl defines them."""
-function number_of_operations(symbolic_expr)
-    if SymbolicUtils.istree(symbolic_expr) && operation(symbolic_expr) ∈ (+, *, -)
-        return 1 + sum(number_of_operations.(arguments(symbolic_expr)))
-    else
-        return 0
-    end
-end
 
 function simple_dag(cache::Union{IdDict,Nothing}=IdDict())
     @variables zz y

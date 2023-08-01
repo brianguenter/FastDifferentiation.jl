@@ -46,8 +46,6 @@ struct Node <: Number
         return new(operation, args)
     end
 
-    Node(a::SymbolicUtils.BasicSymbolic{Real}) = new(a, nothing)
-
     Node(a::S) where {S<:Symbol} = new(a, nothing)
 end
 
@@ -63,7 +61,6 @@ function check_cache(a::Node, cache)
 end
 
 
-SymbolicUtils.islike(::Node, ::Type{Number}) = true
 Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
@@ -250,8 +247,6 @@ function simplify_check_cache(::typeof(-), a, cache)
     end
 end
 
-SymbolicUtils.@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
-
 #TODO: probably want to add boolean operations so can sort Nodes.
 # binary ops that return Bool
 # for (f, Domain) in [(==) => Number, (!=) => Number,
@@ -382,7 +377,7 @@ export derivative
 
 
 """returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
-variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node)) #SymbolicUtils changed, used to use SymbolicUtils.Sym for this test.
+variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node))
 
 
 children(a::Node) = a.children
@@ -521,3 +516,7 @@ function make_variables(name::Symbol, array_size::T...) where {T}
     return result
 end
 export make_variables
+
+
+#create methods that accept Node arguments for all mathematical functions.
+@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
