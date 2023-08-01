@@ -97,9 +97,10 @@ function constant_value(a::Node)
     end
 end
 
-Base.isless(a::Node, b::Number) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
-Base.isless(a::Number, ::Node) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
-Base.isless(a::Node, b::Node) = throw(ErrorException("FastDifferentiation.jl does not currently support conditionals."))
+error_message() = throw(ErrorException("FastDifferentiation.jl does not currently support comparison operations on FastDifferentiation expressions. Your code, or libraries called by your code, had a statement with a comparison operator such as x<y where either or both of x,y were FastDifferentiation expressions. You have to remove all these comparison operators for FastDifferentiation to work."))
+Base.isless(::Node, ::Number) = error_message()
+Base.isless(::Number, ::Node) = error_message()
+Base.isless(::Node, ::Node) = error_message()
 
 Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
 

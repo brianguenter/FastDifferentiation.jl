@@ -1,7 +1,20 @@
 # How it works
-The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper.
+**FD** is a domain specific language (DSL) embedded in Julia. **FD** defines a custom `Number` type and nd overloads all the mathematical operators in Base to apply to this new number type. You create **FD** numbers using either [`@variables`](@ref) or [`make_variable`](@ref).
 
-**FD** transforms the input expression graph into a derivative graph[^2], and then factors this graph to generate an efficient expression for the derivative. This is fundamentally different from forward and reverse automatic differentiation. 
+Mathematical operations on **FD** numbers create a graph representing the mathematical expression rather than immediately returning a floating point value. For example, in this code fragment 
+```julia
+@variables x y
+f(a,b)= cos(a)*sin(b)
+
+myexpr = f(x,y)
+```
+`myexpr` contains a graph representation of the `cos(x)*sin(y)` where `x,y` are **FD** numbers. 
+
+For the most part there is no difference between using **FD** numbers and the base number types, `Float64`, `Int64`, etc. You define your Julia function as you normally world and then call it with **FD** numbers as inputs; the return value will be a graph representing the expression your Julia function computes.  
+
+The **FD** differentiation functions, `jacobian`, `hessian`, etc., take **FD** expression graphs as inputs and return **FD** expression graphs. To turn this into executable Julia code you pass an **FD** expression graph as an argument to `make_function`.
+
+All the **FD** differntiation functions use derivative graph factorization[^2] to compute derivatives. The **FD** differentiation algorithm is related to the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically faster so it works on much larger expression graphs. The new algorithms used in **FD** will be described in a soon to be written paper. **FD** automatic differentiaion is fundamentally different from forward and reverse automatic differentiation. 
 
 The efficiency of **FD** comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FD** applies only these algebraic simplications[^1] to expressions:
 * `x×0=>0`
