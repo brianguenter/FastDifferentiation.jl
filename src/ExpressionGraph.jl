@@ -251,10 +251,9 @@ Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b,
 
 rules = Any[]
 
-# Base.push!(a::Vector{T}, b::Number) where {T<:Node} = push!(a, Node(b)) #there should be a better way to do this.
-
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
-Base.promote_rule(::Type{<:Real}, ::Type{<:Node}) = Node
+Base.promote_rule(::Type{<:Real}, ::Type{Node}) = Node
+
 function Base.:-(a::AbstractArray{<:Node,N}) where {N}
     if length(a) == 0
         return a

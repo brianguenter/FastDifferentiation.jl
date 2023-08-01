@@ -96,7 +96,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 end
 export make_Expr
 
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,Ti}
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, zero_in_place_array::Bool) where {T<:Node,S<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
@@ -135,10 +135,10 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
-"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` it will generate code to fill a user supplied array with the result. In this case if an element of `func_array` is identically zero the generated code will not set the result to zero to zero because this leads to code bloat and slow execution. If you need these array elements to be zero instead of `undef` you should properly initialize your array to zero before passing it to the runtime generated function.
+"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` it will generate code to fill a user supplied array with the result. In this case if an element of `func_array` is identically zero the generated code will not set the result to zero because this leads to code bloat and slow execution. If you need these array elements to be zero instead of `undef` you should properly initialize your array to zero before passing it to the runtime generated function.
 
 If `in_place=false` then the returned array will be properly initialized with zeros."""
-function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place=false) where {T<:Node}
-    @RuntimeGeneratedFunction(make_Expr(func_array, vcat(input_variables...), in_place))
+function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, zero_in_place_array::Bool=true) where {T<:Node}
+    @RuntimeGeneratedFunction(make_Expr(func_array, vcat(input_variables...), in_place, zero_in_place_array))
 end
 export make_function
