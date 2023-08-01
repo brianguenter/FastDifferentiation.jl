@@ -8,7 +8,6 @@ end #module
 
 module FDTests
 using DiffRules
-using TermInterface
 using StaticArrays
 using Memoize
 using DataStructures
