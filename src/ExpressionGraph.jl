@@ -247,29 +247,6 @@ function simplify_check_cache(::typeof(-), a, cache)
     end
 end
 
-#TODO: probably want to add boolean operations so can sort Nodes.
-# binary ops that return Bool
-# for (f, Domain) in [(==) => Number, (!=) => Number,
-#     (<=) => Real,   (>=) => Real,
-#     (isless) => Real,
-#     (<) => Real,   (> ) => Real,
-#     (& ) => Bool,   (| ) => Bool,
-#     xor => Bool]
-# @eval begin
-# promote_symtype(::$(typeof(f)), ::Type{<:$Domain}, ::Type{<:$Domain}) = Bool
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::$Domain) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::Symbolic{<:$Domain}, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# (::$(typeof(f)))(a::$Domain, b::Symbolic{<:$Domain}) = term($f, a, b, type=Bool)
-# end
-# end
-
-# struct Differential
-#     expression::FastDifferentiation.Node #expression to take derivative of
-#     with_respect_to::FastDifferentiation.Node #variable or internal node to take derivative wrt
-# end
-
-# derivative(f, args, v) = NoDeriv()
-
 Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
 
 rules = Any[]
@@ -285,11 +262,6 @@ function Base.:-(a::AbstractArray{<:Node,N}) where {N}
         return .-(a)
     end
 end
-
-# Base.convert(::Type{Node{T,0}}, x::Node{S,0}) where {T<:Real,S<:Real} = Node{T,0}(convert(T, value(x)))
-# function (Node{T})(y::Node{S}) where {T<:Real,S<:Real}
-#     convert(Node{T,0}, y)
-# end
 
 Base.conj(a::Node) = a #need to define this because dot and probably other linear algebra functions call this.
 Base.adjoint(a::Node) = a
@@ -311,10 +283,6 @@ for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :Special
         @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = $expr
     end
 end
-
-#need to define because derivative functions can return inv
-# Base.inv(a::Node{typeof(/),2}) = children(a)[2] / children(a)[1]
-# Base.inv(a::Node) = 1 / a
 
 function Base.inv(a::Node)
     if typeof(value(a)) === /
