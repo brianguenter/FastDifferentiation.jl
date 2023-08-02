@@ -57,12 +57,14 @@ return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) w
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
     if in_place
-        push!(body.args, :(result .= zero(eltype(input_variables))))
+        if init_with_zeros
+            push!(body.args, :(result .= zero(eltype(input_variables))))
+        end
     else
         push!(body.args, (return_declaration(func_array, input_variables)))
     end
@@ -96,7 +98,8 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 end
 export make_Expr
 
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node,Ti}
+"""`init_with_zeros` argument is not used for sparse matrices."""
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
@@ -135,10 +138,48 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
-"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` it will generate code to fill a user supplied array with the result. In this case if an element of `func_array` is identically zero the generated code will not set the result to zero to zero because this leads to code bloat and slow execution. If you need these array elements to be zero instead of `undef` you should properly initialize your array to zero before passing it to the runtime generated function.
+"""
+```julia
+make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
+```
 
-If `in_place=false` then the returned array will be properly initialized with zeros."""
-function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place=false) where {T<:Node}
-    @RuntimeGeneratedFunction(make_Expr(func_array, vcat(input_variables...), in_place))
+Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables``. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`. 
+
+    If `in_place=false` then the returned array will be properly initialized with zeros.
+
+If `in_place=true` it will generate code to fill a user supplied array with the result. 
+
+If the array is dense and `in_place=true` then the keyword argument `init_with_zeros` affects how the in place array is initialized. If `init_with_zeros = true` then the in place array is initialized with zeros. If `init_with_zeros=false` it is the user's responsibility to initialize the array with zeros before passing it to the runtime generated function.
+
+This can be useful for modestly sparse dense matrices with say at least 1/4 of the array entries non-zero. In this case a sparse matrix may not be as efficient as a dense matrix. But a large fraction of time could be spent unnecessarily setting elements to zero. In this case you can initialize the in place Jacobian array once with zeros before calling the run time generated function.
+
+```julia
+julia> @variables x
+x
+
+julia> f = x+1
+(x + 1)
+
+
+julia> jac = jacobian([f],[x])
+1×1 Matrix{FastDifferentiation.Node}:
+ 1
+
+julia> jac #the Jacobian has a single constant element, 1, and is no longer a function of x
+1×1 Matrix{FastDifferentiation.Node}:
+ 1
+
+julia> make_function(jac,[x]) #But you can specify x as an input variable to the runtime generated function.
+```
+
+
+"""
+function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
+    vars = variables(func_array) #all unique variables in func_array
+    all_input_vars = vcat(input_variables...)
+
+    @assert vars ⊆ all_input_vars "Some of the variables in your function (the func_array argument) were not in the input_variables argument. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
+
+    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
 end
 export make_function

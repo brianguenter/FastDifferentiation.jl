@@ -1772,4 +1772,21 @@ end
 
 end
 
+@testitem "in place init_with_zeros" begin
+    @variables x y
+    A = [x 0; 0 y]
+    mat = [10 10; 10 10]
+
+    fn = make_function(A, [x, y], in_place=true, init_with_zeros=true)
+    fn([1, 1], mat)
+    @test isapprox(mat, [1 0; 0 1])
+    fn2 = make_function(A, [x, y], in_place=true, init_with_zeros=false)
+    mat = [10 10; 10 10]
+    println(mat)
+    fn2([1, 1], mat)
+    @test isapprox(mat, [1 10; 10 1])
+end
+
+
+
 end #module
