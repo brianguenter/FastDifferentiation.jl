@@ -57,12 +57,14 @@ return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) w
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, zero_in_place_array::Bool) where {T<:Node,S<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
     if in_place
-        push!(body.args, :(result .= zero(eltype(input_variables))))
+        if zero_in_place_array
+            push!(body.args, :(result .= zero(eltype(input_variables))))
+        end
     else
         push!(body.args, (return_declaration(func_array, input_variables)))
     end
@@ -135,9 +137,15 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 end
 export make_Expr
 
-"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=true` it will generate code to fill a user supplied array with the result. In this case if an element of `func_array` is identically zero the generated code will not set the result to zero because this leads to code bloat and slow execution. If you need these array elements to be zero instead of `undef` you should properly initialize your array to zero before passing it to the runtime generated function.
+"""Makes a function to evaluate the symbolic expressions in `func_array`. If `in_place=false` then the returned array will be properly initialized with zeros.
 
-If `in_place=false` then the returned array will be properly initialized with zeros."""
+If `in_place=true` it will generate code to fill a user supplied array with the result. 
+
+If the array is dense and `in_place=true` then the keyword argument `zero_in_place_array` affects how the in place array is initialized. If `zero_in_place_array = true` then the in place array is initialized with zeros. If `zero_in_place_array=false` it is the user's responsibility to initialize the array with zeros before passing it to the runtime generated function.
+
+This can be useful for modestly sparse dense matrices with say at least 1/4 of the array entries non-zero. In this case a sparse matrix may not be as efficient as a dense matrix. But a large fraction of time could be spent unnecessarily setting elements to zero. In this case you should initialize the in place Jacobian array once with zeros before calling the run time generated function.
+
+"""
 function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, zero_in_place_array::Bool=true) where {T<:Node}
     @RuntimeGeneratedFunction(make_Expr(func_array, vcat(input_variables...), in_place, zero_in_place_array))
 end
