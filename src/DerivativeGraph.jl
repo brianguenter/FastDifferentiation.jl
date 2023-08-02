@@ -523,8 +523,6 @@ function delete_edge!(graph::DerivativeGraph, edge::PathEdge, force::Bool=false)
     return nothing
 end
 
-make_function(graph::DerivativeGraph) = make_function(graph, variables(graph))
-
 
 """Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
 function sparsity(graph::DerivativeGraph)

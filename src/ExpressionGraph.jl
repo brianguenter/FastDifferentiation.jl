@@ -346,6 +346,13 @@ export derivative
 """returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
 variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node))
 
+function variables(a::AbstractArray{T}) where {T<:Node}
+    visited = IdDict{Node,Int64}()
+    for root in a
+        all_nodes!(root, visited)
+    end
+    return filter((x) -> is_variable(x), collect(keys(visited)))
+end
 
 children(a::Node) = a.children
 
@@ -415,19 +422,18 @@ end
 """finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
     visited = IdDict{Node,index_type}()
-    nodes = Vector{Node}(undef, 0)
 
-    all_nodes!(a, visited, nodes)
+    all_nodes!(a, visited)
+    return collect(keys(visited))
     return nodes
 end
 
-function all_nodes!(node::N, visited::IdDict{Node,T}, nodes::Vector{Node}) where {T<:Integer,N<:Node}
+function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
     tmp = get(visited, node, nothing)
     if tmp === nothing
-        push!(nodes, node) #only add node to nodes once.
         visited[node] = 1
         if arity(node) != 0
-            all_nodes!.(node.children, Ref(visited), Ref(nodes))
+            all_nodes!.(node.children, Ref(visited))
         end
     else #already visited this node so don't have to recurse to children
         visited[node] += 1
