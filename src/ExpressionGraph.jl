@@ -1,7 +1,7 @@
 
 
 #until I can think of a better way of structuring the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately. Many other parts of the algorithm are difficult to multithread. Processing is also so quick that only large graphs would benefit from multithreading. Don't know how common these will be.
-EXPRESSION_CACHE = IdDict()
+const EXPRESSION_CACHE = IdDict()
 
 function check_cache(a::Tuple{Vararg}, cache)
     cache_val = get(cache, a, nothing)
