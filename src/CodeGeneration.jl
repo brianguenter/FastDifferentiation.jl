@@ -1,10 +1,14 @@
 
-"""Used to determine whether to fill zero array elements with an assignment statement or to fill the array in the declaration. Function arrays with many zero elements generate many zero assignment statements which can make compilation time slow. But Need a heuristic to determine when to choose one or the other."""
+"""Computes a number representing the sparsity of the array of expressions. Specifically, if `nelts` is the number of elements in the array and `nzeros` is the number of non-zero elements in the array
+then `sparsity = (nelts-nzeros)/nelts`. 
+
+Frequently used in combination with a call to `make_function` to determine whether to set keyword argument `init_with_zeros` to false."""
 function sparsity(sym_func::AbstractArray{<:Node})
     zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
     return zeros == 0 ? 1.0 : (tot - zeros) / tot
 end
+export sparsity
 
 """Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
 ```julia

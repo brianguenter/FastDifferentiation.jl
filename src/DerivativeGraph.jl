@@ -525,7 +525,7 @@ end
 
 
 """Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
-function sparsity(graph::DerivativeGraph)
+function _sparsity(graph::DerivativeGraph)
     total_entries = codomain_dimension(graph) * domain_dimension(graph)
     non_zero = 0
     for i in eachindex(roots(graph))
@@ -533,7 +533,7 @@ function sparsity(graph::DerivativeGraph)
     end
     return non_zero / total_entries
 end
-export sparsity
+
 
 function number_of_operations(graph::DerivativeGraph)
     #Set makes more sense but causes a weird type promotion error.
@@ -597,7 +597,7 @@ function graph_statistics(graph::DerivativeGraph)
         end
     end
     @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
-    @info "sparsity of Jacobian $(sparsity(graph))"
+    @info "sparsity of Jacobian $(_sparsity(graph))"
 end
 
 

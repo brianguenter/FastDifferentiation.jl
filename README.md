@@ -2,6 +2,15 @@
 
 [![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain) [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/dev)
 
+<details> 
+     <summary> Release Notes </summary>
+     v0.2.9: Added `init_with_zeros` keyword argument to make_function. If this argument is false then the runtime generated function will not zero the in place array, otherwise it will. 
+     
+     This can significantly improve performance for matrices that are somewhat sparse (say 3/4 of elements identically zero) but not sparse enough that a sparse matrix is efficient. In cases like this setting array elements to zero on every call to the runtime generated function can take more time than evaluating the non-zero array element expressions. 
+     
+     This argument is only active if rhe `in_place` argument is true. 
+</details>
+
 FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
 
 Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
