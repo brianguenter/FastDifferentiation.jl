@@ -112,7 +112,8 @@ function main()
      y = rand(5)
 
      f!(result, [x; y]) #in place matrix argument now comes first instead of second.
-     #f!([x;y], result) #this used to work but now will raise an exception
+     #f!([x;y], result) #this used to work but now will raise an exception 
+     # unless [x;y] and result are the same size in which case the answer will just be wrong.
      return result, (sum(x), sum(y))
 end
 ```
