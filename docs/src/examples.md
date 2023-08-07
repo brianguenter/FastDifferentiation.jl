@@ -173,7 +173,7 @@ julia> f_eval = view(tmp,5:6)
  1.5198684153570665
 ```
 
-There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a vector of input variable values and a matrix to hold the result. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
+There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a matrix to hold the result and a vector of input variable values. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
 
 ```julia
 julia> jac_exe = make_function(symb,[x,y], in_place=true)
@@ -183,7 +183,7 @@ julia> a = similar(symb,Float64)
  0.0  0.0
  0.0  6.93532e-310
 
-julia> jac_exe([1.0,2.0],a)
+julia> jac_exe(a,[1.0,2.0])
 2×2 Matrix{Float64}:
  -1.68294    0.540302
   0.909297  -0.416147
@@ -344,27 +344,3 @@ julia> jtv_exe([1.0,2.0,3.0,4.0])
  -1.4116362015446517
  -0.04368042858415033
 ```
-
-Convert between FastDifferentiation and Symbolics representations (requires [FDConversion](https://github.com/brianguenter/FDConversion/tree/main) package, not released yet[^1]):
-```julia
-julia> f = x^2+y^2 #Symbolics expression
-x^2 + y^2
-
-
-julia> Node(f) #convert to FastDifferentiation form
-x^2 + y^2
-
-julia> typeof(ans)
-Node{SymbolicUtils.BasicSymbolic{Real}, 0}
-
-julia> node_exp = x^3/y^4 #FastDifferentiation expression
-((x ^ 3) / (y ^ 4))
-
-julia> to_symbolics(node_exp)
-(x^3) / (y^4)
-
-julia> typeof(ans)
-Symbolics.Num
-```
-
-[^1]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.
