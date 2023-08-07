@@ -176,14 +176,14 @@ julia> f_eval = view(tmp,5:6)
 There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a matrix to hold the result and a vector of input variable values. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
 
 ```julia
-julia> jac_exe = make_function(symb,[x,y], in_place=true)
+julia> jac_exe! = make_function(symb,[x,y], in_place=true)
 ...
 julia> a = similar(symb,Float64)
 2×2 Matrix{Float64}:
  0.0  0.0
  0.0  6.93532e-310
 
-julia> jac_exe(a,[1.0,2.0])
+julia> jac_exe!(a,[1.0,2.0])
 2×2 Matrix{Float64}:
  -1.68294    0.540302
   0.909297  -0.416147
