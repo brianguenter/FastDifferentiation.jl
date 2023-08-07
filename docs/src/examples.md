@@ -66,7 +66,7 @@ julia> derivative([f],x,y,x) #take derivative wrt x, then y, then x
 
 [:, :, 2] =
  (((((x * y) + 1) * exp((x * y))) * y) + (y * exp((x * y))))
- ```
+```
 
 Compute derivative of a function and make executable
 
