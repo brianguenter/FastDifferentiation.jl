@@ -1641,7 +1641,7 @@ end
     )
 
     h2_exe = make_function(h, [x, y, z], in_place=true)
-    h2_exe([1, 2, 3], inp)
+    h2_exe(inp, [1, 2, 3])
     @test isapprox(inp,
         [
             72.0 72.0 48.0
@@ -1694,7 +1694,7 @@ end
     f2 = make_function(spmat, vars, in_place=true)
 
     @test f1(inputs) == correct
-    f2(inputs, inp)
+    f2(inp, inputs)
     @test inp == correct
 end
 
@@ -1776,12 +1776,12 @@ end
     mat = [10 10; 10 10]
 
     fn = make_function(A, [x, y], in_place=true, init_with_zeros=true)
-    fn([1, 1], mat)
+    fn(mat, [1, 1])
     @test isapprox(mat, [1 0; 0 1])
     fn2 = make_function(A, [x, y], in_place=true, init_with_zeros=false)
     mat = [10 10; 10 10]
     println(mat)
-    fn2([1, 1], mat)
+    fn2(mat, [1, 1])
     @test isapprox(mat, [1 10; 10 1])
 end
 

@@ -275,7 +275,7 @@ julia> tmp = similar(a,Float64)
 julia> f2 = make_function(a,[x,y],in_place=true)
 ...
 
-julia> f2([1.0,2.0],tmp)
+julia> f2(tmp, [1.0,2.0])
 2×2 SparseArrays.SparseMatrixCSC{Float64, Int64} with 2 stored entries:
   ⋅   1.0
  1.0   ⋅

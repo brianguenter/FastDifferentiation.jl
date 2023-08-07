@@ -2,14 +2,7 @@
 
 [![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain) [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/dev)
 
-<details> 
-     <summary> Release Notes </summary>
-     v0.2.9: Added `init_with_zeros` keyword argument to make_function. If this argument is false then the runtime generated function will not zero the in place array, otherwise it will. 
-     
-     This can significantly improve performance for matrices that are somewhat sparse (say 3/4 of elements identically zero) but not sparse enough that a sparse matrix is efficient. In cases like this setting array elements to zero on every call to the runtime generated function can take more time than evaluating the non-zero array element expressions. 
-     
-     This argument is only active if rhe `in_place` argument is true. 
-</details>
+
 
 FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
 
@@ -103,6 +96,33 @@ ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol,
 ```
 This is actively being worked on. I hope to have experimental support for conditionals soon.
 
+## Release Notes
+<details>
+v0.3.0 - BREAKING CHANGE. `make_function` called with `in_place` = true now returns an anonymous function which takes the in place result matrix as the first argument. Prior to this the result matrix was the second argument.
+
+```julia
+function main()
+     x = FD.make_variables(:x, 5)
+     y = FD.make_variables(:y, 5)
+
+     f! = FD.make_function([sum(x), sum(y)], x, y; in_place=true)
+
+     result = zeros(2)
+     x = rand(5)
+     y = rand(5)
+
+     f!(result, [x; y]) #in place matrix argument now comes first instead of second.
+     #f!([x;y], result) #this used to work but now will raise an exception
+     return result, (sum(x), sum(y))
+end
+```
+
+v0.2.9: Added `init_with_zeros` keyword argument to make_function. If this argument is false then the runtime generated function will not zero the in place array, otherwise it will. 
+
+This can significantly improve performance for matrices that are somewhat sparse (say 3/4 of elements identically zero) but not sparse enough that a sparse matrix is efficient. In cases like this setting array elements to zero on every call to the runtime generated function can take more time than evaluating the non-zero array element expressions. 
+     
+This argument is only active if rhe `in_place` argument is true. 
+</details>
 
 
 [^b]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.

@@ -91,7 +91,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     end
 
     if in_place
-        return :((input_variables, result) -> @inbounds begin
+        return :((result, input_variables) -> @inbounds begin
             $body
         end)
     else
@@ -135,7 +135,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
     push!(body.args, :(return result))
 
     if in_place
-        return :((input_variables, result) -> $body)
+        return :((result, input_variables) -> $body)
     else
         return :((input_variables) -> $body)
     end
@@ -147,16 +147,8 @@ export make_Expr
 make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
 ```
 
-Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables``. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`. 
-
-    If `in_place=false` then the returned array will be properly initialized with zeros.
-
-If `in_place=true` it will generate code to fill a user supplied array with the result. 
-
-If the array is sparse then the keyword argument `init_with_zeros` has no effect. If the array is dense and `in_place=true` then the keyword argument `init_with_zeros` affects how the in place array is initialized. If `init_with_zeros = true` then the in place array is initialized with zeros. If `init_with_zeros=false` it is the user's responsibility to initialize the array with zeros before passing it to the runtime generated function.
-
-This can be useful for modestly sparse dense matrices with say at least 1/4 of the array entries non-zero. In this case a sparse matrix may not be as efficient as a dense matrix. But a large fraction of time could be spent unnecessarily setting elements to zero. In this case you can initialize the in place Jacobian array once with zeros before calling the run time generated function.
-
+Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables`. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`. Example:
+    
 ```julia
 julia> @variables x
 x
@@ -165,18 +157,45 @@ julia> f = x+1
 (x + 1)
 
 
-julia> jac = jacobian([f],[x])
+julia> jac = jacobian([f],[x]) #the Jacobian has a single constant element, 1, and is no longer a function of x
 1×1 Matrix{FastDifferentiation.Node}:
  1
 
-julia> jac #the Jacobian has a single constant element, 1, and is no longer a function of x
-1×1 Matrix{FastDifferentiation.Node}:
- 1
-
-julia> make_function(jac,[x]) #But you can specify x as an input variable to the runtime generated function.
+ julia> fjac = make_function(jac,[x])
+ ...
+ 
+ julia> fjac(2.0) #the value 2.0 is passed in for the variable x but has no effect on the output. Does not cause a runtime exception.
+ 1×1 Matrix{Float64}:
+  1.0
 ```
 
 
+If `in_place=false` then a new array will be created to hold the result each time the function is called. If `in_place=true` the function expects a user supplied array to hold the result. The user supplied array must be the first argument to the function. Example:
+
+```
+julia> @variables x
+x
+
+julia> f! = make_function([x,x^2],[x],in_place=true)
+...
+
+julia> result = zeros(2)
+2-element Vector{Float64}:
+ 0.0
+ 0.0
+
+julia> f!(result,[2.0])
+4.0
+
+julia> result
+2-element Vector{Float64}:
+ 2.0
+ 4.0
+```
+
+If the array is sparse then the keyword argument `init_with_zeros` has no effect. If the array is dense and `in_place=true` then the keyword argument `init_with_zeros` affects how the in place array is initialized. If `init_with_zeros = true` then the in place array is initialized with zeros. If `init_with_zeros=false` it is the user's responsibility to initialize the array with zeros before passing it to the runtime generated function.
+
+This can be useful for modestly sparse dense matrices with say at least 1/4 of the array entries non-zero. In this case a sparse matrix may not be as efficient as a dense matrix. But a large fraction of time could be spent unnecessarily setting elements to zero. In this case you can initialize the in place Jacobian array once with zeros before calling the run time generated function.
 """
 function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
     vars = variables(func_array) #all unique variables in func_array
