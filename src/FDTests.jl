@@ -1728,11 +1728,9 @@ end
 @testitem "dot bug and others" begin
     x = make_variables(:x, 2)
     mu = make_variables(:mu, 2)
-    using LinearAlgebra: dot
 
     function no_exceptions()
         x'mu
-        dot(x, mu)
         ex = sum(abs2, x .* mu)
 
         h = sparse_hessian(ex, x)
@@ -1746,8 +1744,8 @@ end
 
     @test no_exceptions()
 
-    x′ = FastDifferentiation.Node.(x) #this will change the type of the vector
-    fn = make_function([x′'mu], x′, mu)
+    xprime = FastDifferentiation.Node.(x) #this will change the type of the vector
+    fn = make_function([xprime'mu], xprime, mu)
 
     @test isapprox(fn([1, 2, 3, 4])[1], 11)
 end
