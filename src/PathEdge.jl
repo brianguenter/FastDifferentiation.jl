@@ -10,7 +10,20 @@ function verify_invariants(v1::Integer, v2::Integer)
     return v1, v2
 end
 
-""""Represents a partial derivative edge in a derivative graph. Edge keeps track of which roots and variables are reachable from this edge."""
+""""
+    PathEdge{T<:Integer,N,M}
+
+Represents a partial derivative edge in a derivative graph. Edge keeps track of which roots and variables are reachable from this edge.
+
+# Fields
+
+- `top_vertex::T`
+- `bott_vertex::T`
+- `edge_value::Node`
+- `reachable_variables::BitVector`
+- `reachable_roots::BitVector`
+- `unique_id::UUID`
+"""
 struct PathEdge{T<:Integer,N,M}
     top_vertex::T
     bott_vertex::T
@@ -52,17 +65,26 @@ vertices(e::PathEdge) = (top_vertex(e), bott_vertex(e))
 
 times_used(a::PathEdge) = sum(reachable_roots(a)) * sum(reachable_variables(a))
 
-"""This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
+"""
+    reachable_roots(e::PathEdge)
+
+This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_roots(e::PathEdge) = e.reachable_roots
 
 is_root_reachable(e::PathEdge, root_index::Integer) = reachable_roots(e)[root_index]
 
-"""This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
+"""
+    reachable_variables(e::PathEdge)
+
+This returns the internal data structure so **DO NOT MODIFY** the returned value unless you know what you are doing! Modification will corrupt the derivative graph. If you need to modify the result then copy first."""
 reachable_variables(e::PathEdge) = e.reachable_variables
 
 is_variable_reachable(e::PathEdge, variable_index::Integer) = reachable_variables(e)[variable_index]
 
-"""used for printing out a more readable version of Edge"""
+"""
+    to_tuple(e::PathEdge)
+
+used for printing out a more readable version of Edge"""
 to_tuple(e::PathEdge) = (e.top_vertex, e.bott_vertex)
 
 
@@ -82,14 +104,19 @@ end
 mask_roots!(e::PathEdge, mask::BitVector) = e.reachable_roots .= e.reachable_roots .& mask
 mask_variables!(e::PathEdge, mask::BitVector) = e.reachable_variables .= e.reachable_variables .& mask
 
-"""`root_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from root `i` and a 0 otherwise. Changes the `reachable_roots` field of the edge to be 0 where `root_mask` is 1 and unchanged otherwise."""
+"""
+    zero_roots!(e::PathEdge, root_mask::BitVector)
+
+`root_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from root `i` and a 0 otherwise. Changes the `reachable_roots` field of the edge to be 0 where `root_mask` is 1 and unchanged otherwise."""
 zero_roots!(e::PathEdge, root_mask::BitVector) = @. e.reachable_roots = e.reachable_roots & (!root_mask)
 
-"""`variable_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from variable `i` and a 0 otherwise. Changes the `reachable_variables` field of the edge to be 0 where `variable_mask` is 1 and unchanged otherwise."""
+"""
+    zero_variables!(e::PathEdge, variable_mask::BitVector)
+
+`variable_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from variable `i` and a 0 otherwise. Changes the `reachable_variables` field of the edge to be 0 where `variable_mask` is 1 and unchanged otherwise."""
 zero_variables!(e::PathEdge, variable_mask::BitVector) = @. e.reachable_variables = e.reachable_variables & (!variable_mask)
 
 
 roots_resettable(e::PathEdge, root_mask::BitVector) = overlap(e.reachable_roots, root_mask)
 
 variables_resettable(e::PathEdge, variable_mask::BitVector) = overlap(e.reachable_variables, variable_mask)
-

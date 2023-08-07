@@ -1,4 +1,10 @@
-"""Tests for == of each of the fields of item1,item2. If a field is an array then == will return true if the elements of the two arrays match, false otherwise."""
+"""
+    value_equal(
+        item1::T, item2::S,
+        fields_to_ignore::Union{Nothing,Vector{Symbol}}=Symbol[]
+    )
+
+Tests for == of each of the fields of item1,item2. If a field is an array then == will return true if the elements of the two arrays match, false otherwise."""
 function value_equal(item1::T, item2::S, fields_to_ignore::Union{Nothing,Vector{Symbol}}=Symbol[]) where {T,S}
     fields = fieldnames(T)
     fields2 = fieldnames(S)
@@ -15,4 +21,3 @@ function value_equal(item1::T, item2::S, fields_to_ignore::Union{Nothing,Vector{
     # edge1.bott_vertex == edge2.bott_vertex && 
     # node_value(edge_value(edge1)) == node_value(edge_value(edge2))
 end
-

@@ -12,7 +12,10 @@ function check_cache(a::Tuple{Vararg}, cache)
     return cache[a]
 end
 
-"""Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for their existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
+"""
+    clear_cache()
+
+Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for their existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
 clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
@@ -233,7 +236,10 @@ end
 
 simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 
-"""Special case only for unary -. No simplifications are currently applied to any other unary functions"""
+"""
+    simplify_check_cache(::typeof(-), a, cache)
+
+Special case only for unary -. No simplifications are currently applied to any other unary functions"""
 function simplify_check_cache(::typeof(-), a, cache)
     na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
@@ -343,7 +349,10 @@ export derivative
 
 
 
-"""returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
+"""
+    variables(node::Node)
+
+Returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
 variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node))
 
 function variables(a::AbstractArray{T}) where {T<:Node}
@@ -391,7 +400,10 @@ function node_symbol(a::Node, variable_to_index::IdDict{Node,Int64})
     return result
 end
 
-"""Used to postorder function with multiple outputs"""
+"""
+    postorder(roots::AbstractVector{<:Node})
+
+Used to postorder function with multiple outputs"""
 function postorder(roots::AbstractVector{T}) where {T<:Node}
     node_to_index = IdDict{Node,Int64}()
     nodes = Vector{Node}(undef, 0)
@@ -403,7 +415,15 @@ function postorder(roots::AbstractVector{T}) where {T<:Node}
     return node_to_index, nodes, variables
 end
 
-"""returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
+"""
+    _postorder_nodes!(
+        a::Node,
+        nodes::AbstractVector{<:Node},
+        variables::AbstractVector{<:Node},
+        visited::IdDict{Node,Int64}
+    )
+
+Returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
 function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {S<:Node}
     if get(visited, a, nothing) === nothing
         if arity(a) != 0
@@ -419,7 +439,10 @@ function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::Abstrac
     return nothing
 end
 
-"""finds all the nodes in the graph and the number of times each node is visited in DFS."""
+"""
+    all_nodes(a::Node, index_type=DefaultNodeIndexType)
+
+Finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
     visited = IdDict{Node,index_type}()
 
@@ -442,7 +465,10 @@ function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
     return nothing
 end
 
-"""computes leaves of the graph `node`. This is inefficient since it allocates space to store all nodes and then searches through that vector to find the leaves."""
+"""
+    graph_leaves(node::Node)
+
+Computes leaves of the graph `node`. This is inefficient since it allocates space to store all nodes and then searches through that vector to find the leaves."""
 function graph_leaves(node::Node)
     result = Vector{Node}(undef, 0)
     nodes = all_nodes(node)
@@ -456,7 +482,13 @@ function graph_leaves(node::Node)
     return result
 end
 
-"""Returns an Array of variables with names corresponding to their indices in the Array. Example:
+"""
+    make_variables(name::Symbol, array_size)
+
+Returns an Array of variables with names corresponding to their indices in the Array. 
+
+# Example
+
 ```julia
 julia> make_variables(:x,3)
 3-element Vector{FastDifferentiation.Node}:
@@ -478,7 +510,7 @@ julia> make_variables(:x,2,3,2)
 [:, :, 2] =
  x1_1_2  x1_2_2  x1_3_2
  x2_1_2  x2_2_2  x2_3_2
- ```
+```
  """
 function make_variables(name::Symbol, array_size::T...) where {T}
     result = Array{Node,length(array_size)}(undef, array_size...)

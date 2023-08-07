@@ -1,4 +1,13 @@
-"""Factors the graph then computes the Jacobian matrix. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed. Example:
+"""
+    _symbolic_jacobian!(
+        graph::DerivativeGraph,
+        partial_variables::AbstractVector{<:Node}
+    ) 
+
+Factors the graph then computes the Jacobian matrix. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed.
+
+# Example
+
 ```julia
 julia> @variables x y
 
@@ -52,9 +61,14 @@ function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVecto
     return _symbolic_jacobian!(tmp, variable_ordering)
 end
 
-"""Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Examples:
-```julia-repl
+"""
+    jacobian(
+        terms::AbstractVector{<:Node},
+        partial_variables::AbstractVector{<:Node}
+    )
 
+Jacobian matrix of the n element function defined by `terms`. Each term element is a Node expression graph. Only the columns of the Jacobian corresponsing to the elements of `partial_variables` will be computed and the partial columns in the Jacobian matrix will be in the order specified by `partial_variables`. Examples:
+```julia
 julia> @variables x y
 
 julia> jacobian([x*y,y*x],[x,y])
@@ -77,7 +91,13 @@ jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {
 export jacobian
 
 
-"""Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
+"""
+    _sparse_symbolic_jacobian!(
+        graph::DerivativeGraph,
+        partial_variables::AbstractVector{<:Node}
+    )
+
+Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
 function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::AbstractVector{T}) where {T<:Node}
     row_indices = Int64[]
     col_indices = Int64[]
@@ -106,11 +126,23 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
     return sparse(row_indices, col_indices, values, codomain_dimension(graph), length(partial_variables))
 end
 
-"""Returns a sparse array containing the Jacobian of the function defined by `terms`"""
+"""
+    sparse_jacobian(
+        terms::AbstractVector{<:Node},
+        partial_variables::AbstractVector{<:Node}
+    )
+
+Returns a sparse array containing the Jacobian of the function defined by `terms`"""
 sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_jacobian
 
-"""Returns a vector of Node, where each element in the vector is the symbolic form of `Jv``. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jv` and you want to separate the inputs to the function and the `v` variables."""
+"""
+    jacobian_times_v(
+        terms::AbstractVector{<:Node},
+        partial_variables::AbstractVector{<:Node}
+    ) 
+
+Returns a vector of Node, where each element in the vector is the symbolic form of `Jv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     graph = DerivativeGraph(terms)
     v_vector = make_variables(gensym(), domain_dimension(graph))
@@ -167,14 +199,23 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
 end
 export jacobian_times_v
 
-"""Computes Hessian times a vector v without forming the Hessian matrix. Useful when the Hessian would be impractically large."""
+"""
+    hessian_times_v(term::Node, partial_variables::AbstractVector{<:Node})
+
+Computes Hessian times a vector v without forming the Hessian matrix. Useful when the Hessian would be impractically large."""
 function hessian_times_v(term::T, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     gradient = vec(jacobian([term], partial_variables))
     return jacobian_times_v(gradient, partial_variables)
 end
 export hessian_times_v
 
-"""Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
+"""
+    jacobian_transpose_v(
+        terms::AbstractVector{<:Node},
+        partial_variables::AbstractVector{<:Node}
+    )
+
+Returns a vector of Node, where each element in the vector is the symbolic form of `Jᵀv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jᵀv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     graph = DerivativeGraph(terms)
     r_vector = make_variables(gensym(), codomain_dimension(graph))
@@ -229,7 +270,13 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
 end
 export jacobian_transpose_v
 
-"""Returns the dense symbolic Hessian matrix. Example:
+"""
+    hessian(expression::Node, variable_order::AbstractVector{<:Node})
+
+Returns the dense symbolic Hessian matrix.
+
+# Example
+
 ```julia
 julia> @variables x y
 
@@ -247,11 +294,16 @@ function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:
 end
 export hessian
 
-"""Compute a sparse symbolic Hessian. Returns a sparse matrix of symbolic expressions. 
-Can be used in combination with `make_function` to generate an executable that
- will return a sparse matrix or take one as an in-place argument. Example:
+"""
+    sparse_hessian(expression::Node, variable_order::AbstractVector{<:Node})
 
- ```julia
+Compute a sparse symbolic Hessian. Returns a sparse matrix of symbolic expressions. 
+Can be used in combination with `make_function` to generate an executable that
+ will return a sparse matrix or take one as an in-place argument.
+
+# Example
+
+```julia
 julia> @variables x y
 
 julia> a = sparse_hessian(x*y,[x,y])
@@ -297,10 +349,14 @@ export sparse_hessian
 
 
 
-"""computes ∂A/(∂variables[1],...,∂variables[n]). Repeated differentiation rather than computing different columns of the Jacobian. Example:
+"""
+    derivative(A::AbstractArray{<:Node}, variables...)
 
-```julia-repl
+Computes `∂A/(∂variables[1],...,∂variables[n])`. Repeated differentiation rather than computing different columns of the Jacobian.
 
+# Example
+
+```julia
 julia> A = [t t^2;3t^2 5]  
 2×2 Matrix{Node}:
  t              (t ^ 2)
@@ -316,7 +372,7 @@ julia> derivative(A,t,t)
  0.0  2
  6    0.0
 ```
- """
+"""
 function derivative(A::AbstractArray{<:Node}, variables::T...) where {T<:Node}
     var = variables[1]
     mat = _derivative(A, var)
@@ -329,7 +385,10 @@ function derivative(A::AbstractArray{<:Node}, variables::T...) where {T<:Node}
 end
 export derivative
 
-"""Computes the derivative of the function matrix `A` with respect to  `variable`."""
+"""
+    _derivative(A::AbstractArray{<:Node}, variable::Node)
+
+Computes the derivative of the function matrix `A` with respect to  `variable`."""
 function _derivative(A::AbstractArray{<:Node}, variable::T) where {T<:Node}
     #convert A into vector then compute jacobian
     vecA = vec(A)
@@ -349,7 +408,13 @@ function _derivative(A::AbstractArray{<:Node}, variable::T) where {T<:Node}
     end
 end
 
-"""Returns an anonymous function that takes the derivative of a scalar function with respect to `variables`. Example:
+"""
+    differential(variables::Node...)
+
+Returns an anonymous function that takes the derivative of a scalar function with respect to `variables`.
+    
+# Example
+
 ```julia
 julia> @variables t
 t

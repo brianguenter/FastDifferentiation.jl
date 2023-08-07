@@ -2,6 +2,19 @@ abstract type AbstractFactorableSubgraph end
 abstract type DominatorSubgraph <: AbstractFactorableSubgraph end
 abstract type PostDominatorSubgraph <: AbstractFactorableSubgraph end
 
+"""
+    FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
+
+# Fields
+
+- `graph::DerivativeGraph{T}`
+- `subgraph::Tuple{T,T}`
+- `times_used::T`
+- `reachable_roots::BitVector`
+- `reachable_variables::BitVector`
+- `dom_mask::Union{Nothing,BitVector}`
+- `pdom_mask::Union{Nothing,BitVector}`
+"""
 struct FactorableSubgraph{T<:Integer,S<:AbstractFactorableSubgraph}
     graph::DerivativeGraph{T}
     subgraph::Tuple{T,T}
@@ -38,7 +51,10 @@ postdominator_subgraph(graph::DerivativeGraph{T}, dominating_node::T, dominated_
 
 graph(a::FactorableSubgraph) = a.graph
 
-"""Returns a tuple of ints (dominator vertex,dominated vertex) that are the top and bottom vertices of the subgraph"""
+"""
+    vertices(subgraph::FactorableSubgraph)
+
+Returns a tuple of ints (dominator vertex,dominated vertex) that are the top and bottom vertices of the subgraph"""
 vertices(subgraph::FactorableSubgraph) = subgraph.subgraph
 
 
@@ -95,7 +111,10 @@ function summarize(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
 end
 
 
-"""Returns parent edges if subgraph is dominator and child edges otherwise. Parent edges correspond to the forward traversal of a dominator subgraph in graph factorization, analogously for postdominator subgraph"""
+"""
+    forward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge)
+
+Returns parent edges if subgraph is dominator and child edges otherwise. Parent edges correspond to the forward traversal of a dominator subgraph in graph factorization, analogously for postdominator subgraph"""
 forward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where {T} = parent_edges(graph(a), edge)
 forward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = child_edges(graph(a), edge)
 
@@ -103,7 +122,10 @@ forward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {
 forward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::T) where {T} = child_edges(graph(a), node_index)
 
 
-"""Returns child edges if subgraph is dominator and parent edges otherwise. Child edges correspond to the backward check for paths bypassing the dominated node of a dominator subgraph, analogously for postdominator subgraph"""
+"""
+    backward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T)
+
+Returns child edges if subgraph is dominator and parent edges otherwise. Child edges correspond to the backward check for paths bypassing the dominated node of a dominator subgraph, analogously for postdominator subgraph"""
 backward_edges(a::FactorableSubgraph{T,DominatorSubgraph}, node_index::T) where {T} = child_edges(graph(a), node_index)
 backward_edges(a::FactorableSubgraph{T,PostDominatorSubgraph}, node_index::T) where {T} = parent_edges(graph(a), node_index)
 
@@ -188,7 +210,10 @@ function edges_on_path(a::FactorableSubgraph, start_edge::PathEdge{T}) where {T}
 end
 
 
-"""Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
+"""
+    add_non_dom_edges!(subgraph::FactorableSubgraph{T,S})
+
+Splits edges which have roots not in the `dominance_mask` of `subgraph`. Original edge has only roots in `dominance_mask`. A new edge is added to the graph that contains only roots not in `dominance_mask`."""
 function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:AbstractFactorableSubgraph}
     temp_edges = PathEdge{T}[]
 
@@ -221,7 +246,10 @@ function add_non_dom_edges!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstr
 end
 
 
-"""Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
+"""
+    reset_edge_masks!(subgraph::FactorableSubgraph{T})
+
+Sets the reachable root and variable masks for every edge in `DominatorSubgraph` `subgraph`. """
 function reset_edge_masks!(subgraph::FactorableSubgraph{T}) where {T}
     edges_to_delete = PathEdge{T}[]
 
@@ -274,7 +302,15 @@ function check_edges(subgraph::FactorableSubgraph{T,S}, edge_list::Vector{PathEd
     end
 end
 
-"""Returns all edges in the subgraph as a set. Recursively traverses the subgraph so will work even for subgraphs with branching paths."""
+"""
+    subgraph_edges(
+        subgraph::FactorableSubgraph{T},
+        sub_edges::Union{Nothing,Set{PathEdge{T}}}=nothing,
+        visited::Union{Nothing,Set{PathEdge{T}}}=nothing,
+        curr_node::Union{Nothing,T}=nothing
+    )
+
+Returns all edges in the subgraph as a set. Recursively traverses the subgraph so will work even for subgraphs with branching paths."""
 function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothing,Set{PathEdge{T}}}=nothing, visited::Union{Nothing,Set{PathEdge{T}}}=nothing, curr_node::Union{Nothing,T}=nothing) where {T}
     if sub_edges === nothing
         sub_edges = Set{PathEdge{T}}()
@@ -304,7 +340,10 @@ function subgraph_edges(subgraph::FactorableSubgraph{T}, sub_edges::Union{Nothin
 end
 
 
-"""returns subgraph edges, as a `Set`, and nodes, as a `Vector`."""
+"""
+    deconstruct_subgraph(subgraph::FactorableSubgraph)
+
+Returns subgraph edges, as a `Set`, and nodes, as a `Vector`."""
 function deconstruct_subgraph(subgraph::FactorableSubgraph)
     sub_edges = subgraph_edges(subgraph)
     sub_nodes = map(x -> bott_vertex(x), collect(sub_edges))
@@ -317,7 +356,10 @@ function deconstruct_subgraph(subgraph::FactorableSubgraph)
     return sub_edges, unique(sub_nodes)
 end
 
-"""Returns true if the subgraph is still a factorable subgraph, false otherwise"""
+"""
+    subgraph_exists(subgraph::FactorableSubgraph)
+
+Returns true if the subgraph is still a factorable subgraph, false otherwise"""
 function subgraph_exists(subgraph::FactorableSubgraph)
     #Do fast tests that guarantee subgraph has been destroyed by factorization: no edges connected to dominated node, dominated_node or dominator node has < 2 subgraph edges
     #This is inefficient since many tests require just the number of edges but this code creates temp arrays containing the edges and then measures the length. Optimize later by having separate children and parents fields in edges structure of RnToRmGraph. Then num_parents and num_children become fast and allocation free.
@@ -385,7 +427,10 @@ end
 edge_path(subgraph::FactorableSubgraph, start_edge) = PathIterator(subgraph, start_edge)
 
 
-"""Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
+"""
+    Base.iterate(a::PathIterator{T,S})
+
+Returns an iterator for a single path in a factorable subgraph. If the path has been destroyed by factorization returns nothing."""
 function Base.iterate(a::PathIterator{T,S}) where {T,S<:FactorableSubgraph}
     if !isa_connected_path(a.subgraph, a.start_edge)
         return nothing
@@ -418,7 +463,17 @@ function r1r1subgraph_edges(graph::DerivativeGraph{T}, root_index::T, variable_i
 end
 
 
-"""Returns the edges in the subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
+"""
+    _r1r1subgraph_edges(
+        graph::DerivativeGraph{T},
+        current_index::T,
+        root_index::T,
+        variable_index::T,
+        visited::Set{T},
+        sub_edges::Set{PathEdge}
+    )
+
+Returns the edges in the subgraph connecting `root_index` and `variable_index`. This is an R¹->R¹ function. Used for debugging."""
 function _r1r1subgraph_edges(graph::DerivativeGraph{T},
     current_index::T,
     root_index::T,
@@ -439,10 +494,10 @@ function _r1r1subgraph_edges(graph::DerivativeGraph{T},
     return sub_edges
 end
 
-"""Finds the node indices in the subgraph. Computes relations for each node (indices of parents inside subgraph for dom, children for pdom. Returns two vectors: the indices of the graph nodes, and a vector of vectors that contains the relations informations."""
+"""
+    graph_array(subgraph::DominatorSubgraph)
+
+Finds the node indices in the subgraph. Computes relations for each node (indices of parents inside subgraph for dom, children for pdom. Returns two vectors: the indices of the graph nodes, and a vector of vectors that contains the relations informations."""
 function graph_array(subgraph::DominatorSubgraph)
 
 end
-
-
-
