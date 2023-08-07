@@ -89,7 +89,7 @@ julia&gt; symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, ordere
 3×2 Matrix{Node}:
  0.0  x
  y    z
- x    0.0</code></pre><h5 id="More-on-make_function"><a class="docs-heading-anchor" href="#More-on-make_function">More on make_function</a><a id="More-on-make_function-1"></a><a class="docs-heading-anchor-permalink" href="#More-on-make_function" title="Permalink"></a></h5><p>Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to <code>make_function</code> then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:</p><pre><code class="language-julia hljs">julia&gt; f = [x^2*y^2,sqrt(x*y)]
+ x    0.0</code></pre><h5 id="More-on-make_function"><a class="docs-heading-anchor" href="#More-on-make_function">More on make_function</a><a id="More-on-make_function-1"></a><a class="docs-heading-anchor-permalink" href="#More-on-make_function" title="Permalink"></a></h5><p>There are many options to <code>make_function</code>. This brief summary will help you figure out how to set them to achieve maximum performance.</p><p>There are two categories of problem for which different settings are likely to yield best performance: small and large. The first category has a return matrix that is small with less than 100 elements, and an input vector that in this size range. In this case you will probably get the fastest results by calling <code>make_function</code> with a static array as the first argument and then calling the runtime generated function with an SVector or MVector for the input variable arguments.</p><p>If your problem is in the large category then whenever possible set <code>in_place=true</code> and pass a matrix into the runtime generated function to hold the return values. You can improve performance further by combining <code>in_place=true</code> with <code>init_with_zeros=false</code>. The runtime generated function will not initialize your in place array with zeros each time it is called. </p><p>You can use the (sparsity)[@ref] function to determine if any entries in your function are identically zero. If none are then <code>init_with_zeros=false</code> is safe even if you don&#39;t pre-initialize your array with zeros because every array entry will be set with a valid value.</p><p>Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to <code>make_function</code> then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:</p><pre><code class="language-julia hljs">julia&gt; f = [x^2*y^2,sqrt(x*y)]
 2-element Vector{FastDifferentiation.Node}:
  ((x ^ 2) * (y ^ 2))
        sqrt((x * y))
@@ -146,7 +146,7 @@ julia&gt; @assert typeof(j_exe([1.0, 2.0])) &lt;: Array #return type is Array an
 
 julia&gt; j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
 
-julia&gt; @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) &lt;: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.</code></pre><p>If you need to generate code that can be cut and pasted into another application then you can use <code>make_Expr</code> instead of <code>make_function</code>. It has the same arguments except the <code>in_place</code> boolean argument is not optional.</p><pre><code class="language-julia hljs">julia&gt; @variables x y
+julia&gt; @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) &lt;: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.</code></pre><p>If you need to generate code that can be cut and pasted into another application then you can use <code>make_Expr</code> instead of <code>make_function</code>. It has the same arguments except the <code>in_place</code> and <code>init_with_zeros</code> boolean arguments are not optional.</p><pre><code class="language-julia hljs">julia&gt; @variables x y
 y
 
 julia&gt; j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
@@ -157,46 +157,93 @@ julia&gt; j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
  ((y / x) * (1 / y))  ((y / x) * -(((x / y) / y)))
 
 #create code to evaluate the jacobian with in place matrix
-julia&gt; make_Expr(j,[x,y],true)
-:((input_variables, result)-&gt;begin
-          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =#
-          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =# @inbounds begin
-                  #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:89 =#
+julia&gt; make_Expr(j,[x,y],true,false) 
+#Notice that the generated code does NOT initialize the input to 0
+#
+:((result, input_variables)-&gt;begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:95 =#
                   begin
-                      result .= zero(eltype(input_variables))
                       begin
-                          var&quot;##303&quot; = input_variables[2] ^ 2
-                          var&quot;##304&quot; = 2 * input_variables[1]
+                          var&quot;##293&quot; = input_variables[2] ^ 2
+                          var&quot;##294&quot; = 2 * input_variables[1]
+                          var&quot;##292&quot; = var&quot;##293&quot; * var&quot;##294&quot;
+                          result[CartesianIndex(1, 1)] = var&quot;##292&quot;
+                      end
+                      begin
+                          var&quot;##297&quot; = input_variables[1] + input_variables[2]
+                          var&quot;##296&quot; = sin(var&quot;##297&quot;)
+                          var&quot;##295&quot; = -var&quot;##296&quot;
+                          result[CartesianIndex(2, 1)] = var&quot;##295&quot;       
+                      end
+                      begin
+                          var&quot;##300&quot; = input_variables[1] / input_variables[2]
+                          var&quot;##299&quot; = 1 / var&quot;##300&quot;
+                          var&quot;##301&quot; = 1 / input_variables[2]
+                          var&quot;##298&quot; = var&quot;##299&quot; * var&quot;##301&quot;
+                          result[CartesianIndex(3, 1)] = var&quot;##298&quot;       
+                      end
+                      begin
+                          var&quot;##303&quot; = input_variables[1] ^ 2
+                          var&quot;##304&quot; = 2 * input_variables[2]
                           var&quot;##302&quot; = var&quot;##303&quot; * var&quot;##304&quot;
-                          result[CartesianIndex(1, 1)] = var&quot;##302&quot;
+                          result[CartesianIndex(1, 2)] = var&quot;##302&quot;       
                       end
                       begin
-                          var&quot;##307&quot; = input_variables[1] + input_variables[2]
-                          var&quot;##306&quot; = sin(var&quot;##307&quot;)
-                          var&quot;##305&quot; = -var&quot;##306&quot;
-                          result[CartesianIndex(2, 1)] = var&quot;##305&quot;
+                          result[CartesianIndex(2, 2)] = var&quot;##295&quot;       
                       end
                       begin
-                          var&quot;##309&quot; = input_variables[2] / input_variables[1]
-                          var&quot;##310&quot; = 1 / input_variables[2]
+                          var&quot;##307&quot; = var&quot;##300&quot; / input_variables[2]    
+                          var&quot;##306&quot; = -var&quot;##307&quot;
+                          var&quot;##305&quot; = var&quot;##299&quot; * var&quot;##306&quot;
+                          result[CartesianIndex(3, 2)] = var&quot;##305&quot;       
+                      end
+                  end
+              end
+      end)
+
+julia&gt; make_Expr(j, [x, y], true, true) 
+#Notice that the generated code initializes the input array to zero
+:((result, input_variables)-&gt;begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:95 =#
+                  begin
+                      result .= zero(eltype(input_variables)) #INITIALIZE to 0
+                      begin
+                          var&quot;##309&quot; = input_variables[2] ^ 2
+                          var&quot;##310&quot; = 2 * input_variables[1]
                           var&quot;##308&quot; = var&quot;##309&quot; * var&quot;##310&quot;
-                          result[CartesianIndex(3, 1)] = var&quot;##308&quot;
+                          result[CartesianIndex(1, 1)] = var&quot;##308&quot;       
                       end
                       begin
-                          var&quot;##312&quot; = input_variables[1] ^ 2
-                          var&quot;##313&quot; = 2 * input_variables[2]
-                          var&quot;##311&quot; = var&quot;##312&quot; * var&quot;##313&quot;
-                          result[CartesianIndex(1, 2)] = var&quot;##311&quot;
+                          var&quot;##313&quot; = input_variables[1] + input_variables[2]
+                          var&quot;##312&quot; = sin(var&quot;##313&quot;)
+                          var&quot;##311&quot; = -var&quot;##312&quot;
+                          result[CartesianIndex(2, 1)] = var&quot;##311&quot;       
                       end
                       begin
-                          result[CartesianIndex(2, 2)] = var&quot;##305&quot;
+                          var&quot;##316&quot; = input_variables[1] / input_variables[2]
+                          var&quot;##315&quot; = 1 / var&quot;##316&quot;
+                          var&quot;##317&quot; = 1 / input_variables[2]
+                          var&quot;##314&quot; = var&quot;##315&quot; * var&quot;##317&quot;
+                          result[CartesianIndex(3, 1)] = var&quot;##314&quot;       
                       end
                       begin
-                          var&quot;##317&quot; = input_variables[1] / input_variables[2]
-                          var&quot;##316&quot; = var&quot;##317&quot; / input_variables[2]
-                          var&quot;##315&quot; = -var&quot;##316&quot;
-                          var&quot;##314&quot; = var&quot;##309&quot; * var&quot;##315&quot;
-                          result[CartesianIndex(3, 2)] = var&quot;##314&quot;
+                          var&quot;##319&quot; = input_variables[1] ^ 2
+                          var&quot;##320&quot; = 2 * input_variables[2]
+                          var&quot;##318&quot; = var&quot;##319&quot; * var&quot;##320&quot;
+                          result[CartesianIndex(1, 2)] = var&quot;##318&quot;       
+                      end
+                      begin
+                          result[CartesianIndex(2, 2)] = var&quot;##311&quot;       
+                      end
+                      begin
+                          var&quot;##323&quot; = var&quot;##316&quot; / input_variables[2]    
+                          var&quot;##322&quot; = -var&quot;##323&quot;
+                          var&quot;##321&quot; = var&quot;##315&quot; * var&quot;##322&quot;
+                          result[CartesianIndex(3, 2)] = var&quot;##321&quot;       
                       end
                   end
               end
@@ -257,4 +304,4 @@ julia&gt; jtv_exe = make_function(jTv,[[x,y];rvec])
 julia&gt; jtv_exe([1.0,2.0,3.0,4.0])
 2-element Vector{Float64}:
  -1.4116362015446517
- -0.04368042858415033</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howitworks/">« How it works</a><a class="docs-footer-nextpage" href="../benchmarks/">Benchmarks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 7 August 2023 18:41">Monday 7 August 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ -0.04368042858415033</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howitworks/">« How it works</a><a class="docs-footer-nextpage" href="../benchmarks/">Benchmarks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 7 August 2023 21:36">Monday 7 August 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
