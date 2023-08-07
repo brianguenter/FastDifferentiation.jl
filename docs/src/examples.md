@@ -136,6 +136,14 @@ julia> symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, ordered s
  x    0.0
 ```
 ##### More on make_function
+There are many options to `make_function`. This brief summary will help you figure out how to set them to achieve maximum performance.
+
+There are two categories of problem for which different settings are likely to yield best performance: small and large. The first category has a return matrix that is small with less than 100 elements, and an input vector that in this size range. In this case you will probably get the fastest results by calling `make_function` with a static array as the first argument and then calling the runtime generated function with an SVector or MVector for the input variable arguments.
+
+If your problem is in the large category then whenever possible set `in_place=true` and pass a matrix into the runtime generated function to hold the return values. You can improve performance further by combining `in_place=true` with `init_with_zeros=false`. The runtime generated function will not initialize your in place array with zeros each time it is called. 
+
+You can use the (sparsity)[@ref] function to determine if any entries in your function are identically zero. If none are then `init_with_zeros=false` is safe even if you don't pre-initialize your array with zeros because every array entry will be set with a valid value.
+
 Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
 
 ```julia
@@ -212,7 +220,7 @@ julia> j_exe2 = make_function(SArray{Tuple{3,2}}(j), [x, y])
 
 julia> @assert typeof(j_exe2(SVector{2}([1.0, 2.0]))) <: StaticArray #return type is StaticArray and input type is SVector. This should be the fastest.
 ```
-If you need to generate code that can be cut and pasted into another application then you can use `make_Expr` instead of `make_function`. It has the same arguments except the `in_place` boolean argument is not optional.
+If you need to generate code that can be cut and pasted into another application then you can use `make_Expr` instead of `make_function`. It has the same arguments except the `in_place` and `init_with_zeros` boolean arguments are not optional.
 ```julia
 julia> @variables x y
 y
@@ -225,52 +233,98 @@ julia> j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
  ((y / x) * (1 / y))  ((y / x) * -(((x / y) / y)))
 
 #create code to evaluate the jacobian with in place matrix
-julia> make_Expr(j,[x,y],true)
-:((input_variables, result)->begin
-          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =#
-          #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:88 =# @inbounds begin
-                  #= c:\Users\seatt\Source\FastDifferentiation.jl\src\CodeGeneration.jl:89 =#
+julia> make_Expr(j,[x,y],true,false) 
+#Notice that the generated code does NOT initialize the input to 0
+#
+:((result, input_variables)->begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:95 =#
                   begin
-                      result .= zero(eltype(input_variables))
                       begin
-                          var"##303" = input_variables[2] ^ 2
-                          var"##304" = 2 * input_variables[1]
+                          var"##293" = input_variables[2] ^ 2
+                          var"##294" = 2 * input_variables[1]
+                          var"##292" = var"##293" * var"##294"
+                          result[CartesianIndex(1, 1)] = var"##292"
+                      end
+                      begin
+                          var"##297" = input_variables[1] + input_variables[2]
+                          var"##296" = sin(var"##297")
+                          var"##295" = -var"##296"
+                          result[CartesianIndex(2, 1)] = var"##295"       
+                      end
+                      begin
+                          var"##300" = input_variables[1] / input_variables[2]
+                          var"##299" = 1 / var"##300"
+                          var"##301" = 1 / input_variables[2]
+                          var"##298" = var"##299" * var"##301"
+                          result[CartesianIndex(3, 1)] = var"##298"       
+                      end
+                      begin
+                          var"##303" = input_variables[1] ^ 2
+                          var"##304" = 2 * input_variables[2]
                           var"##302" = var"##303" * var"##304"
-                          result[CartesianIndex(1, 1)] = var"##302"
+                          result[CartesianIndex(1, 2)] = var"##302"       
                       end
                       begin
-                          var"##307" = input_variables[1] + input_variables[2]
-                          var"##306" = sin(var"##307")
-                          var"##305" = -var"##306"
-                          result[CartesianIndex(2, 1)] = var"##305"
+                          result[CartesianIndex(2, 2)] = var"##295"       
                       end
                       begin
-                          var"##309" = input_variables[2] / input_variables[1]
-                          var"##310" = 1 / input_variables[2]
+                          var"##307" = var"##300" / input_variables[2]    
+                          var"##306" = -var"##307"
+                          var"##305" = var"##299" * var"##306"
+                          result[CartesianIndex(3, 2)] = var"##305"       
+                      end
+                  end
+              end
+      end)
+
+julia> make_Expr(j, [x, y], true, true) 
+#Notice that the generated code initializes the input array to zero
+:((result, input_variables)->begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:94 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:95 =#
+                  begin
+                      result .= zero(eltype(input_variables)) #INITIALIZE to 0
+                      begin
+                          var"##309" = input_variables[2] ^ 2
+                          var"##310" = 2 * input_variables[1]
                           var"##308" = var"##309" * var"##310"
-                          result[CartesianIndex(3, 1)] = var"##308"
+                          result[CartesianIndex(1, 1)] = var"##308"       
                       end
                       begin
-                          var"##312" = input_variables[1] ^ 2
-                          var"##313" = 2 * input_variables[2]
-                          var"##311" = var"##312" * var"##313"
-                          result[CartesianIndex(1, 2)] = var"##311"
+                          var"##313" = input_variables[1] + input_variables[2]
+                          var"##312" = sin(var"##313")
+                          var"##311" = -var"##312"
+                          result[CartesianIndex(2, 1)] = var"##311"       
                       end
                       begin
-                          result[CartesianIndex(2, 2)] = var"##305"
+                          var"##316" = input_variables[1] / input_variables[2]
+                          var"##315" = 1 / var"##316"
+                          var"##317" = 1 / input_variables[2]
+                          var"##314" = var"##315" * var"##317"
+                          result[CartesianIndex(3, 1)] = var"##314"       
                       end
                       begin
-                          var"##317" = input_variables[1] / input_variables[2]
-                          var"##316" = var"##317" / input_variables[2]
-                          var"##315" = -var"##316"
-                          var"##314" = var"##309" * var"##315"
-                          result[CartesianIndex(3, 2)] = var"##314"
+                          var"##319" = input_variables[1] ^ 2
+                          var"##320" = 2 * input_variables[2]
+                          var"##318" = var"##319" * var"##320"
+                          result[CartesianIndex(1, 2)] = var"##318"       
+                      end
+                      begin
+                          result[CartesianIndex(2, 2)] = var"##311"       
+                      end
+                      begin
+                          var"##323" = var"##316" / input_variables[2]    
+                          var"##322" = -var"##323"
+                          var"##321" = var"##315" * var"##322"
+                          result[CartesianIndex(3, 2)] = var"##321"       
                       end
                   end
               end
       end)
 ```
-
 ##### Sparse Jacobians and Hessians
 The functions `sparse_jacobian, sparse_hessian` compute sparse symbolic derivatives. When you pass a sparse symbolic function matrix to `make_function` it will generate an executable which expects an in place sparse matrix to hold the result. For functions with sparse Jacobians or Hessians this can be orders of magnitude faster than using a dense in place matrix.
 
