@@ -3,8 +3,5 @@
 ```@autodocs
 Modules = [FastDifferentiation]
 Private = false
-Order = [:function]
-```
-
-```@index
+Order = [:macro, :function]
 ```

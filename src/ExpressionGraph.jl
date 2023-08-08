@@ -19,7 +19,19 @@ Clears the global expression cache. To maximize efficiency of expressions the di
 clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
+"""
+@variables args...
 
+create **FD** variables to use in symbolic expressions. Example:
+
+```julia
+julia> @variables x y
+y
+
+julia> f = x*y
+(x * y)
+```
+"""
 macro variables(args...)
     tmp = Expr(:block)
     for x in args
@@ -483,11 +495,10 @@ function graph_leaves(node::Node)
 end
 
 """
-    make_variables(name::Symbol, array_size)
+make_variables(name::Symbol,array_size::T...)
 
 Returns an Array of variables with names corresponding to their indices in the Array. 
-
-# Example
+## Example:
 
 ```julia
 julia> make_variables(:x,3)

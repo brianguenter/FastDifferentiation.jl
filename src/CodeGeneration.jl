@@ -2,6 +2,7 @@
 """
     sparsity(sym_func::AbstractArray{<:Node})
 
+
 Computes a number representing the sparsity of the array of expressions. If `nelts` is the number of elements in the array and `nzeros` is the number of zero elements in the array
 then `sparsity = (nelts-nzeros)/nelts`. 
 
