@@ -96,9 +96,9 @@ ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol,
 ```
 This is actively being worked on. I hope to have experimental support for conditionals soon.
 
-## Release Notes
+# Release Notes
 <details>
-v1.0.0-alpha - BREAKING CHANGE. `make_function` called with `in_place` = true now returns an anonymous function which takes the in place result matrix as the first argument. Prior to this the result matrix was the second argument.
+v0.3.0 - BREAKING CHANGE. `make_function` called with `in_place` = true now returns an anonymous function which takes the in place result matrix as the first argument. Prior to this the result matrix was the second argument.
 
 ```julia
 function main()
