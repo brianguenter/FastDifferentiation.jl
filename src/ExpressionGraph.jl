@@ -16,7 +16,19 @@ end
 clear_cache() = empty!(EXPRESSION_CACHE)
 export clear_cache
 
+"""
+@variables args...
 
+create **FD** variables to use in symbolic expressions. Example:
+
+```julia
+julia> @variables x y
+y
+
+julia> f = x*y
+(x * y)
+```
+"""
 macro variables(args...)
     tmp = Expr(:block)
     for x in args
@@ -456,7 +468,10 @@ function graph_leaves(node::Node)
     return result
 end
 
-"""Returns an Array of variables with names corresponding to their indices in the Array. Example:
+"""
+make_variables(name::Symbol,array_size::T...) where{T}
+
+Returns an Array of variables with names corresponding to their indices in the Array. Example:
 ```julia
 julia> make_variables(:x,3)
 3-element Vector{FastDifferentiation.Node}:

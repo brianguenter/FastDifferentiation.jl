@@ -1,5 +1,5 @@
 # How it works
-**FD** is a domain specific language (DSL) embedded in Julia. **FD** defines a custom `Number` type and nd overloads all the mathematical operators in Base to apply to this new number type. You create **FD** numbers using either [`@variables`](@ref) or [`make_variable`](@ref).
+**FD** is a domain specific language (DSL) embedded in Julia. **FD** defines a custom `Number` type and nd overloads all the mathematical operators in Base to apply to this new number type. You create **FD** numbers using either [`@variables`](@ref) or [`make_variables`](@ref).
 
 Mathematical operations on **FD** numbers create a graph representing the mathematical expression rather than immediately returning a floating point value. For example, in this code fragment 
 ```julia
