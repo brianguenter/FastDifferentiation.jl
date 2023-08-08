@@ -469,7 +469,7 @@ function graph_leaves(node::Node)
 end
 
 """
-make_variables(name::Symbol,array_size::T...) where{T}
+make_variables(name::Symbol,array_size::T...)
 
 Returns an Array of variables with names corresponding to their indices in the Array. Example:
 ```julia
