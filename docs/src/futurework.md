@@ -1,4 +1,4 @@
-## Future Work
+# Future Work
 The two biggest limitations of **FD** are no support for conditionals involving **FD** variables and code size that scales with number of operations. 
 
 The first can be dealt with by modifying `make_function`. The new generated code would have three distinct steps:

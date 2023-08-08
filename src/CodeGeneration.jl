@@ -1,6 +1,7 @@
 
 """
-sparsity(sym_func::AbstractArray{<:Node})
+    sparsity(sym_func::AbstractArray{<:Node})
+
 
 Computes a number representing the sparsity of the array of expressions. If `nelts` is the number of elements in the array and `nzeros` is the number of zero elements in the array
 then `sparsity = (nelts-nzeros)/nelts`. 
@@ -13,7 +14,14 @@ function sparsity(sym_func::AbstractArray{<:Node})
 end
 export sparsity
 
-"""Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
+"""
+    function_body!(
+        dag::Node,
+        variable_to_index::IdDict{Node,Int64},
+        node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing
+    )
+
+Create body of Expr that will evaluate the function. The function body will be a sequence of assignment statements to automatically generated variable names. This is an example for a simple function:
 ```julia
 quote
     var"##343" = 2x
@@ -58,12 +66,23 @@ end
 
 return_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef); result .= 0) #need to initialize array to zero because this is no longer being done by simple assignment statements.
 
-"""fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
+"""
+    return_declaration(func_array::Array, input_variables::AbstractVector)
+
+Fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
 return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = zeros(promote_type(Float64, eltype(input_variables)), $(size(func_array)...)))
 
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
+"""
+    make_Expr(
+        func_array::AbstractArray{<:Node},
+        input_variables::AbstractVector{<:Node},
+        in_place::Bool,
+        init_with_zeros::Bool
+    )
+"""
 function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
@@ -105,7 +124,14 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 end
 export make_Expr
 
-"""`init_with_zeros` argument is not used for sparse matrices."""
+"""
+    make_Expr(
+        A::SparseMatrixCSC{<:Node,<:Integer},
+        input_variables::AbstractVector{<:Node},
+        in_place::Bool, init_with_zeros::Bool
+    )
+
+`init_with_zeros` argument is not used for sparse matrices."""
 function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
@@ -146,12 +172,14 @@ end
 export make_Expr
 
 """
-```julia
-make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
-```
+    make_function(
+        func_array::AbstractArray{<:Node},
+        input_variables::AbstractVector{<:Node}...;
+        in_place::Bool=false, init_with_zeros::Bool=true
+    )
 
-Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables`. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`. Example:
-    
+Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables`. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`.
+
 ```julia
 julia> @variables x
 x
@@ -172,10 +200,9 @@ julia> jac = jacobian([f],[x]) #the Jacobian has a single constant element, 1, a
   1.0
 ```
 
+If `in_place=false` then a new array will be created to hold the result each time the function is called. If `in_place=true` the function expects a user supplied array to hold the result. The user supplied array must be the first argument to the function.
 
-If `in_place=false` then a new array will be created to hold the result each time the function is called. If `in_place=true` the function expects a user supplied array to hold the result. The user supplied array must be the first argument to the function. Example:
-
-```
+```julia
 julia> @variables x
 x
 
