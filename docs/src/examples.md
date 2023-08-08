@@ -142,7 +142,7 @@ There are two categories of problem for which different settings are likely to y
 
 If your problem is in the large category then whenever possible set `in_place=true` and pass a matrix into the runtime generated function to hold the return values. You can improve performance further by combining `in_place=true` with `init_with_zeros=false`. The runtime generated function will not initialize your in place array with zeros each time it is called. 
 
-You can use the (sparsity)[@ref] function to determine if any entries in your function are identically zero. If none are then `init_with_zeros=false` is safe even if you don't pre-initialize your array with zeros because every array entry will be set with a valid value.
+You can use the [`sparsity`](@ref) function to determine if any entries in your function are identically zero. If none are then `init_with_zeros=false` is safe even if you don't pre-initialize your array with zeros because every array entry will be set with a valid value.
 
 Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
 
