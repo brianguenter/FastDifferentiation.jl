@@ -64,13 +64,15 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
     return body, _dag_to_function(dag)
 end
 
-return_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef); result .= 0) #need to initialize array to zero because this is no longer being done by simple assignment statements.
+zero_array_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef); result .= 0) #need to initialize array to zero because this is no longer being done by simple assignment statements.
+undef_array_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef)) #need to initialize array to zero because this is no longer being done by simple assignment statements.
 
 """
     return_declaration(func_array::Array, input_variables::AbstractVector)
 
 Fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
-return_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = zeros(promote_type(Float64, eltype(input_variables)), $(size(func_array)...)))
+zero_array_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = zeros(promote_type(Float64, eltype(input_variables)), $(size(func_array))))
+undef_array_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = Array{promote_type(Float64, eltype(input_variables))}(undef, $(size(func_array))))
 
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
@@ -86,13 +88,19 @@ return_expression(::Array) = :(return result)
 function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
+    zero_assignment_threshold = 0.05 * length(func_array)
+    do_array_zero = count(is_zero, (func_array)) >= zero_assignment_threshold #choose whether to use result .= 0 or to assign each zero element individually.
 
     if in_place
-        if init_with_zeros
+        if init_with_zeros && do_array_zero
             push!(body.args, :(result .= zero(eltype(input_variables))))
         end
     else
-        push!(body.args, (return_declaration(func_array, input_variables)))
+        if do_array_zero
+            push!(body.args, zero_array_declaration(func_array, input_variables)) #zero array elements with zeros(....)
+        else
+            push!(body.args, undef_array_declaration(func_array, input_variables))
+        end
     end
 
     node_to_index = IdDict{Node,Int64}()
@@ -101,10 +109,14 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     end
 
     for (i, node) in pairs(func_array)
-        if !is_zero(node)
+        if !is_zero(node) || (is_zero(node) && (init_with_zeros || !in_place) && !do_array_zero)
             node_body, variable = function_body!(node, node_to_index, node_to_var)
-            push!(node_body.args, :(result[$i] = $variable))
-            push!(body.args, node_body)
+            println("node_body $(node_body.args)")
+            # push!(node_body.args, :(result[$i] = $variable))
+            for arg in node_body.args
+                push!(body.args, arg)
+            end
+            push!(body.args, :(result[$i] = $variable))
         end
     end
 

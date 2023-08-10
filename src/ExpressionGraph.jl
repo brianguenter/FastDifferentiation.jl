@@ -460,7 +460,6 @@ function all_nodes(a::Node, index_type=DefaultNodeIndexType)
 
     all_nodes!(a, visited)
     return collect(keys(visited))
-    return nodes
 end
 
 function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
@@ -476,6 +475,20 @@ function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
 
     return nothing
 end
+
+""" 
+all_nodes(a::AbstractArray{<:Node})
+
+Returns a vector of the unique nodes in the graphs whose roots are elements of `a`.
+
+"""
+function all_nodes(a::AbstractArray{<:Node})
+    visited = IdDict{Node,Int32}
+
+    all_nodes!.(a, Ref(visited))
+    return collect(keys(visited))
+end
+
 
 """
     graph_leaves(node::Node)
