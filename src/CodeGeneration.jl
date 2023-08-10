@@ -111,8 +111,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     for (i, node) in pairs(func_array)
         if !is_zero(node) || (is_zero(node) && (init_with_zeros || !in_place) && !do_array_zero)
             node_body, variable = function_body!(node, node_to_index, node_to_var)
-            println("node_body $(node_body.args)")
-            # push!(node_body.args, :(result[$i] = $variable))
+
             for arg in node_body.args
                 push!(body.args, arg)
             end
@@ -165,7 +164,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
     for j = 1:n
         for i in nzrange(A, j)
-            # println(i)
+
             row = rows[i]
             node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
             push!(node_body.args, :(vals[$i] = $variable))

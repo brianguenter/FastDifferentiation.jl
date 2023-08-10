@@ -54,35 +54,5 @@ function write_dot end
 
 include("FDTests.jl")
 
-function test()
-    p = make_variables(:p, 21)
-
-    println("NO array zero statement")
-    show(make_Expr(p, p, true, true))
-    show(make_Expr(p, p, true, false))
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
-
-
-    p[21] = 0
-
-    println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, true, true))
-    println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, true, false))
-    println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
-
-    p[20] = 0
-    println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, true, true))
-    println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, true, false))
-    println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
-end
-export test
 
 end # module
