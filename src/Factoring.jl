@@ -611,8 +611,8 @@ end
 function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
     count = 0
     visited = IdDict{Node,Int64}()
-    nodes = Node[]
-    all_nodes!.(jacobian, Ref(visited), Ref(nodes))
+    all_nodes!.(jacobian, Ref(visited))
+    nodes = collect(keys(visited))
     for node in nodes
         if is_tree(node) && !is_negate(node) #don't count negate as an operation
             count += 1
