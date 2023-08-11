@@ -71,7 +71,7 @@ julia> floatp
 Notice that `floatp[2,2]` is not 0. This is because `init_with_zeros=false`. If you need this array element to be zero then initialize it before making the call to `fexe!`.
 
 
-You can use the [`sparsity`](@ref) function to measure sparsity and determine whether you should use the dense or sparse derivative functions.
+You can use the [`sparsity`](@ref) function to measure sparsity and determine whether you should use the dense or sparse derivative functions to pass as the `func_array` argument.
 
 ## Evaluate a function and derivatives
 Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to `make_function` then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:
@@ -109,27 +109,6 @@ julia> f_eval = view(tmp,5:6)
 2-element view(::Vector{Float64}, 5:6) with eltype Float64:
  5.336100000000001
  1.5198684153570665
-```
-
-There are several options for `make_function`. If `in_place==false`, the default, then it will create and return a new matrix at each function call. If `in_place==true` it will make a function that expects two arguments, a matrix to hold the result and a vector of input variable values. The `in_place` option is available on all executables including Jᵀv,Jv,Hv.
-
-```julia
-julia> jac_exe! = make_function(symb,[x,y], in_place=true)
-...
-julia> a = similar(symb,Float64)
-2×2 Matrix{Float64}:
- 0.0  0.0
- 0.0  6.93532e-310
-
-julia> jac_exe!(a,[1.0,2.0])
-2×2 Matrix{Float64}:
- -1.68294    0.540302
-  0.909297  -0.416147
-
-julia> a
-2×2 Matrix{Float64}:
- -1.68294    0.540302
-  0.909297  -0.416147
 ```
 
 ## Generating code
