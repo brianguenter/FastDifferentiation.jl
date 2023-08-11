@@ -8,6 +8,7 @@ makedocs(
         "Limitations" => "limitations.md",
         "How it works" => "howitworks.md",
         "Examples" => "examples.md",
+        "How to use make_function" => "makefunction.md",
         "Benchmarks" => "benchmarks.md",
         "Symbolic processing" => "symbolicprocessing.md",
         "Future work" => "futurework.md",

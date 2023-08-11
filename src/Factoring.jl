@@ -589,7 +589,7 @@ function verify_paths(graph::DerivativeGraph)
 end
 
 
-function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
+function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node} #not efficient, may revist parts of the jacobian many times.
     nodes = IdDict{Node,Bool}()
 
     for index in eachindex(jacobian)
@@ -610,9 +610,7 @@ end
 """Count of number of operations in graph."""
 function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
     count = 0
-    visited = IdDict{Node,Int64}()
-    all_nodes!.(jacobian, Ref(visited))
-    nodes = collect(keys(visited))
+    nodes = all_nodes(jacobian)
     for node in nodes
         if is_tree(node) && !is_negate(node) #don't count negate as an operation
             count += 1

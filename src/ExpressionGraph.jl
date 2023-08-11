@@ -483,7 +483,7 @@ Returns a vector of the unique nodes in the graphs whose roots are elements of `
 
 """
 function all_nodes(a::AbstractArray{<:Node})
-    visited = IdDict{Node,Int32}
+    visited = IdDict{Node,Int32}()
 
     all_nodes!.(a, Ref(visited))
     return collect(keys(visited))
