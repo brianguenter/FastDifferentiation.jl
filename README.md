@@ -98,6 +98,8 @@ This is actively being worked on. I hope to have experimental support for condit
 
 # Release Notes
 <details>
+v0.3.1 - Code generation is smarter about initializing in place arrays with zeros. Previously it initialized all array elements even if most of them not identically zero and would be set to a properly defined value elsewhere in the code. This especially improves performance for functions where no or few elements are identically zero.
+
 v0.3.0 - BREAKING CHANGE. `make_function` called with `in_place` = true now returns an anonymous function which takes the in place result matrix as the first argument. Prior to this the result matrix was the second argument.
 
 ```julia
