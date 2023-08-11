@@ -9,7 +9,9 @@ Several of the AD algorithms have unexpectedly slow timings; the Enzyme Rosenbro
 
 When determining which AD algorithm to use keep in mind the limitations of **FD**: operation count and conditionals. The total operation count of your expression should be less than 10⁵. You may get reasonable performance for expressions as large as 10⁶ operations but expect very long compile times. FD does not support conditionals which involve the differentiation variables (yet). The other algorithms do not have these limitations.
 
-To generate the markdown for the results in this section execute the function `write_markdown()` in the file `Benchmarks.jl` at the [Benchmarks.jl](https://github.com/brianguenter/Benchmarks) repo.
+### Results
+
+To generate the markdown for the results in this section execute the function `write_markdown()` in the file `Benchmarks.jl`.
     
 These timings are just for evaluating the derivative function. They do not include preprocessing time required to generate and compile the function nor any time needed to generate auxiliary data structures that make the evaluation more efficient.
 
@@ -28,14 +30,15 @@ Platform Info:
   Threads: 1 on 32 virtual cores
 Environment:
   JULIA_EDITOR = code.cmd
+  JULIA_NUM_THREADS = 1
 ``` 
 
 | Function | FD sparse | FD dense | ForwardDiff | ReverseDiff | Enzyme | Zygote |
 |---------|-----------|----------|-------------|-------------|--------|--------|
-| Rosenbrock Hessian | **1.00** | 8.31 | 33455.33 | 99042.70 | 194.5 | 85003.60 |
-| Rosenbrock gradient | [^1] | 1.29 | 674.82 | 299.67 | **1.00** | 4208.30 |
-| Simple matrix Jacobian | [^1] | **1.00** | 34.09 | 51.25 | [^50] | 125.26 |
-| Spherical harmonics Jacobian | [^1] | **1.00** | 29.25 | [^40] | [^51] | [^6] |
+| Rosenbrock Hessian | **1.00** | 15.60 | 67031.33 | 193591.71 | 367.77 | 163244.34 |
+| Rosenbrock gradient | [^1] | 1.13 | 629.23 | 281.72 | **1.00** | 3967.02 |
+| Simple matrix Jacobian | [^1] | **1.00** | 41.16 | 52.39 | [^50] | 123.91 |
+| Spherical harmonics Jacobian | [^1] | **1.00** | 29.00 | [^40] | [^51] | [^6] |
 [^1]: **FD** sparse was slower than **FD** dense so results are only shown for dense.
 [^1]: **FD** sparse was slower than **FD** dense so results are only shown for dense.
 [^50]: Enzyme prints "Warning: using fallback BLAS replacements, performance may be degraded", followed by stack overflow error or endless loop.
@@ -51,7 +54,7 @@ Enzyme (array) is written to accept a vector input and return a matrix output to
 
 | FD sparse | FD Dense | ForwardDiff | ReverseDiff | Enzyme (array) | Enzyme (tuple) | Zygote | Hand optimized|
 |-----------|----------|-------------|-------------|----------------|----------------|--------|---------------|
- **1.00** | 1.83 | 32.72 | [^41] | 281.05 | 4.30 | 554767.55 | 2.50 |
+ **1.00** | 1.74 | 29.28 | [^41] | 255.63 | 4.22 | 504683.35 | 2.30 |
 
 
 It is worth nothing that both FD sparse and FD dense are faster than the hand optimized Jacobian.
