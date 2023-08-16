@@ -77,6 +77,44 @@ undef_array_declaration(func_array::Array{T,N}, input_variables::AbstractVector{
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
+
+function all_constants(func_array::AbstractArray{T}) where {T<:Node}
+    isconst = true
+    for func in func_array
+        if !is_constant(func)
+            isconst = false
+            break
+        end
+    end
+    return isconst
+end
+
+
+"""Should only be called if `all_constants(func_array) == true`. Unpredictable results otherwise."""
+function to_number(func_array::AbstractArray{T}) where {T<:Node}
+    #find type
+    arr_type = typeof(value(func_array[begin]))
+    for elt in func_array
+        arr_type = promote_type(arr_type, typeof(value(elt)))
+    end
+    tmp = similar(func_array, arr_type)
+    @. tmp = value(func_array)
+    return tmp
+end
+
+function to_number(func_array::SparseMatrixCSC{T}) where {T<:Node}
+    nz = nonzeros(func_array)
+    #find type
+    arr_type = typeof(value(func_array[begin]))
+    for elt in nz
+        arr_type = promote_type(arr_type, typeof(value(elt)))
+    end
+    tmp = similar(nz, arr_type)
+    @. tmp = value(nz)
+    return tmp
+end
+
+
 """
     make_Expr(
         func_array::AbstractArray{<:Node},
@@ -91,46 +129,54 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     zero_assignment_threshold = 0.05 * length(func_array)
     do_array_zero = count(is_zero, (func_array)) >= zero_assignment_threshold #choose whether to use result .= 0 or to assign each zero element individually.
 
-    if in_place
-        if init_with_zeros && do_array_zero
-            push!(body.args, :(result .= zero(eltype(input_variables))))
-        end
-    else
-        if do_array_zero
-            push!(body.args, zero_array_declaration(func_array, input_variables)) #zero array elements with zeros(....)
+    if all_constants(func_array)
+        if in_place
+            return :((result, input_variables) -> result .= $(to_number(func_array)))
         else
-            push!(body.args, undef_array_declaration(func_array, input_variables))
+            return :((input_variables) -> copy($(to_number(func_array))))
         end
-    end
-
-    node_to_index = IdDict{Node,Int64}()
-    for (i, node) in pairs(input_variables)
-        node_to_index[node] = i
-    end
-
-    for (i, node) in pairs(func_array)
-        if !is_zero(node) || (is_zero(node) && (init_with_zeros || !in_place) && !do_array_zero)
-            node_body, variable = function_body!(node, node_to_index, node_to_var)
-
-            for arg in node_body.args
-                push!(body.args, arg)
-            end
-            push!(body.args, :(result[$i] = $variable))
-        end
-    end
-
-    if !in_place
-        push!(body.args, return_expression(func_array))
-    end
-
-    if in_place
-        return :((result, input_variables) -> @inbounds begin
-            $body
-        end)
     else
-        return :((input_variables) -> @inbounds begin
-            $body
-        end)
+        if in_place
+            if init_with_zeros && do_array_zero
+                push!(body.args, :(result .= zero(eltype(input_variables))))
+            end
+        else
+            if do_array_zero
+                push!(body.args, zero_array_declaration(func_array, input_variables)) #zero array elements with zeros(....)
+            else
+                push!(body.args, undef_array_declaration(func_array, input_variables))
+            end
+        end
+
+        node_to_index = IdDict{Node,Int64}()
+        for (i, node) in pairs(input_variables)
+            node_to_index[node] = i
+        end
+
+        for (i, node) in pairs(func_array)
+            if !is_zero(node) || (is_zero(node) && (init_with_zeros || !in_place) && !do_array_zero)
+                node_body, variable = function_body!(node, node_to_index, node_to_var)
+
+                for arg in node_body.args
+                    push!(body.args, arg)
+                end
+                push!(body.args, :(result[$i] = $variable))
+            end
+        end
+
+        if !in_place
+            push!(body.args, return_expression(func_array))
+        end
+
+        if in_place
+            return :((result, input_variables) -> @inbounds begin
+                $body
+            end)
+        else
+            return :((input_variables) -> @inbounds begin
+                $body
+            end)
+        end
     end
 end
 export make_Expr
@@ -157,27 +203,36 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
     push!(body.args, :(vals = nonzeros(result)))
 
-    node_to_index = IdDict{Node,Int64}()
-    for (i, node) in pairs(input_variables)
-        node_to_index[node] = i
-    end
-
-    for j = 1:n
-        for i in nzrange(A, j)
-
-            row = rows[i]
-            node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
-            push!(node_body.args, :(vals[$i] = $variable))
-            push!(body.args, node_body)
+    if all_constants(A)
+        push!(body.args, :(vals .= $(to_number(A))))
+        if in_place
+            return :((result, input_variables) -> $body)
+        else
+            return :((input_variables) -> $body)
         end
-    end
-
-    push!(body.args, :(return result))
-
-    if in_place
-        return :((result, input_variables) -> $body)
     else
-        return :((input_variables) -> $body)
+        node_to_index = IdDict{Node,Int64}()
+        for (i, node) in pairs(input_variables)
+            node_to_index[node] = i
+        end
+
+        for j = 1:n
+            for i in nzrange(A, j)
+
+                row = rows[i]
+                node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
+                push!(node_body.args, :(vals[$i] = $variable))
+                push!(body.args, node_body)
+            end
+        end
+
+        push!(body.args, :(return result))
+
+        if in_place
+            return :((result, input_variables) -> $body)
+        else
+            return :((input_variables) -> $body)
+        end
     end
 end
 export make_Expr
@@ -247,3 +302,4 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
     @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
 end
 export make_function
+
