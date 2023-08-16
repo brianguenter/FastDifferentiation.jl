@@ -78,28 +78,6 @@ return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
 
-function all_constants(func_array::AbstractArray{T}) where {T<:Node}
-    isconst = true
-    num_zeros = 0
-
-    for func in func_array
-        if is_zero(func)
-            num_zeros += 1
-        end
-
-        if !is_constant(func)
-            isconst = false
-            break
-        end
-    end
-
-    if num_zeros / length(func_array) > 0.5
-        isconst = false
-    end
-    return isconst
-end
-
-
 """Should only be called if `all_constants(func_array) == true`. Unpredictable results otherwise."""
 function to_number(func_array::AbstractArray{T}) where {T<:Node}
     #find type
@@ -139,7 +117,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     zero_assignment_threshold = 0.05 * length(func_array)
     do_array_zero = count(is_zero, (func_array)) >= zero_assignment_threshold #choose whether to use result .= 0 or to assign each zero element individually.
 
-    if all_constants(func_array)
+    num_nonconst = count(!is_constant, func_array)
+
+    if frac_nonzero_constant(func_array) >= 0.5
         if in_place
             return :((result, input_variables) -> result .= $(to_number(func_array)))
         else
@@ -164,7 +144,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
 
         for (i, node) in pairs(func_array)
-            if !is_zero(node) || (is_zero(node) && (init_with_zeros || !in_place) && !do_array_zero)
+            if !is_zero(node)
                 node_body, variable = function_body!(node, node_to_index, node_to_var)
 
                 for arg in node_body.args
