@@ -80,11 +80,21 @@ return_expression(::Array) = :(return result)
 
 function all_constants(func_array::AbstractArray{T}) where {T<:Node}
     isconst = true
+    num_zeros = 0
+
     for func in func_array
+        if is_zero(func)
+            num_zeros += 1
+        end
+
         if !is_constant(func)
             isconst = false
             break
         end
+    end
+
+    if num_zeros / length(func_arary) > 0.5
+        isconst = false
     end
     return isconst
 end
