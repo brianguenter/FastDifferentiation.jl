@@ -213,7 +213,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
     push!(body.args, :(vals = nonzeros(result)))
 
-    if all_constants(A)
+    if all_constants(vals)
         push!(body.args, :(vals .= $(to_number(A))))
         if in_place
             return :((result, input_variables) -> $body)
