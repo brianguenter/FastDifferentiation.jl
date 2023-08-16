@@ -93,10 +93,13 @@ function all_constants(func_array::AbstractArray{T}) where {T<:Node}
         end
     end
 
-    if num_zeros / length(func_arary) > 0.5
+    if num_zeros / length(func_array) > 0.5
         isconst = false
     end
     return isconst
+
+    #TODO change this back
+    return false
 end
 
 
