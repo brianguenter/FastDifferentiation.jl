@@ -234,8 +234,12 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
                 row = rows[i]
                 node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
-                push!(node_body.args, :(vals[$i] = $variable))
-                push!(body.args, node_body)
+                for arg in node_body.args
+                    push!(body.args, arg)
+                end
+                push!(node_body.args,)
+
+                push!(body.args, :(vals[$i] = $variable))
             end
         end
 
