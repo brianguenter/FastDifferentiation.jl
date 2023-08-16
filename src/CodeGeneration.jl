@@ -221,6 +221,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
             return :((input_variables) -> $body)
         end
     else
+        println("here")
         node_to_index = IdDict{Node,Int64}()
         for (i, node) in pairs(input_variables)
             node_to_index[node] = i
