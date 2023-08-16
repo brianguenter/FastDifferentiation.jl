@@ -97,9 +97,6 @@ function all_constants(func_array::AbstractArray{T}) where {T<:Node}
         isconst = false
     end
     return isconst
-
-    #TODO change this back
-    return false
 end
 
 
