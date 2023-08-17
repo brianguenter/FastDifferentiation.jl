@@ -119,11 +119,16 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
 
     if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
+        elt_type = typeof(value(func_array[first]))
+        for elt in func_array
+            elt_type = promote_type(elt_type, typeof(elt))
+        end
+
         if num_zeros > 5 * num_const
             if in_place
-                push!(body.args, :(result .= zero(Node)))
+                push!(body.args, :(result .= zero(elt_type)))
             else
-                push!(body.args, :(result = zeros(Node, size(func_array))))
+                push!(body.args, :(result = zeros(elt_type, size(func_array))))
             end
 
             #testing
