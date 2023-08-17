@@ -119,7 +119,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
 
     if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
-        if num_zeros > 10 * num_const
+        if num_zeros > 5 * num_const
             if in_place
                 push!(body.args, :(result .= zero(Node)))
             else
