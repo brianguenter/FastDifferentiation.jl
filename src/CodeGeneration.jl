@@ -126,12 +126,19 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 push!(body.args, :(result = zeros(Node, size(func_array))))
             end
 
+            #testing
+            count = 0
+            #end testing
+
             #have mostly zeros but small number of constants so fill these in one by one
             for (i, node) in pairs(func_array) #know that all elements in func_array are constant but only need to set non-zero values
                 if is_constant(node) && !is_zero(node)
                     push!(body.args, :(result[$i] = $(value(node))))
+                    count += 1
                 end
             end
+
+            println("num lines = $count")
         else #use constant array
             if in_place
                 push!(body.args, :(result .= $(to_number(func_array))))
