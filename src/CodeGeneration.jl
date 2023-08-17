@@ -129,7 +129,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
             #have mostly zeros but small number of constants so fill these in one by one
             for (i, node) in pairs(func_array) #know that all elements in func_array are constant but only need to set non-zero values
                 if is_constant(node) && !is_zero(node)
-                    push!(body.args, :(result[i] = $(value(node))))
+                    push!(body.args, :(result[$i] = $(value(node))))
                 end
             end
         else #use constant array
