@@ -126,9 +126,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
         if num_zeros > 5 * num_const
             if in_place
-                push!(body.args, :(result .= zero(elt_type)))
+                push!(body.args, :(result .= zero($elt_type)))
             else
-                push!(body.args, :(result = zeros(elt_type, size(func_array))))
+                push!(body.args, :(result = zeros($elt_type, size(func_array))))
             end
 
             #testing
