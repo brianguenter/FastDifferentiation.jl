@@ -121,7 +121,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
         elt_type = typeof(value(func_array[begin]))
         for elt in func_array
-            elt_type = promote_type(elt_type, typeof(elt))
+            elt_type = promote_type(elt_type, typeof(value(elt)))
         end
 
         if num_zeros > 5 * num_const
