@@ -54,5 +54,22 @@ function write_dot end
 
 include("FDTests.jl")
 
+function test()
+    @variables x y
+    A = [x 0; 0 y]
+    mat = [10 10; 10 10]
+
+    # fn = make_function(A, [x, y], in_place=true, init_with_zeros=true)
+    # fn(mat, [1, 1])
+    # @assert isapprox(mat, [1 0; 0 1])
+    fn2 = make_function(A, [x, y], in_place=true, init_with_zeros=false)
+    println(fn2)
+    mat = [10 10; 10 10]
+    println(mat)
+    fn2(mat, [1, 1])
+    println(mat)
+    @assert isapprox(mat, [1 10; 10 1])
+end
+export test
 
 end # module

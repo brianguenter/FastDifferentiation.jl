@@ -114,25 +114,52 @@ end
 function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
-    zero_assignment_threshold = 0.05 * length(func_array)
-    do_array_zero = count(is_zero, (func_array)) >= zero_assignment_threshold #choose whether to use result .= 0 or to assign each zero element individually.
 
-    num_nonconst = count(!is_constant, func_array)
+    num_zeros = count(is_zero, (func_array))
+    num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
 
-    if frac_nonzero_constant(func_array) >= 0.5
-        if in_place
-            return :((result, input_variables) -> result .= $(to_number(func_array)))
-        else
-            return :((input_variables) -> copy($(to_number(func_array))))
-        end
-    else
-        if in_place
-            if init_with_zeros && do_array_zero
-                push!(body.args, :(result .= zero(eltype(input_variables))))
+    if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
+        if num_zeros > 10 * num_const
+            if in_place
+                push!(body.args, :(result .= zero(Node)))
+            else
+                push!(body.args, :(result = zeros(Node, size(func_array))))
             end
-        else
-            if do_array_zero
+
+            #have mostly zeros but small number of constants so fill these in one by one
+            for (i, node) in pairs(func_array) #know that all elements in func_array are constant but only need to set non-zero values
+                if is_constant(node) && !is_zero(node)
+                    push!(body.args, :(result[i] = $(value(node))))
+                end
+            end
+        else #use constant array
+            if in_place
+                push!(body.args, :(result .= $(to_number(func_array))))
+            else
+                push!(body.args, :(result = copy($(to_number(func_array)))))
+            end
+        end
+    else #not all constant values
+        zero_threshold = 0.5
+        const_threshold = 0.5
+
+        do_array_const = num_const > const_threshold * length(func_array)
+        do_array_zero = init_with_zeros && (!do_array_const && (num_zeros > zero_threshold * length(func_array))) #only zero array if not also using const array initialization
+
+        if in_place
+            if do_array_const #initialize array with array of constants
+                push!(body.args, :(result .= $(to_number(func_array))))
+            else
+                if do_array_zero #initialize array with zeros
+                    push!(body.args, :(result .= zero(eltype(input_variables))))
+                end
+            end
+        else #write declaration for array to hold result
+            if do_array_const #initialize array with array of constants
+                push!(body.args, :(result = copy($(to_number(func_array)))))
+            elseif do_array_zero #initialize array with zeros
                 push!(body.args, zero_array_declaration(func_array, input_variables)) #zero array elements with zeros(....)
+
             else
                 push!(body.args, undef_array_declaration(func_array, input_variables))
             end
@@ -144,7 +171,11 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
 
         for (i, node) in pairs(func_array)
-            if !is_zero(node)
+            #if already assigned const array then don't need to generate assignment statements for any constants
+            #if already assigned zero array then don't need to generate assignment statements for any zeros
+            #always generate statements for non-constant nodes
+            if !is_constant(node) || init_with_zeros && (!(do_array_const && is_constant(node)) || (!(do_array_zero && is_zero(node))))
+                println("node $node do_array_const $do_array_const init_with_zeros $init_with_zeros do_array_zero $do_array_zero")
                 node_body, variable = function_body!(node, node_to_index, node_to_var)
 
                 for arg in node_body.args
@@ -157,16 +188,16 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         if !in_place
             push!(body.args, return_expression(func_array))
         end
+    end
 
-        if in_place
-            return :((result, input_variables) -> @inbounds begin
-                $body
-            end)
-        else
-            return :((input_variables) -> @inbounds begin
-                $body
-            end)
-        end
+    if in_place
+        return :((result, input_variables) -> @inbounds begin
+            $body
+        end)
+    else
+        return :((input_variables) -> @inbounds begin
+            $body
+        end)
     end
 end
 export make_Expr
@@ -193,7 +224,8 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
     push!(body.args, :(vals = nonzeros(result)))
 
-    if all_constants(vals)
+    num_consts = count(x -> is_constant(x), vals)
+    if num_consts == nnz(A) #all elements are constant
         push!(body.args, :(vals .= $(to_number(A))))
         if in_place
             return :((result, input_variables) -> $body)
