@@ -131,19 +131,14 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 push!(body.args, :(result = zeros($elt_type, size(func_array))))
             end
 
-            #testing
-            linecount = 0
-            #end testing
 
             #have mostly zeros but small number of constants so fill these in one by one
             for (i, node) in pairs(func_array) #know that all elements in func_array are constant but only need to set non-zero values
                 if is_constant(node) && !is_zero(node)
                     push!(body.args, :(result[$i] = $(value(node))))
-                    linecount += 1
                 end
             end
 
-            println("num lines = $linecount")
         else #use constant array
             if in_place
                 push!(body.args, :(result .= $(to_number(func_array))))
@@ -187,7 +182,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
             #if already assigned zero array then don't need to generate assignment statements for any zeros
             #always generate statements for non-constant nodes
             if !is_constant(node) || init_with_zeros && (!(do_array_const && is_constant(node)) || (!(do_array_zero && is_zero(node))))
-                println("node $node do_array_const $do_array_const init_with_zeros $init_with_zeros do_array_zero $do_array_zero")
                 node_body, variable = function_body!(node, node_to_index, node_to_var)
 
                 for arg in node_body.args
@@ -245,7 +239,6 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
             return :((input_variables) -> $body)
         end
     else
-        println("here")
         node_to_index = IdDict{Node,Int64}()
         for (i, node) in pairs(input_variables)
             node_to_index[node] = i
@@ -253,8 +246,6 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
         for j = 1:n
             for i in nzrange(A, j)
-
-                row = rows[i]
                 node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
                 for arg in node_body.args
                     push!(body.args, arg)
