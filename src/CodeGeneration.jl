@@ -128,7 +128,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
             if in_place
                 push!(body.args, :(result .= zero($elt_type)))
             else
-                push!(body.args, :(result = zeros($elt_type, size(func_array))))
+                push!(body.args, zero_array_declaration(func_array, input_variables))
             end
 
 
@@ -190,10 +190,10 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 push!(body.args, :(result[$i] = $variable))
             end
         end
+    end
 
-        if !in_place
-            push!(body.args, return_expression(func_array))
-        end
+    if !in_place
+        push!(body.args, return_expression(func_array))
     end
 
     if in_place
