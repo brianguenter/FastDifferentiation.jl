@@ -21,9 +21,11 @@ function get_bitvector(numbits::T) where {T<:Integer}
 end
 
 
-"""WARNING not multithread safe
+"""
+    subset(a::BitVector, b::BitVector)
 
-returns true if a ⊆ b, false otherwise"""
+Returns true if a ⊆ b, false otherwise.
+WARNING not multithread safe."""
 function subset(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     temp = get_bitvector(length(a))
@@ -33,14 +35,21 @@ function subset(a::BitVector, b::BitVector)
 end
 
 
-"""returns the set that has all the elements of b removed from a. This allocates"""
+"""
+    set_diff(a::BitVector, b::BitVector)
+
+Returns the set that has all the elements of b removed from a.
+This allocates."""
 function set_diff(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     return @. !(a & b) & a
 end
 
 
-"""removes elements of b from a"""
+"""
+    set_diff!(a::BitVector, b::BitVector)
+
+Removes elements of b from a."""
 function set_diff!(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     @. a = !(a & b) & a
@@ -48,7 +57,10 @@ function set_diff!(a::BitVector, b::BitVector)
 end
 
 
-"""returns true if a ∩ b is not empty"""
+"""
+    overlap(a::BitVector, b::BitVector)
+
+Returns true if a ∩ b is not empty."""
 function overlap(a::BitVector, b::BitVector)
     @assert length(a) == length(b)
     temp = get_bitvector(length(a))

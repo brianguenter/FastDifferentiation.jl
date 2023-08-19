@@ -1,8 +1,0 @@
-need to add simplify_check_cache for derivative(*,arb number of args). Currently this does not check the cache for equivalent values. Nor do any of the * simplifications get applied.
-
-remove Logging from dependencies when done debugging
-
-add function derivative_columns which accepts multiple variable arguments and computes just the columns of the Jacobian corresponding to those variables.
-
-optimize set_diff to be non_allocating. Make it set_diff! and accept a BitArray arg.
-

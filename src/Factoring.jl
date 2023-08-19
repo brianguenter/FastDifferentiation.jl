@@ -37,17 +37,6 @@ function print_subgraph(io, a, rv_string, subgraph_type)
     print(io, ", $(a.subgraph) , $(times_used(a)))")
 end
 
-# function Base.show(io::IO, a::FactorableSubgraph{T,DominatorSubgraph}) where {T}
-#     root_string = [bvar == 0 ? "" : "r$i" for (i, bvar) in pairs(dom_mask(a))]
-#     print_subgraph(io, a, root_string, "D")
-
-# end
-
-# function Base.show(io::IO, a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T}
-#     var_string = [bvar == 0 ? "" : "v$i" for (i, bvar) in pairs(pdom_mask(a))]
-#     print_subgraph(io, a, var_string, "P")
-# end
-
 """Holds information for factorable subgraph that is both a dom and pdom."""
 
 
@@ -502,13 +491,11 @@ function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list = compute_factorable_subgraphs(a)
 
     while !isempty(subgraph_list)
-        # @info "Processed $count subgraphs out of $total"
+
         subgraph = pop!(subgraph_list)
 
         factor_subgraph!(subgraph)
-        #test
-        # Vis.draw_dot(graph(subgraph), start_nodes=[93], graph_label="factored subgraph $(vertices(subgraph))", value_labels=false)
-        #end test
+
     end
     return nothing #return nothing so people don't mistakenly think this is returning a copy of the original graph
 end
@@ -544,12 +531,12 @@ function evaluate_path(graph::DerivativeGraph, root_index::Integer, var_index::I
     if !is_tree(node_value) #root contains a variable or constant
         if is_variable(node_value)
             if variable(graph, var_index) == node_value
-                return 1.0 #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
+                return one(Node) #taking a derivative with respect to itself, which is 1. Need to figure out a better way to get the return number type right. This will always return Float64.
             else
-                return 0.0 #taking a derivative with respect to a different variable, which is 0.
+                return zero(Node) #taking a derivative with respect to a different variable, which is 0.
             end
         else
-            return 0.0 #root is a constant
+            return zero(Node) #root is a constant
         end
     else #root contains a graph which has been factored so that there should be a single linear path from each root to each variable with no branching
         return follow_path(graph, root_index, var_index)
@@ -559,32 +546,40 @@ end
 
 """Verifies that there is a single path from each root to each variable, if a path exists. This should be an invariant of the factored graph so it should always be true. But the algorithm is complex enough that it is easy to accidentally introduce errors when adding features. `verify_paths` has negligible runtime cost compared to factorization."""
 function _verify_paths(graph::DerivativeGraph, a::Int)
-    branches = child_edges(graph, a)
+    child_branches = child_edges(graph, a)
+    parent_branches = parent_edges(graph, a)
     valid_graph = true
 
-    if length(branches) > 1
-        for br1 in 1:length(branches)
-            for br2 in br1+1:length(branches)
-                roots_intersect = reachable_roots(branches[br1]) .& reachable_roots(branches[br2])
-                if !is_zero(roots_intersect) #if any shared roots then can't have any shared variables
-                    if any(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))
-                        valid_graph = false
-                        @info "More than one path to variable for node $a. Non-zero intersection of reachable variables: $(reachable_variables(branches[br1]) .& reachable_variables(branches[br2]))"
-                        #could break on first bad path but prefer to list all of them. Better for debugging.
-                    end
-                end
-            end
+    if length(parent_branches) > 1 #this simple test won't work if a branch is a child of another branch. Then could have 
+        roots_intersect = reduce(.&, reachable_roots.(parent_branches))
+        if !is_zero(roots_intersect)
+            valid_graph = false
         end
+    end
+    if length(child_branches) > 1
+        vars_intersect = reduce(.&, reachable_variables.(child_branches))
+        if !is_zero(vars_intersect)
+            valid_graph = false
+        end
+    end
 
+    if !valid_graph
+        # FastDifferentiation.FastDifferentiationVisualizationExt.draw_dot(graph)
+        @info "failure"
+        @info "roots_intersect $roots_intersect"
+        # return false
+    else
         for child in children(graph, a)
             valid_graph &= _verify_paths(graph, child)
         end
     end
+
     return valid_graph
 end
 
 """verifies that there is a single path from each root to each variable, if such a path exists."""
 function verify_paths(graph::DerivativeGraph)
+    return true #until can fix this so it both correctly verifies paths and does not take quadratic time.
     for root in roots(graph)
         if !_verify_paths(graph, postorder_number(graph, root))
             return false
@@ -593,240 +588,33 @@ function verify_paths(graph::DerivativeGraph)
     return true
 end
 
-"""Factors the graph then computes jacobian matrix. Destructive."""
-function _symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    indim = domain_dimension(graph)
-    outdim = codomain_dimension(graph)
 
-    result = Matrix{Node}(undef, outdim, indim)
-    factor!(graph)
+function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node} #not efficient, may revist parts of the jacobian many times.
+    nodes = IdDict{Node,Bool}()
 
-    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
-
-    for (i, var) in pairs(variable_ordering)
-        var_index = variable_node_to_index(graph, var)
-        for root_index in 1:codomain_dimension(graph)
-            result[root_index, i] = evaluate_path(graph, root_index, var_index)
-        end
-    end
-
-    return result
-end
-
-_symbolic_jacobian!(a::DerivativeGraph) = _symbolic_jacobian!(a, variables(a))
-
-function _symbolic_jacobian(a::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    tmp = DerivativeGraph(roots(a)) #rebuild derivative graph. This is probably less efficient than deepcopy but deepcopy(Node(x)) != Node(x) which can lead to all kinds of trouble.
-    return _symbolic_jacobian!(tmp, variable_ordering)
-end
-
-_symbolic_jacobian(a::DerivativeGraph) = _symbolic_jacobian(a, variables(a))
-
-symbolic_jacobian(terms::AbstractVector{T}, variable_ordering::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
-export symbolic_jacobian
-
-
-"""Computes sparse Jacobian matrix `J` using `SparseArray`. Each element `J[i,j]` is an expression graph which is the symbolic value of the Jacobian ∂fᵢ/∂vⱼ, where fᵢ is the ith output of the function represented by graph and vⱼ is the jth variable."""
-function _sparse_symbolic_jacobian!(graph::DerivativeGraph, variable_ordering::AbstractVector{T}) where {T<:Node}
-    row_indices = Int64[]
-    col_indices = Int64[]
-    values = Node[]
-    @assert length(variable_ordering) == domain_dimension(graph)
-
-    factor!(graph)
-
-    @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
-    #input is an array of Node's representing variables. Need a mapping from the variable index matching the Node to the index in variable_ordering
-    variable_index = map(x -> variable_postorder_to_index(graph, postorder_number(graph, x)), variable_ordering)
-    var_order_to_ = similar(variable_index)
-
-
-    for root in 1:codomain_dimension(graph)
-        for var in findall(reachable_variables(graph, root_index_to_postorder_number(graph, root)))
-            #TODO this does not use variable_ordering. Need to fix.
-            push!(row_indices, root)
-            push!(col_indices, variable_index[var])
-            push!(values, evaluate_path(graph, root, var))
-        end
-    end
-
-    return sparse(row_indices, col_indices, values, codomain_dimension(graph), domain_dimension(graph))
-end
-
-sparse_symbolic_jacobian(terms::AbstractVector{Node}, variable_ordering::AbstractVector{Node}) = _sparse_symbolic_jacobian(DerivativeGraph(terms), variable_ordering)
-export sparse_symbolic_jacobian
-
-"""Computes an `Expr` that can be compiled to compute the Jacobian at run time"""
-function jacobian_Expr!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
-    tmp = _symbolic_jacobian!(graph, variable_order)
-    node_to_var = Dict{Node,Union{Symbol,Real}}()
-    all_vars = variables(graph)
-
-    if variable_order === nothing
-        ordering = all_vars
-    else
-        ordering = Node.(variable_order)
-    end
-    @assert Set(all_vars) ⊆ Set(ordering) "Not every variable in the graph had a corresponding ordering variable."
-
-    body = Expr(:block)
-    if !in_place
-        push!(body.args, :(result = fill(0.0, $(size(tmp))))) #shouldn't need to fill with zero. All elements should be defined. Unless doing sparse Jacobian. 
-        #TODO: Unfortunately this fixes the type of the result to be Float64. Should write code so the type is picked up from the runtime arguments to the generated function. Add this feature later.
-    end
-
-    for (i, node) in pairs(tmp)
-        node_body, variable = function_body(node, node_to_var)
-        push!(node_body.args, :(result[$i] = $variable))
-        push!(body.args, node_body)
-    end
-
-    push!(body.args, :(return result))
-
-    if in_place
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)..., :result), body)
-    else
-        return Expr(:->, Expr(:tuple, map(x -> node_symbol(x), ordering)...), body)
-    end
-end
-
-"""Compiles a function which computes an m×n matrix containing the Jacobian of the ℝᵐ->ℝⁿ function defined by `graph`:
-
-        ∂f₁/∂v₁  ...  ∂f₁/∂vₙ 
-
-        ∂fₘ/∂v₁  ...  ∂fₘ/∂vₙ 
-
-Destroys `graph` in the process. Example returning a new matrix with every call to the generated Jacobian function:
-
-```
-julia> @variables x 
-
-julia> nx = Node(x);ny = Node(y);
-
-julia> gr = DerivativeGraph([nx^2*ny^2,nx^3*ny^3]);
-
-julia> func = jacobian_function!(gr, [nx,ny]);
-
-julia> func(2,3)
-2×2 Matrix{Float64}:
-  36.0   24.0
- 324.0  216.0
-```
-
-Example of in_place Jacobian generation:
-```
-julia> func_in_place = jacobian_function!(gr, [nx,ny],in_place=true)
-
-julia> a = Matrix{Float64}(undef,2,2);
-
-julia> func_in_place(2,3,a)
-2×2 Matrix{Float64}:
-  36.0   24.0
- 324.0  216.0
-
-julia> a
-2×2 Matrix{Float64}:
-  36.0   24.0
- 324.0  216.0
-
- ```
-
-"""
-_jacobian_function!(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node} = @RuntimeGeneratedFunction(jacobian_Expr!(graph, variable_order; in_place))
-
-_jacobian_function!(graph::DerivativeGraph; in_place::Bool=true) = _jacobian_function!(graph, variables(graph), in_place=in_place)
-
-
-function _jacobian_function(graph::DerivativeGraph, variable_order::AbstractVector{S}; in_place=false) where {S<:Node}
-    tmp = DerivativeGraph(roots(graph)) #need to recreate derivative graph with the same variables as were passed in the variable_order parameter.
-    return @RuntimeGeneratedFunction(jacobian_Expr!(tmp, variable_order; in_place))
-end
-
-jacobian_function(terms::AbstractVector{T}, variable_order::AbstractVector{S}; in_place::Bool=false) where {T<:Node,S<:Node} = _jacobian_function(DerivativeGraph(terms), variable_order; in_place=in_place)
-export jacobian_function
-
-
-"""Computes the full symbolic Hessian matrix"""
-function hessian(graph::DerivativeGraph, variable_order)
-    @assert codomain_dimension(graph) == 1
-    return hessian(roots(graph)[1], variable_order)
-end
-
-"""Computes the full symbolic Hessian matrix"""
-function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
-    tmp = DerivativeGraph(expression)
-    jac = _symbolic_jacobian!(tmp, variable_order)
-    tmp2 = DerivativeGraph(vec(jac))
-    return _symbolic_jacobian!(tmp2, variable_order)
-end
-export hessian
-
-function sparse_hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node}
-    gradient = sparse_symbolic_jacobian(DerivativeGraph(expression), variable_order)
-end
-
-function unique_nodes(jacobian::AbstractArray{T}) where {T<:Node}
-    nodes = Set{Node}()
     for index in eachindex(jacobian)
         oned = all_nodes(jacobian[index])
-        union!(nodes, oned)
+        for node in oned
+            nodes[node] = true
+        end
     end
-    return nodes
+    # nodes = Set{Node}()
+    # for index in eachindex(jacobian)
+    #     oned = all_nodes(jacobian[index])
+    #     union!(nodes, oned)
+    # end
+    # return nodes
+    return keys(nodes)
 end
 
 """Count of number of operations in graph."""
-number_of_operations(jacobian::AbstractArray{T}) where {T<:Node} = length(filter(x -> is_tree(x), unique_nodes(jacobian)))
-
-
-"""computes ∂A/∂variables[1],...,variables[n]. Repeated differentiation rather than computing different columns of the Jacobian. Example:
-
-```
-julia> A = [t t^2;3t^2 5]
-2×2 Matrix{Node}:
- t              (t ^ 2)
- (3 * (t ^ 2))  5
-
-julia> derivative(A,t)
-2×2 Matrix{Node}:
- 1.0      (2 * t)
- (6 * t)  0.0
-
- julia> derivative(A,t,t)
- 2×2 Matrix{Node{T, 0} where T}:
- 0.0  2
- 6    0.0
- ```
- """
-function derivative(A::Matrix{<:Node}, variables::T...) where {T<:Node}
-    var = variables[1]
-    mat = _derivative(A, var)
-    rest = variables[2:end]
-    if rest === ()
-        return mat
-    else
-        return derivative(mat, rest...)
+function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
+    count = 0
+    nodes = all_nodes(jacobian)
+    for node in nodes
+        if is_tree(node) && !is_negate(node) #don't count negate as an operation
+            count += 1
+        end
     end
+    return count
 end
-export derivative
-
-"""Computes the derivative of the function matrix `A` with respect to  `variable`."""
-function _derivative(A::Matrix{<:Node}, variable::T) where {T<:Node}
-    #convert A into vector then compute jacobian
-    vecA = vec(A)
-    graph = DerivativeGraph(vecA)
-
-    temp = _symbolic_jacobian!(graph)
-    #pick out the column of the Jacobian containing partials with respect to variable and pack them back into a matrix of the same shape as A. Later, if this becomes a bottleneck, modify symbolic_jacobian! to only compute the single column of derivatives.
-    column_index = variable_node_to_index(graph, variable)
-    if column_index === nothing
-        return Node.(zeros(size(A)))
-    else
-        column = temp[:, column_index] #these 3 lines allocate but this shouldn't be a significant source of inefficiency.
-        mat_column = reshape(column, size(A))
-        result = copy(mat_column)
-
-        return Node.(result)
-    end
-end
-
-

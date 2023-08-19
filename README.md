@@ -1,304 +1,134 @@
-# FastSymbolicDifferentiation
+# FastDifferentiation
 
-[![Build Status](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastSymbolicDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain)
-
-
-This is a package for computing symbolic derivatives quickly and for generating efficient executables to evaluate those derivatives. For expression graphs with many common subexpressions (where each node in the expression graph has more than one parent on average) **FSD** may compute symbolic derivatives much more quickly than conventional computer algebra systems such as Symbolics.jl or Mathematica. The generated executables may also be significantly faster. See the benchmarks, below, for examples.
-
-This is beta software being modified on a daily basis. Expect bugs nd frequent, possibly breaking changes, over the next month or so. 
-
-This functionality is coded and tested:
-* dense and sparse symbolic Jacobian, dense symbolic Hessian
-* compiled executable, in place and out of place, for dense Jacobian
-* higher order derivatives
-
-This is not yet coded:
-* sparse symbolic Hessian
-* compiled sparse Jacobian, sparse Hessian, dense Hessian
-
-# How it works
-The **FSD** symbolic differentiation algorithm is related to the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) algorithm but is asymptotically  faster. **FSD** transforms the input expression graph into a derivative graph and then factors this derivative graph to generate an efficient expression for the derivative. **FSD** is fundamentally different from forward and reverse automatic differentiation. See the paper if you want more details.
-
-If your function is small or tree like (where each node in the expression graph has one parent on average) then Symbolics.jl may outperform **FSD**. For more complex functions with many common subexpressions it is likely that **FSD** will outperform Symbolics.jl, perhaps substantially (see benchmarks, below).
-
-**FSD** can be used standalone if all you need is a derivative or in combination with Symbolics.jl if you need to do further analysis on the symbolic derivative. Converting between Symbolics.jl and **FSD** expression forms is straightforward. However, because of the tree based representation used by Symbolics.jl expression size can grow significantly when converting from **FSD** to Symbolics.jl forms.
+[![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain) [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/dev)
 
 
-Unlike forward and reverse automatic differentiation you don't have to choose which differentiation algorithm to use based on the graph structure. **FSD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. Its efficiency comes from analysis of the graph structure of the function rather than sophisticated algebraic simplification rules. By default **FSD** applies only these algebraic simplications[^1] to expressions:
-* x×0=>0
-* x×1=>x
-* x/1=>x
-* x+0=>x
-* c₁×c₂=>c₃ for c₁,c₂,c₃ constants
-* c₁+c₂=>c₃ for c₁,c₂,c₃ constants
-* c₁×(c₂×x) => (c₁×c₂)×x  for c₁,c₂ constants
 
+FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
 
-These rules are generally safe in the sense of obeying IEEE floating point arithmetic rules. However if the runtime value of x happens to be NaN or Inf the **FSD** expression x*0 will identically return 0, because it will have been rewritten to 0 by the simplification rules. The expected IEEE result is NaN.
+Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
 
-## Future work
-The **FSD** algorithm is fast enough to differentiate large expression graphs (>10⁵ operations) but compile time can be significant for larger graphs. For these very large graphs [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl) might be a better tradeoff between compile and execution time. I will be experimenting with this over the coming months. The function generation time should be acceptable and runtime performance should be good, if not as fast as fully compiled code.
+For f:ℝⁿ->ℝᵐ with n,m large FD may have better performance than conventional AD algorithms because the **FD** algorithm finds expressions shared between partials and computes them only once. In some cases **FD** derivatives can be as efficient as manually coded derivatives (see the Lagrangian dynamics example in the [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) paper or the Benchmarks section of the documentation for another example).
 
-The code currently uses BitVector for tracking reachability of function roots and variable nodes. This seemed like a good idea when I began and thought **FSD** would only be practical for modest size graphs (<10⁴ nodes). Unfortunately, for larger graphs the memory overhead of the BitVector representation becomes significant. It should be possible to automatically detect when it would make sense to switch from BitVector to Set. Then it will be possible to differentiate significantly larger graphs than is currently feasible.
+ **FD** may take much less time to compute symbolic derivatives than Symbolics.jl even in the ℝ¹->ℝ¹ case[^b]. The executables generated by **FD** may also be much faster (see the documentation for more details). 
 
-**FSD** can only differentiate symbolic expressions without branches. However, **FSD** is fast enough that it should be practical to use it in a tracing JIT compiler, applying **FSD** to the basic blocks detected and compiled by the JIT. These basic blocks do not have branches. Many programs could be differentiated competely automatically by this method. I'm not a compiler expert so it is unlikely I will do this by myself. But contact me if *you* are a compiler expert and want a cool project to work on.
+You should consider using FastDifferentiation when you need: 
+* a fast executable for evaluating the derivative of a function and the overhead of the preprocessing/compilation time is swamped by evaluation time.
+* to do additional symbolic processing on your derivative. **FD** can generate a true symbolic derivative to be processed further in Symbolics.jl or another computer algebra system.
 
-<details> 
- <summary> Examples and basic usage </summary>
- 
-There are several ways to use FastSymbolicDifferentiation. You can do all your symbolic work, except differentiation, in Symbolics and then convert to **FSD** graph form just to do the differentiation, then convert back to Symbolics form. Or you can do everything in **FSD**: create **FSD** variables, make an expression using those variables and then differentiate it. 
+This is the **FD** feature set:
 
-Because Symbolics uses a tree representation and FastSymbolicDifferentiation uses a graph representation it is possible that converting from FastSymbolicDifferentiation->Symbolic could result in an exponential increase in the size of the expression.
+<table>
+<tr>
+<td> <b></b>
+<td> <b>Dense Jacobian</b> <td>  <b>Sparse Jacobian</b> </td> 
+<td>  <b>Dense Hessian</b> </td><td>  <b> Sparse Hessian</b> </td> 
+<td>  <b>Higher order derivatives</b> </td> 
+<td>  <b>Jᵀv</b> </td> 
+<td>  <b>Jv</b> </td> 
+<td> <b> Hv </b> </td>
+</tr>
+<tr>
+<td> <b> Compiled function </b> </td> 
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅  </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+</tr>
+<tr>
+<td> <b> Symbolic expression </b> </td> 
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅  </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+<td> ✅ </td>
+</tr>
 
-If all you need is an executable derivative function then the fastest workflow will be to do everything in **FSD**. 
- 
-**FSD** uses a global cache for common subexpression elimination so **FSD** is not thread safe (yet). Under ordinary conditions you the memory used by the cache won't be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use all available memory. If this happens call the function `clear_cache` once you are done processing an expression.
+</table>
 
-Set up variables:
+Jᵀv and Jv compute the Jacobian transpose times a vector and the Jacobian times a vector, without explicitly forming the Jacobian matrix. For applications see this [paper](https://arxiv.org/abs/1812.01892). Hv computes the Hessian times a vector without explicitly forming the Hessian matrix.
+
+See the documentation for more information on the capabilities and limitations of **FD**.
+
+If you use FD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for others to determine if FD will help with their problem.
+
+This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
+
+## FAQ
+
+**Q**: Does **FD** support complex numbers?  
+**A**: Not currently.
+
+**Q**: You say **FD** computes efficient derivatives but the printed version of my symbolic derivatives is very long. How can that be efficient?  
+**A**: **FD** stores and evaluates the common subexpressions in your function just once. But, the print function recursively descends through all expressions in the directed acyclic graph representing your function, including nodes that have already been visited. The printout can be exponentially larger than the internal **FD** representation.
+
+**Q**: How about matrix and tensor expressions?  
+**A**: Evaluation of an **FD** expression returns a graph, not a number. If you multiply a matrix of **FD** variables times a vector of **FD** variables the matrix vector multiplication loop is effectively unrolled into scalar expressions. Matrix operations on large matrices will generate large executables and long preprocessing time. **FD** functions with up 10⁵ operations should still have reasonable preprocessing/compilation times (approximately 1 minute on a modern laptop) and good run time performance.
+
+**Q**: Does **FD** support conditionals?  
+**A**: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
+```julia
+@variables x y #create FD variables
+
+julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
+f (generic function with 2 methods)
+
+julia> f(0.0,x,y)
+cos(x)
+
+julia> f(1.0,x,y)
+sin(y)
 ```
-using FastSymbolicDifferentiation
-using Symbolics
+but you can't do this:
+```julia
+julia> f(a,b) = a < b ? cos(a) : sin(b)
+f (generic function with 2 methods)
 
-@variables x y z
-
-julia> nx,ny,nz = Node.((x,y,z)) #create FastSymbolicDifferentiation variables.
-(x, y, z)
+julia> f(x,y)
+ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
 ```
-Compute Hessian:
-```
-julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
-3×3 Matrix{Node}:
- 2    0.0  0.0
- 0.0  2    0.0
- 0.0  0.0  2
+This is actively being worked on. I hope to have experimental support for conditionals soon.
 
- julia> hessian(nx*ny*nz,[nx,ny,nz])
- 3×3 Matrix{Node}:
-  0.0  z    y
-  z    0.0  x
-  y    x    0.0
-```
-Compute Jacobian:
-```
-julia> nx, ny = Node.((x, y))
-(x, y)
-
-julia> f1 = cos(nx) * ny
-(cos(x) * y)
-
-julia> f2 = sin(ny) * nx
-(sin(y) * x)
-
-julia> symb = symbolic_jacobian([f1, f2], [nx, ny]) #non-destructive
-2×2 Matrix{Node}:
- (y * -(sin(x)))  cos(x)
- sin(y)           (x * cos(y))
-```
-Generate executable function that evaluates derivative function:
-```
-julia> func = jacobian_function([f1, f2], [nx, ny]);
-
-julia> func(1.0, 2.0)
-2×2 Matrix{Float64}:
- -1.68294    0.540302
-  0.909297  -0.416147
-```
-Convert between FastSymbolicDifferentiation and Symbolics representations:
-```
-julia> f = x^2+y^2 #Symbolics expression
-x^2 + y^2
-
-julia> Node(f) #convert to FastSymbolicDifferentiation form
-x^2 + y^2
-
-julia> typeof(ans)
-Node{SymbolicUtils.BasicSymbolic{Real}, 0}
-
-julia> node_exp = nx^3/ny^4 #FastSymbolicDifferentiation expression
-((x ^ 3) / (y ^ 4))
-
-julia> dag_to_Symbolics_expression(node_exp)
-(x^3) / (y^4)
-
-julia> typeof(ans)
-Symbolics.Num
-```
-</details>
-
+# Release Notes
 <details>
-    <summary> Benchmarks </summary>
- 
-## Benchmarks
+v0.3.1 - Code generation is smarter about initializing in place arrays with zeros. Previously it initialized all array elements even if most of them not identically zero and would be set to a properly defined value elsewhere in the code. This especially improves performance for functions where no or few elements are identically zero.
 
-The **FSDBenchmark** subdirectory has several benchmark functions you can use to compare the performance of [Symbolics.jl](https://symbolics.juliasymbolics.org/dev/) to FastSymbolicDifferentiation.jl on your computer. See the README.md file in this subdirectory for a brief overview of how to run the benchmarks yourself. See the source in `FSDBenchmarks.jl` for more details. Look for the function `benchmark_package`.
- 
-There are three types of benchmarks: **Symbolic**, **MakeFunction**, and **Exe**.
+v0.3.0 - BREAKING CHANGE. `make_function` called with `in_place` = true now returns an anonymous function which takes the in place result matrix as the first argument. Prior to this the result matrix was the second argument.
 
-* The **Symbolic** benchmark is the time required to compute just the symbolic form of the derivative. The Symbolic benchmark can be run with simplification turned on or off for Symbolics.jl. If simplification is on then computation time can be extremely long but the resulting expression might be simpler and faster to execute.
+```julia
+function main()
+     x = FD.make_variables(:x, 5)
+     y = FD.make_variables(:y, 5)
 
-* The **MakeFunction** benchmark is the time to generate a Julia Expr from an already computed symbolic derivative and to then compile it.
+     f! = FD.make_function([sum(x), sum(y)], x, y; in_place=true)
 
-* The **Exe** benchmark measures just the time required to execute the compiled function using an in-place matrix.
+     result = zeros(2)
+     x = rand(5)
+     y = rand(5)
 
-All benchmarks show the ratio of time taken by Symbolics.jl to FastSymbolicDifferentiation.jl. Numbers greater than 1 mean FastSymbolicDifferentiation is faster.
-
-All benchmarks were run on an AMD Ryzen 9 7950X 16-Core Processor with 32GB RAM running Windows 11 OS, Julia version 1.9.0.
-### Chebyshev polynomial
-The first example is a recursive function for 
-the Chebyshev polynomial of order n:
-
-```
-@memoize function Chebyshev(n, x)
-    if n == 0
-        return 1
-    elseif n == 1
-        return x
-    else
-        return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
-    end
+     f!(result, [x; y]) #in place matrix argument now comes first instead of second.
+     #f!([x;y], result) #this used to work but now will raise an exception 
+     # unless [x;y] and result are the same size in which case the answer will just be wrong.
+     return result, (sum(x), sum(y))
 end
 ```
-The function is memoized for efficiency. 
 
-The Chebyshev expression graph does not have many nodes even at the largest size tested (graph size increases linearly with Chebyshev order). For example, here is the graph of the 10th order expression: 
-<img src="Documentation/Paper/illustrations/chebyshev10.svg" alt="drawing" height="400">
-The complexity arises from the number of different paths from the root to the leaf of the graph.
+v0.2.9: Added `init_with_zeros` keyword argument to make_function. If this argument is false then the runtime generated function will not zero the in place array, otherwise it will. 
 
-The first set of three benchmarks show results with simplification turned off in Symbolics.jl, followed by a set of three with simplification turned on. Performance is somewhat better in the latter case but still slower than the FSD executable. Note that the y axis is logarithmic.
-
-#### Chebyshev benchmarks with simplification off
-<img src="FSDBenchmark\Data\figure_chebyshev_Symbolic_simplify_false.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_MakeFunction_simplify_false.svg" alt="drawing" width="50%"> 
-<img src="FSDBenchmark\Data\figure_chebyshev_Exe_simplify_false.svg" alt="drawing" width="50%">
-
-
-
-#### Chebyshev benchmarks with simplification on
-<img src="FSDBenchmark\Data\figure_chebyshev_Exe_simplify_true.svg" alt="drawing" width="50%">
-
-With simplification on performance of the executable derivative function for Symbolics.jl is slightly better than with simplification off. But simplification processing time is longer.
- 
-### Spherical Harmonics
-
-The second example is the spherical harmonics function. This is the expression graph for the spherical harmonic function of order 8:
-<img src="Documentation/Paper/illustrations/sphericalharmonics_8.svg" alt="drawing" width="100%">
-
-<details>
-    <summary> Source for spherical harmonics benchmark </summary>
-
-```
-@memoize function P(l, m, z)
-    if l == 0 && m == 0
-        return 1.0
-    elseif l == m
-        return (1 - 2m) * P(m - 1, m - 1, z)
-    elseif l == m + 1
-        return (2m + 1) * z * P(m, m, z)
-    else
-        return ((2l - 1) / (l - m) * z * P(l - 1, m, z) - (l + m - 1) / (l - m) * P(l - 2, m, z))
-    end
-end
-export P
-
-@memoize function S(m, x, y)
-    if m == 0
-        return 0
-    else
-        return x * C(m - 1, x, y) - y * S(m - 1, x, y)
-    end
-end
-export S
-
-@memoize function C(m, x, y)
-    if m == 0
-        return 1
-    else
-        return x * S(m - 1, x, y) + y * C(m - 1, x, y)
-    end
-end
-export C
-
-function factorial_approximation(x)
-    local n1 = x
-    sqrt(2 * π * n1) * (n1 / ℯ * sqrt(n1 * sinh(1 / n1) + 1 / (810 * n1^6)))^n1
-end
-export factorial_approximation
-
-function compare_factorial_approximation()
-    for n in 1:30
-        println("n $n relative error $((factorial(big(n))-factorial_approximation(n))/factorial(big(n)))")
-    end
-end
-export compare_factorial_approximation
-
-@memoize function N(l, m)
-    @assert m >= 0
-    if m == 0
-        return sqrt((2l + 1 / (4π)))
-    else
-        # return sqrt((2l+1)/2π * factorial(big(l-m))/factorial(big(l+m)))
-        #use factorial_approximation instead of factorial because the latter does not use Stirlings approximation for large n. Get error for n > 2 unless using BigInt but if use BigInt get lots of rational numbers in symbolic result.
-        return sqrt((2l + 1) / 2π * factorial_approximation(l - m) / factorial_approximation(l + m))
-    end
-end
-export N
-
-"""l is the order of the spherical harmonic. I think"""
-@memoize function Y(l, m, x, y, z)
-    @assert l >= 0
-    @assert abs(m) <= l
-    if m < 0
-        return N(l, abs(m)) * P(l, abs(m), z) * S(abs(m), x, y)
-    else
-        return N(l, m) * P(l, m, z) * C(m, x, y)
-    end
-end
-export Y
-
-SHFunctions(max_l, x::Node, y::Node, z::Node) = SHFunctions(Vector{Node}(undef, 0), max_l, x, y, z)
-SHFunctions(max_l, x::Symbolics.Num, y::Symbolics.Num, z::Symbolics.Num) = SHFunctions(Vector{Symbolics.Num}(undef, 0), max_l, x, y, z)
-
-function SHFunctions(shfunc, max_l, x, y, z)
-    for l in 0:max_l-1
-        for m in -l:l
-            push!(shfunc, Y(l, m, x, y, z))
-        end
-    end
-
-    return shfunc
-end
-export SHFunctions
-
-function spherical_harmonics(::JuliaSymbolics, model_size)
-    Symbolics.@variables x y z
-    return SHFunctions(model_size, x, y, z), [x, y, z]
-end
-
-function spherical_harmonics(::FastSymbolic, model_size, x, y, z)
-    nx = Node(x)
-    ny = Node(y)
-    nz = Node(z)
-
-    graph = DerivativeGraph(SHFunctions(model_size, nx, ny, nz))
-    return graph
-end
-
-function spherical_harmonics(package::FastSymbolic, model_size)
-    Symbolics.@variables x, y, z
-    return spherical_harmonics(package, model_size, x, y, z)
-end
-export spherical_harmonics
-```
+This can significantly improve performance for matrices that are somewhat sparse (say 3/4 of elements identically zero) but not sparse enough that a sparse matrix is efficient. In cases like this setting array elements to zero on every call to the runtime generated function can take more time than evaluating the non-zero array element expressions. 
+     
+This argument is only active if rhe `in_place` argument is true. 
 </details>
 
-As was the case for Chebyshev polynomials the number of paths from the roots to the variables is much greater than the number of nodes in the graph. Once again the y axis is logarithmic.
 
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Symbolic_simplify_false.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_MakeFunction_simplify_false.svg" alt="drawing" width="50%">
-<img src="FSDBenchmark\Data\figure_spherical_harmonics_Exe_simplify_false.svg" alt="drawing" width="50%">
- 
- The **Exe** benchmark took many hours to run and was stopped at model size 24 instead of 25 as for the **Symbolic** and **MakeFunction** benchmarks.
+[^b]: I am working with the SciML team to see if it is possible to integrate **FD** differentiation directly into Symbolics.jl.
 
-</details>
+[^a]: See the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) paper for an explanation of derivative graph factorization. 
 
-[^1]: More rules may be added in future versions of FSD to improve efficiency.

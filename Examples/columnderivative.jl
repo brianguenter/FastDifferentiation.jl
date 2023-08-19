@@ -1,19 +1,16 @@
-using FastSymbolicDifferentiation
-using Symbolics
+using FastDifferentiation
 
 @variables t
 
-nt = Node(t)
+A = [t t^2; 3t^2 5]
 
-A = [nt nt^2; 3nt^2 5]
+derivative(A, t)
 
-derivative(A, nt)
-
-derivative(A, nt, nt)
+derivative(A, t, t)
 
 
 """
-```
+```julia
 julia> A = [t t^2; 3t^2 5]
 2×2 Matrix{Node}:
  t              (t ^ 2)

@@ -1,28 +1,25 @@
-using FastSymbolicDifferentiation
-using Symbolics
+using FastDifferentiation
 
 @variables x y z
 
-nx, ny, nz = Node.((x, y, z))
+hessian(x^2 + y^2 + z^2, [x, y, z])
 
-hessian(nx^2 + ny^2 + nz^2, [nx, ny, nz])
-
-hessian(nx * ny * nz, [nx, ny, nz])
+hessian(x * y * z, [x, y, z])
 
 """
-```
-julia> nx,ny,nz = Node.((x,y,z))
+```julia
+julia> x,y,z = Node.((x,y,z))
 (x, y, z)
 
 julia> 
 
-julia> hessian(nx^2+ny^2+nz^2,[nx,ny,nz])
+julia> hessian(x^2+y^2+z^2,[x,y,z])
 3×3 Matrix{Node}:
  2    0.0  0.0
  0.0  2    0.0
  0.0  0.0  2
 
- julia> hessian(nx*ny*nz,[nx,ny,nz])
+ julia> hessian(x*y*z,[x,y,z])
  3×3 Matrix{Node}:
   0.0  z    y
   z    0.0  x
