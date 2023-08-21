@@ -54,19 +54,5 @@ function write_dot end
 
 include("FDTests.jl")
 
-function test()
-    @variables x y
-
-
-    cosx = Node(cos, x)
-    sinx = Node(sin, x)
-    partial_cosx = Node(-, sinx)
-    siny = Node(sin, y)
-    partial_siny = Node(cos, y)
-    ctimess = cosx * siny
-    partial_times = [siny, cosx]
-    cpluss = cosx + siny
-end
-export test
 
 end # module
