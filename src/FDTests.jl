@@ -1811,6 +1811,12 @@ end
     show(make_Expr(p, p, false, false))
 end
 
+@testitem "init with constants" begin
+    using Random
+    using SparseArrays
+    using StaticArrays
+    using FastDifferentiation
+    using FastDifferentiation: Node
 @testitem "test c1*a ± c2*a => (c1 ± c1)*a" begin
     import FastDifferentiation as FD
     @variables x
@@ -1826,6 +1832,30 @@ end
     f5 = 2x - -3x
     @test f5 === 5x
 
+@testitem "init with constants" begin
+    using Random
+    using SparseArrays
+    using StaticArrays
+    using FastDifferentiation
+    using FastDifferentiation: Node
+
+    #difficult to test that inline array return code is being generated without unparsing generated function. But can at least verify that all different constant types of function arrays, all zeros, all non-zero constants, mix of the two, are filled properly.
+    rng = Xoshiro(9398)
+    size = 5
+    for p in 0.0:0.1:1.0
+        mat = convert(Matrix, sprand(rng, size, size, p))
+        nmat2 = SMatrix{size,size,Node}(Node.(mat))
+        nmat = Node.(mat)
+
+        println(nmat2)
+        func1 = make_function(nmat, Node[])
+        func2 = make_function(nmat2, Node[])
+        println(func2)
+
+        @assert isapprox(func1(Float64[]), mat)
+        @assert isapprox(func2(Float64[]), mat)
+
+    end
 end
 
 
