@@ -98,17 +98,17 @@ This is actively being worked on. I hope to have experimental support for condit
 
 # Release Notes
 <details>
-v0.3.2 - `make_function` now generates functions that have much faster LLVM compile time for all constant input arguments. It now generates code to do this
-```julia
+v0.3.2 - make_function now generates functions that have much faster LLVM compile time for all constant input arguments. It now generates code to do this
+
 result = [c1,c2,....]
-```
+
 instead of assigning every element of the array in code:
-```julia
+
 #old way
 result[1] = c1
 result[2] = c2
 ...
-```
+
 This is especially useful for large constant Jacobians. LLVM code generation in the old method could take a very long time (many minutes for constant Jacobians with 100,000+ entries). LLVM code generation for constant Jacobians is now much faster, on the order of ten seconds for a 2000x2000 constant dense Jacobian.
 
 Better algebraic simplification of sums of products. Now this input expression `3x + 5x` will be simplified to `8x`. Before it was left as is.
