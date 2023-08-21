@@ -353,8 +353,6 @@ end
     a = x * y
     @test derivative(a, Val(1)) == y
     @test derivative(a, Val(2)) == x
-    @test derivative(x) == Node(1)
-    @test derivative(Node(1)) == Node(0)
 end
 
 @testitem "compute_factorable_subgraphs test order" begin

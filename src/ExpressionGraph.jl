@@ -41,10 +41,7 @@ macro variables(args...)
 end
 export @variables
 
-# #also add this inner constructor
-#
-#
-# #end of code block to add
+
 
 struct Node <: Number
     node_value
@@ -64,7 +61,14 @@ struct Node <: Number
     Node(a::S) where {S<:Symbol} = new(a, nothing)
 end
 
+struct Differential
+    variables_wrt::MVector{N,Node} where {N}
 
+    Differential(a::Node...) = MVector{length(a),Node}(a)
+    Differential(a::Differential, variable_wrt::Node) = Differential(MVector{num_derivatives(a) + 1,Node}(variable_wrt, a.variables_wrt...))
+end
+
+num_derivatives(a::Differential) = length(a.variables_wrt)
 
 #convenience function to extract the fields from Node object to check cache
 function check_cache(a::Node, cache)
@@ -75,6 +79,14 @@ function check_cache(a::Node, cache)
     end
 end
 
+function (q::Node)(t::Node...)
+    @assert is_variable(q) "The syntax q(t) can only be used if both q and t are variables. In this function call q is not a variable"
+    @assert all(is_variable.(t)) "The syntax q(t) can only be used if both q and t are variables. In this function call one or more of the terms in t is not a variable."
+    @assert q !== t "You attempted to create a variable of the form q(q). A variable cannot be a function of itself"
+    return Node(value(q), MVector{length(t),Node}(t))
+end
+
+is_variable_function(q::Node) = is_variable(q) && arity(q) > 0
 
 Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
@@ -93,8 +105,12 @@ is_leaf(a::Node) = arity(a) == 0
 is_tree(a::Node) = arity(a) >= 1
 
 
-is_variable(a::Node) = isa(value(a), Symbol)
+function is_variable(a::Node)
+    tmp = (value(a) isa Symbol)
+    tmp2 = (arity(a) == 0) || all(is_variable.(children(a))) #this allows q(t) types. Even allows q(q(t)) types. Now have to figure out what the derivative of this is.
 
+    return tmp && tmp2 #previously had this all in a single line statement but the compiler generated weird code
+end
 
 is_constant(a::Node) = !is_variable(a) && !is_tree(a)
 
@@ -319,14 +335,20 @@ function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
     if N == 2
         return I == 1 ? args[2] : args[1]
     else
-        return Node(*, deleteat!(collect(args), I)...) #TODO: simplify_check_cache will only be called for 2 arguments or less. Need to extedn to nary *, n> 2, if this is necessary.
+        return Node(*, deleteat!(collect(args), I)...) #TODO: simplify_check_cache will only be called for 2 arguments or less. Need to extend to nary *, n> 2, if this is necessary.
     end
 end
 
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
+function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]), EXPRESSION_CACHE)
+
 function derivative(a::Node, index::Val{1})
-    if arity(a) == 1
+    # if is_variable(a)
+    #     if arity(a) == 0
+    if is_variable_function(a)
+        return function_variable_derivative(a, index)
+    elseif arity(a) == 1
         return derivative(value(a), (children(a)[1],), index)
     elseif arity(a) == 2
         return derivative(value(a), (children(a)[1], children(a)[2]), index)
@@ -336,30 +358,22 @@ function derivative(a::Node, index::Val{1})
 end
 
 function derivative(a::Node, index::Val{2})
-    if arity(a) == 2
+    if is_variable_function(a)
+        return function_variable_derivative(a, index)
+    elseif arity(a) == 2
         return derivative(value(a), (children(a)[1], children(a)[2]), index)
     else
         throw(ErrorException("should never get here"))
     end
 end
 
-derivative(a::Node, index::Val{i}) where {i} = derivative(value(a), (children(a)...,), index)
-
-# Special cases for leaf nodes with no children.
-function derivative(a::Node)
-    if is_leaf(a)
-        if is_variable(a)
-            return one(Node)
-        else
-            return zero(Node)
-        end
+function derivative(a::Node, index::Val{i}) where {i}
+    if is_variable_function(a)
+        return function_variable_derivative(a, index)
     else
-        throw(ErrorException("should never reach this point in the code"))
+        return derivative(value(a), (children(a)...,), index)
     end
 end
-export derivative
-
-
 
 """
     variables(node::Node)
@@ -384,19 +398,22 @@ end
 
 function to_string(a::Node)
     function node_id(b::Node)
-        # return "Node:$(b.node_value) id:$(objectid(b))"
-        return "$(b.node_value)"
+        return "$(value(b))"
     end
 
     if arity(a) == 0
         return "$(node_id(a))"
     else
-        if arity(a) == 1
-            return "$(node_id(a))($(to_string(a.children[1])))"
+        if typeof(value(a)) === Differential
+            # return "D($)"
+        elseif is_variable(a)
+            return "$(node_id(a))($(join(to_string.(children(a)),",")))"
+        elseif arity(a) == 1
+            return "$(node_id(a))($(to_string(children(a)[1])))"
         elseif arity(a) == 2
-            return "($(to_string(a.children[1])) $(node_id(a)) $(to_string(a.children[2])))"
+            return "($(to_string(children(a)[1])) $(node_id(a)) $(to_string(children(a)[2])))"
         else #Symbolics has expressions like +,* that can have any number of arguments, which translates to any number of Node children.
-            return "($(a.node_value) $(foldl((x,y) -> x * " " * y,to_string.(a.children), init = "")))" #this is probably incredibly inefficient since it's O(n^2) in the length of the expression. Presumably there won't be many expresssions x+y+z+....., that are incredibly long. Best bet don't print out giant expressions.
+            return "($(value(a)) $(foldl((x,y) -> x * " " * y,to_string.(children(a)), init = "")))" #this is probably incredibly inefficient since it's O(n^2) in the length of the expression. Presumably there won't be many expresssions x+y+z+....., that are incredibly long. Best bet don't print out giant expressions.
         end
     end
 end
@@ -439,7 +456,7 @@ Returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] =
 function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {S<:Node}
     if get(visited, a, nothing) === nothing
         if arity(a) != 0
-            for child in a.children
+            for child in children(a)
                 _postorder_nodes!(child, nodes, variables, visited)
             end
         elseif is_variable(a)
@@ -467,7 +484,7 @@ function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
     if tmp === nothing
         visited[node] = 1
         if arity(node) != 0
-            all_nodes!.(node.children, Ref(visited))
+            all_nodes!.(children(node), Ref(visited))
         end
     else #already visited this node so don't have to recurse to children
         visited[node] += 1
