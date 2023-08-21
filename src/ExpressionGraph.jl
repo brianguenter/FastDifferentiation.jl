@@ -214,24 +214,77 @@ function simplify_check_cache(::typeof(*), na, nb, cache)
     end
 end
 
+function find_term(a::Node)
+    if typeof(value(a)) == typeof(-)
+        constant = -1
+        term = children(a)[1]
+    elseif typeof(value(a)) == typeof(*) && is_constant(children(a)[1])
+        constant = children(a)[1]
+        term = children(a)[2]
+    else
+        constant = nothing
+        term = nothing
+    end
+    return term, constant
+end
+
+function matching_terms(lchild, rchild)
+    if lchild === rchild
+        return (1, 1, lchild)
+    else
+        lterm, lconstant = find_term(lchild)
+        rterm, rconstant = find_term(rchild)
+        if lterm !== nothing && rterm !== nothing && lterm === rterm
+            return (lconstant, rconstant, lterm)
+        else
+            return nothing
+        end
+    end
+end
+
 function simplify_check_cache(::typeof(+), na, nb, cache)
     a = Node(na)
     b = Node(nb)
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
-    #TODO add another check that moves all contants to the left and then does constant propagation
-    #c1 + c2 = c3, (c1 + x)+(c2 + x) = c3+2*x
 
     if is_zero(a)
         return b
     elseif is_zero(b)
         return a
+    elseif a === -b || -a === b
+        return zero(Node)
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) + value(b))
     elseif is_constant(a) && typeof(+) == typeof(value(b)) && is_constant(children(b)[1]) #C1 + (C2 + x) => ((C1+C2)+x)
         return Node(value(a) + value(children(b)[1])) + children(b)[2]
+    elseif a === b
+        return 2 * a
+    elseif (tmp = matching_terms(a, b)) !== nothing
+        return (tmp[1] + tmp[2]) * tmp[3]
     else
         return check_cache((+, a, b), cache)
+    end
+end
+
+function simplify_check_cache(::typeof(-), na, nb, cache)
+    a = Node(na)
+    b = Node(nb)
+    if a === b
+        return zero(Node)
+    elseif is_zero(b)
+        return a
+    elseif is_zero(a)
+        return -b
+    elseif is_negate(b)
+        return a + children(b)[1]
+    elseif is_constant(a) && is_constant(b)
+        return Node(value(a) - value(b))
+
+    elseif (tmp = matching_terms(a, b)) !== nothing
+        return (tmp[1] - tmp[2]) * tmp[3]
+    else
+        return check_cache((-, a, b), cache)
     end
 end
 
@@ -248,19 +301,7 @@ function simplify_check_cache(::typeof(/), na, nb, cache)
     end
 end
 
-function simplify_check_cache(::typeof(-), na, nb, cache)
-    a = Node(na)
-    b = Node(nb)
-    if is_zero(b)
-        return a
-    elseif is_zero(a)
-        return -b
-    elseif is_constant(a) && is_constant(b)
-        return Node(value(a) - value(b))
-    else
-        return check_cache((-, a, b), cache)
-    end
-end
+
 
 simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
 
