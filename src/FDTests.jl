@@ -1811,12 +1811,7 @@ end
     show(make_Expr(p, p, false, false))
 end
 
-@testitem "init with constants" begin
-    using Random
-    using SparseArrays
-    using StaticArrays
-    using FastDifferentiation
-    using FastDifferentiation: Node
+
 @testitem "test c1*a ± c2*a => (c1 ± c1)*a" begin
     import FastDifferentiation as FD
     @variables x
@@ -1831,6 +1826,7 @@ end
     @test f4 === -x
     f5 = 2x - -3x
     @test f5 === 5x
+end
 
 @testitem "init with constants" begin
     using Random
