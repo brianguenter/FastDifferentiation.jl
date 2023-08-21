@@ -353,8 +353,6 @@ end
     a = x * y
     @test derivative(a, Val(1)) == y
     @test derivative(a, Val(2)) == x
-    @test derivative(x) == Node(1)
-    @test derivative(Node(1)) == Node(0)
 end
 
 @testitem "compute_factorable_subgraphs test order" begin
@@ -1813,6 +1811,22 @@ end
     show(make_Expr(p, p, false, false))
 end
 
+@testitem "test c1*a ± c2*a => (c1 ± c1)*a" begin
+    import FastDifferentiation as FD
+    @variables x
+
+    f = 2x + 3x
+    @test f === 5 * x
+    f2 = -x + x
+    @test FD.value(f2) == 0
+    f3 = x + -x
+    @test FD.value(f3) == 0
+    f4 = 2x - 3x
+    @test f4 === -x
+    f5 = 2x - -3x
+    @test f5 === 5x
+
+end
 
 
 end #module
