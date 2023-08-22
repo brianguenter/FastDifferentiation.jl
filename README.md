@@ -109,7 +109,7 @@ result[1] = c1
 result[2] = c2
 ...
 
-This is especially useful for large constant Jacobians. LLVM code generation in the old method could take a very long time (many minutes for constant Jacobians with 100,000+ entries). LLVM code generation for constant Jacobians is now much faster, on the order of ten seconds for a 2000x2000 constant dense Jacobian.
+This is especially useful for large constant Jacobians. LLVM code generation in the old method could take a very long time (many minutes for constant Jacobians with 100,000+ entries). make_function and LLVM code generation time for constant Jacobians is now much faster, on the order of 20 seconds for a 10000x10000 constant dense Jacobian.
 
 Better algebraic simplification of sums of products. Now this input expression `3x + 5x` will be simplified to `8x`. Before it was left as is.
 
