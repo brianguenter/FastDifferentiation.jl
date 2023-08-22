@@ -420,7 +420,17 @@ end
     variables(node::Node)
 
 Returns the leaf variables in a DAG. If a leaf is a Sym the assumption is that it is a variable. Leaves can also be numbers, which are not variables. Not certain how robust this is."""
-variables(node::Node) = filter((x) -> is_variable(x), graph_leaves(node))
+function variables(node::Node)
+    if arity(node) == 0
+        if is_variable(node)
+            return [node]
+        else
+            return Node[]
+        end
+    else
+        return filter((x) -> is_variable(x), graph_leaves(node))
+    end
+end
 
 function variables(a::AbstractArray{T}) where {T<:Node}
     visited = IdDict{Node,Int64}()
@@ -514,10 +524,14 @@ end
 
 Finds all the nodes in the graph and the number of times each node is visited in DFS."""
 function all_nodes(a::Node, index_type=DefaultNodeIndexType)
-    visited = IdDict{Node,index_type}()
+    if arity(a) == 0
+        return [a]
+    else
+        visited = IdDict{Node,index_type}()
 
-    all_nodes!(a, visited)
-    return collect(keys(visited))
+        all_nodes!(a, visited)
+        return collect(keys(visited))
+    end
 end
 
 function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
