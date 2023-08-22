@@ -434,10 +434,19 @@ end
 
 function variables(a::AbstractArray{T}) where {T<:Node}
     visited = IdDict{Node,Int64}()
+    result = Node[]
     for root in a
-        all_nodes!(root, visited)
+        if !is_constant(root)
+            all_nodes!(root, visited)
+        end
     end
-    return filter((x) -> is_variable(x), collect(keys(visited)))
+
+    for key in keys(visited)
+        if is_variable(key)
+            push!(result, key)
+        end
+    end
+    return result
 end
 
 children(a::Node) = a.children
@@ -539,10 +548,10 @@ function all_nodes!(node::N, visited::IdDict{Node,T}) where {T<:Integer,N<:Node}
     if tmp === nothing
         visited[node] = 1
         if arity(node) != 0
-            all_nodes!.(children(node), Ref(visited))
+            for child in children(node)
+                all_nodes!(child, visited)
+            end
         end
-    else #already visited this node so don't have to recurse to children
-        visited[node] += 1
     end
 
     return nothing
