@@ -87,7 +87,7 @@ julia> jacobian([x*y,y*x],[x])
  y
 ```
 """
-jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
+jacobian(terms::AbstractArray{T}, partial_variables::AbstractArray{S}) where {T<:Node,S<:Node} = reshape(_symbolic_jacobian(DerivativeGraph(vec(terms)), vec(partial_variables)), (size(terms)..., size(partial_variables)...))
 export jacobian
 
 
