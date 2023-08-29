@@ -15,6 +15,7 @@ using DataStructures
 using ..FastDifferentiation
 using ..FDInternals
 
+
 const FD = FastDifferentiation
 export FD
 
@@ -625,7 +626,7 @@ end
         @test edge_exists(graph, edge)
     end
 
-    @test !edge_exists(graph, PathEdge(1, 7, Node(0), 2, 2)) #this edge is not in the graph
+    @test !edge_exists(graph, PathEdge(1, 7, Node(1), 2, 2)) #this edge is not in the graph
 
 end
 
@@ -1313,21 +1314,21 @@ end
 @testitem "times_used PathEdge" begin
     using FastDifferentiation.FDInternals
 
-    e = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
+    e = PathEdge(1, 2, Node(1), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
     @test times_used(e) == 2
-    e = PathEdge(1, 2, Node(0), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
+    e = PathEdge(1, 2, Node(1), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
     @test times_used(e) == 1
-    e = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([1, 0, 1]))
+    e = PathEdge(1, 2, Node(1), BitVector([1, 0, 1]), BitVector([1, 0, 1]))
     @test times_used(e) == 4
 end
 
 @testitem "path_sort_order" begin
     using FastDifferentiation.FDInternals
-    e1 = PathEdge(1, 2, Node(0), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
-    e2 = PathEdge(3, 2, Node(0), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
+    e1 = PathEdge(1, 2, Node(1), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
+    e2 = PathEdge(3, 2, Node(1), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
     @test path_sort_order(e1, e2) == true
 
-    e3 = PathEdge(3, 2, Node(0), BitVector([1, 1, 0]), BitVector([0, 0, 1]))
+    e3 = PathEdge(3, 2, Node(1), BitVector([1, 1, 0]), BitVector([0, 0, 1]))
     @test path_sort_order(e1, e3) == false
 end
 

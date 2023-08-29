@@ -79,7 +79,10 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
         edge_label = ""
 
         if value_labels
-            edge_label *= "$(value(e)) "
+            srep = "$(value(e)) "
+            if length(srep) < 15
+                edge_label *= "$(value(e)) "
+            end
         end
         if reachability_labels
             edge_label *= "  r:[$roots]  v:[$variables]"
