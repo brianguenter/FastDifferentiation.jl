@@ -30,6 +30,7 @@ FastDifferentiationVisualizationExt = "ElectronDisplay"
 [compat]
 DataStructures = "0.18"
 DiffRules = "1"
+ElectronDisplay = "1"
 FiniteDifferences = "0.12"
 Memoize = "0.4"
 NaNMath = "1"
