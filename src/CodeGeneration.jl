@@ -80,13 +80,14 @@ return_expression(::Array) = :(return result)
 
 """Should only be called if `all_constants(func_array) == true`. Unpredictable results otherwise."""
 function to_number(func_array::AbstractArray{T}) where {T<:Node}
+    _value(a::Node) = is_constant(a) ? value(a) : NaN
     #find type
-    arr_type = typeof(value(func_array[begin]))
+    arr_type = typeof(_value(func_array[begin]))
     for elt in func_array
-        arr_type = promote_type(arr_type, typeof(value(elt)))
+        arr_type = promote_type(arr_type, typeof(_value(elt)))
     end
     tmp = similar(func_array, arr_type)
-    @. tmp = value(func_array)
+    @. tmp = _value(func_array)
     return tmp
 end
 
@@ -125,9 +126,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
 
         if num_zeros > 5 * num_const
-            if in_place
+            if in_place && init_with_zeros
                 push!(body.args, :(result .= zero($elt_type)))
-            else
+            elseif !in_place
                 push!(body.args, zero_array_declaration(func_array, input_variables))
             end
 
@@ -138,7 +139,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                     push!(body.args, :(result[$i] = $(value(node))))
                 end
             end
-
         else #use constant array
             if in_place
                 push!(body.args, :(result .= $(to_number(func_array))))
@@ -178,21 +178,24 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
 
         for (i, node) in pairs(func_array)
-            #if already assigned const array then don't need to generate assignment statements for any constants
-            #if already assigned zero array then don't need to generate assignment statements for any zeros
-            #always generate statements for non-constant nodes
-            if !is_constant(node) || init_with_zeros && (!(do_array_const && is_constant(node)) || (!(do_array_zero && is_zero(node))))
-                node_body, variable = function_body!(node, node_to_index, node_to_var)
-
-                for arg in node_body.args
-                    push!(body.args, arg)
-                end
-                push!(body.args, :(result[$i] = $variable))
+            # skip all terms that we have computed above during construction
+            if is_constant(node) && do_array_const || # already initialized as constant above
+               is_zero(node) && (do_array_zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
+                continue
             end
+
+            node_body, variable = function_body!(node, node_to_index, node_to_var)
+
+            for arg in node_body.args
+                push!(body.args, arg)
+            end
+            push!(body.args, :(result[$i] = $variable))
         end
     end
 
-    if !in_place
+    if in_place
+        push!(body.args, :(return nothing))
+    else
         push!(body.args, return_expression(func_array))
     end
 
