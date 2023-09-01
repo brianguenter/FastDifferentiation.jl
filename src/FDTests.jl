@@ -1851,7 +1851,73 @@ end
 
         @assert isapprox(func1(Float64[]), mat)
         @assert isapprox(func2(Float64[]), mat)
+    end
+end
 
+@testitem "more init with constant" begin
+    using Random
+    using FastDifferentiation
+    using FastDifferentiation: Node
+
+    function test_code_generation(f, x, input, correct_result)
+        # out of place
+        f_callable = make_function(f, x)
+        @test isapprox(f_callable(input), correct_result)
+
+        # in_place, init_with_zeros
+        f_callable_init! = make_function(f, x; in_place=true, init_with_zeros=true)
+        result = rand(length(correct_result))
+        f_callable_init!(result, input) == correct_result
+        @test isapprox(result, correct_result)
+
+        # in_place, !init_with_zeros
+        f_callable_no_init! = make_function(f, x; in_place=true, init_with_zeros=false)
+        result = rand(length(correct_result))
+        result_copy = copy(result)
+        f_callable_no_init!(result, input)
+        for i in eachindex(result)
+            if !iszero(correct_result[i])
+                @test isapprox(result[i], correct_result[i])
+            end
+        end
+    end
+
+    # systematically enumerate the four different branches of `make_Expr`:
+
+    # all constant, mostly zeros
+    let
+        correct_result = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+        x = make_variables(:x, 1)
+        f = Node.(correct_result)
+        test_code_generation(f, x, input, correct_result)
+    end
+
+    # all constant, some zeros
+    let
+        correct_result = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
+        input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+        x = make_variables(:x, 1)
+        f = Node.(correct_result)
+        test_code_generation(f, x, input, correct_result)
+    end
+
+    # mostly constants
+    let
+        correct_result = [1, 2, 9]
+        input = [3.0, 2.0, 1.0]
+        x = make_variables(:x, 1)
+        f = Node.([1, 2, x[1]^2])
+        test_code_generation(f, x, input, correct_result)
+    end
+
+    # mostly zeros
+    let
+        correct_result = [0, 0, 9]
+        input = [3.0, 2.0, 1.0]
+        x = make_variables(:x, 1)
+        f = Node.([0, 0, x[1]^2])
+        test_code_generation(f, x, input, correct_result)
     end
 end
 
