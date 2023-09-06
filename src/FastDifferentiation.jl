@@ -48,7 +48,6 @@ include("FactorableSubgraph.jl")
 include("Factoring.jl")
 include("Jacobian.jl")
 include("CodeGeneration.jl")
-include("NonUnique.jl")
 
 # FastDifferentiationVisualizationExt overloads them
 function make_dot_file end
