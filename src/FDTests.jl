@@ -1859,19 +1859,27 @@ end
     using FastDifferentiation
     using FastDifferentiation: Node
 
-    function test_code_generation(f, x, input, correct_result)
+    function test_code_generation(f, input)
+        correct_result = f(input)
+        x_node = make_variables(:x, length(input))
+        f_node = Node.(f(x_node))
+
         # out of place
-        f_callable = make_function(f, x)
-        @test isapprox(f_callable(input), correct_result)
+        f_callable = make_function(f_node, x_node)
+        @show f_callable
+        result = f_callable(input)
+        @test isapprox(result, correct_result)
 
         # in_place, init_with_zeros
-        f_callable_init! = make_function(f, x; in_place=true, init_with_zeros=true)
+        f_callable_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=true)
+        @show f_callable_init!
         result = rand(length(correct_result))
         f_callable_init!(result, input) == correct_result
         @test isapprox(result, correct_result)
 
         # in_place, !init_with_zeros
-        f_callable_no_init! = make_function(f, x; in_place=true, init_with_zeros=false)
+        f_callable_no_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=false)
+        @show f_callable_no_init!
         result = rand(length(correct_result))
         result_copy = copy(result)
         f_callable_no_init!(result, input)
@@ -1883,41 +1891,34 @@ end
     end
 
     # systematically enumerate the four different branches of `make_Expr`:
-
     # all constant, mostly zeros
-    let
-        correct_result = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
-        input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
-        x = make_variables(:x, 1)
-        f = Node.(correct_result)
-        test_code_generation(f, x, input, correct_result)
+    test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
     end
 
     # all constant, some zeros
-    let
-        correct_result = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
-        input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
-        x = make_variables(:x, 1)
-        f = Node.(correct_result)
-        test_code_generation(f, x, input, correct_result)
+    test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
+        [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
     end
 
     # mostly constants
-    let
-        correct_result = [1, 2, 9]
-        input = [3.0, 2.0, 1.0]
-        x = make_variables(:x, 1)
-        f = Node.([1, 2, x[1]^2])
-        test_code_generation(f, x, input, correct_result)
+    test_code_generation(3.0) do x
+        [2.1 * x[1], 1, 2]
+    end
+
+    # non-constant at non-first position
+    test_code_generation(3.0) do x
+        [1, 2.1 * x[1], 2]
     end
 
     # mostly zeros
-    let
-        correct_result = [0, 0, 9]
-        input = [3.0, 2.0, 1.0]
-        x = make_variables(:x, 1)
-        f = Node.([0, 0, x[1]^2])
-        test_code_generation(f, x, input, correct_result)
+    test_code_generation(3.0) do x
+        [x[1]^2, 0, 0]
+    end
+
+    # all non-constant
+    test_code_generation(3.0) do x
+        [2.1 * x[1], x[1]^2, sqrt(x[1])]
     end
 end
 
