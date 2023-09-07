@@ -127,85 +127,63 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     num_zeros = count(is_zero, (func_array))
     num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
 
-    if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
-        if num_zeros > 5 * num_const
-            if in_place && init_with_zeros
-                push!(body.args, :(result_element_type = eltype(result)))
-                push!(body.args, :(result .= zero(result_element_type)))
-            elseif !in_place
-                push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
-                push!(body.args, zero_array_declaration(func_array))
-            end
 
+    zero_threshold = 0.5
+    const_threshold = 0.5
 
-            #have mostly zeros but small number of constants so fill these in one by one
-            for (i, node) in pairs(func_array) #know that all elements in func_array are constant but only need to set non-zero values
-                if is_constant(node) && !is_zero(node)
-                    push!(body.args, :(result[$i] = $(value(node))))
-                end
-            end
-        else #use constant array
-            if in_place
-                push!(body.args, :(result .= $(to_number(func_array))))
-            else
-                push!(body.args, :(result = copy($(to_number(func_array)))))
-            end
-        end
-    else #not all constant values
-        zero_threshold = 0.5
-        const_threshold = 0.5
+    is_all_constant = num_const + num_zeros == length(func_array)
+    is_mostly_zero = num_zeros > 5 * num_const
 
-        do_array_const = num_const > const_threshold * length(func_array)
-        do_array_zero = init_with_zeros && (!do_array_const && (num_zeros > zero_threshold * length(func_array))) #only zero array if not also using const array initialization
-
-        if in_place
-            if do_array_const #initialize array with array of constants
-                push!(body.args, :(result .= $(to_number(func_array))))
-            else
-                if do_array_zero #initialize array with zeros
-                    push!(body.args, :(result .= zero(eltype(input_variables))))
-                end
-            end
-        else #write declaration for array to hold result
-            push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
-            if do_array_const #initialize array with array of constants
-                push!(body.args, undef_array_declaration(func_array))
-                push!(body.args, :(result .= $(to_number(func_array))))
-            elseif do_array_zero #initialize array with zeros
-                push!(body.args, zero_array_declaration(func_array)) #zero array elements with zeros(....)
-
-            else
-                push!(body.args, undef_array_declaration(func_array))
-            end
-        end
-
-        node_to_index = IdDict{Node,Int64}()
-        for (i, node) in pairs(input_variables)
-            node_to_index[node] = i
-        end
-
-        for (i, node) in pairs(func_array)
-            # skip all terms that we have computed above during construction
-            if is_constant(node) && do_array_const || # already initialized as constant above
-               is_zero(node) && (do_array_zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
-                continue
-            end
-
-            node_body, variable = function_body!(node, node_to_index, node_to_var)
-
-            for arg in node_body.args
-                push!(body.args, arg)
-            end
-            push!(body.args, :(result[$i] = $variable))
-        end
+    # figure out if we have clear majority of terms and select the initialization strategy accordingly
+    if (is_all_constant && is_mostly_zero) || (!is_all_constant && num_zeros > zero_threshold * length(func_array))
+        initialization_strategy = :zero
+    elseif (is_all_constant && !is_mostly_zero) || (!is_all_constant && num_const > const_threshold * length(func_array))
+        initialization_strategy = :const
+    else
+        initialization_strategy = :undef
     end
 
+    # declare result element type, and result variable if not provided by the user
+    if in_place
+        push!(body.args, :(result_element_type = eltype(input_variables)))
+    else
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
+        push!(body.args, undef_array_declaration(func_array))
+    end
+
+    # if there was a clear majority of terms, initialize those in one shot to reduce code size
+    if initialization_strategy === :zero && (init_with_zeros && in_place || !in_place)
+        push!(body.args, :(result .= zero(result_element_type)))
+    elseif initialization_strategy === :const
+        push!(body.args, :(result .= $(to_number(func_array))))
+    end
+
+    node_to_index = IdDict{Node,Int64}()
+    for (i, node) in pairs(input_variables)
+        node_to_index[node] = i
+    end
+
+    for (i, node) in pairs(func_array)
+        # skip all terms that we have computed above during construction
+        if is_constant(node) && initialization_strategy === :const || # already initialized as constant above
+           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
+            continue
+        end
+        node_body, variable = function_body!(node, node_to_index, node_to_var)
+        for arg in node_body.args
+            push!(body.args, arg)
+        end
+        push!(body.args, :(result[$i] = $variable))
+    end
+
+    # return result or nothing if in_place
     if in_place
         push!(body.args, :(return nothing))
     else
         push!(body.args, return_expression(func_array))
     end
 
+    # wrap in function body
     if in_place
         return :((result, input_variables) -> @inbounds begin
             $body
