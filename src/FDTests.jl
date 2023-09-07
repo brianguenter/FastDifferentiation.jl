@@ -1928,7 +1928,7 @@ end
     end
 
     @info "evaluate with exotic eltype"
-    test_code_generation((1.0)) do x
+    test_code_generation(Complex(1.0)) do x
         [1, 2.1 * x[1], 2]
     end
 end
