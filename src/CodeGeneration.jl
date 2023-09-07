@@ -64,41 +64,49 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
     return body, _dag_to_function(dag)
 end
 
-zero_array_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef); result .= 0) #need to initialize array to zero because this is no longer being done by simple assignment statements.
-undef_array_declaration(::StaticArray{S,T,N}, input_variables::AbstractVector{T2}) where {S,T,T2,N} = :(result = MArray{$(S),promote_type(Float64, eltype(input_variables)),$N}(undef)) #need to initialize array to zero because this is no longer being done by simple assignment statements.
+function zero_array_declaration(array::StaticArray{S,<:Any,N}) where {S,N}
+    #need to initialize array to zero because this is no longer being done by simple assignment statements.
+    :($(undef_array_declaration(array)); result .= 0)
+end
+
+function undef_array_declaration(::StaticArray{S,<:Any,N}) where {S,N}
+    #need to initialize array to zero because this is no longer being done by simple assignment statements.
+    :(result = MArray{$(S),promote_type(result_element_type, eltype(input_variables)),$N}(undef))
+end
 
 """
     return_declaration(func_array::Array, input_variables::AbstractVector)
 
-Fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code"""
-zero_array_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = zeros(promote_type(Float64, eltype(input_variables)), $(size(func_array))))
-undef_array_declaration(func_array::Array{T,N}, input_variables::AbstractVector{S}) where {S,T,N} = :(result = Array{promote_type(Float64, eltype(input_variables))}(undef, $(size(func_array))))
+Fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code
+"""
+zero_array_declaration(func_array::Array{T,N}) where {T,N} = :(result = zeros(result_element_type, $(size(func_array))))
+undef_array_declaration(func_array::Array{T,N}) where {T,N} = :(result = Array{result_element_type}(undef, $(size(func_array))))
 
 return_expression(::SArray) = :(return SArray(result))
 return_expression(::Array) = :(return result)
 
+_value(a::Node) = is_constant(a) ? value(a) : NaN
+function _infer_numeric_eltype(array::AbstractArray{<:Node})
+    eltype = Union{}
+    for elt in array
+        eltype = promote_type(eltype, typeof(_value(elt)))
+    end
+    eltype
+end
 
 """Should only be called if `all_constants(func_array) == true`. Unpredictable results otherwise."""
 function to_number(func_array::AbstractArray{T}) where {T<:Node}
-    _value(a::Node) = is_constant(a) ? value(a) : NaN
     #find type
-    arr_type = typeof(_value(func_array[begin]))
-    for elt in func_array
-        arr_type = promote_type(arr_type, typeof(_value(elt)))
-    end
-    tmp = similar(func_array, arr_type)
+    element_type = _infer_numeric_eltype(func_array)
+    tmp = similar(func_array, element_type)
     @. tmp = _value(func_array)
     return tmp
 end
 
 function to_number(func_array::SparseMatrixCSC{T}) where {T<:Node}
     nz = nonzeros(func_array)
-    #find type
-    arr_type = typeof(value(func_array[begin]))
-    for elt in nz
-        arr_type = promote_type(arr_type, typeof(value(elt)))
-    end
-    tmp = similar(nz, arr_type)
+    element_type = _infer_numeric_eltype(nz)
+    tmp = similar(nz, element_type)
     @. tmp = value(nz)
     return tmp
 end
@@ -120,16 +128,13 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
 
     if num_const + num_zeros == length(func_array) #every statement is a constant so can generate very short code body
-        elt_type = typeof(value(func_array[begin]))
-        for elt in func_array
-            elt_type = promote_type(elt_type, typeof(value(elt)))
-        end
-
         if num_zeros > 5 * num_const
             if in_place && init_with_zeros
-                push!(body.args, :(result .= zero($elt_type)))
+                push!(body.args, :(result_element_type = eltype(result)))
+                push!(body.args, :(result .= zero(result_element_type)))
             elseif !in_place
-                push!(body.args, zero_array_declaration(func_array, input_variables))
+                push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
+                push!(body.args, zero_array_declaration(func_array))
             end
 
 
@@ -162,13 +167,15 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 end
             end
         else #write declaration for array to hold result
+            push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
             if do_array_const #initialize array with array of constants
-                push!(body.args, :(result = copy($(to_number(func_array)))))
+                push!(body.args, undef_array_declaration(func_array))
+                push!(body.args, :(result .= $(to_number(func_array))))
             elseif do_array_zero #initialize array with zeros
-                push!(body.args, zero_array_declaration(func_array, input_variables)) #zero array elements with zeros(....)
+                push!(body.args, zero_array_declaration(func_array)) #zero array elements with zeros(....)
 
             else
-                push!(body.args, undef_array_declaration(func_array, input_variables))
+                push!(body.args, undef_array_declaration(func_array))
             end
         end
 

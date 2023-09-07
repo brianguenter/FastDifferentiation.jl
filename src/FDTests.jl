@@ -1855,7 +1855,6 @@ end
 end
 
 @testitem "more init with constant" begin
-    using Random
     using FastDifferentiation
     using FastDifferentiation: Node
 
@@ -1869,18 +1868,19 @@ end
         @show f_callable
         result = f_callable(input)
         @test isapprox(result, correct_result)
+        @test typeof(result) <: typeof(correct_result)
 
         # in_place, init_with_zeros
         f_callable_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=true)
         @show f_callable_init!
-        result = rand(length(correct_result))
+        result = similar(correct_result)
         f_callable_init!(result, input) == correct_result
         @test isapprox(result, correct_result)
 
         # in_place, !init_with_zeros
         f_callable_no_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=false)
         @show f_callable_no_init!
-        result = rand(length(correct_result))
+        result = similar(correct_result)
         result_copy = copy(result)
         f_callable_no_init!(result, input)
         for i in eachindex(result)
@@ -1892,33 +1892,44 @@ end
 
     # systematically enumerate the four different branches of `make_Expr`:
     # all constant, mostly zeros
+    @info "all constant, mostly zeros"
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
     end
 
     # all constant, some zeros
+    @info "all constant, some zeros"
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
     end
 
     # mostly constants
+    @info "mostly constants"
     test_code_generation(3.0) do x
         [2.1 * x[1], 1, 2]
     end
 
     # non-constant at non-first position
+    @info "non-constant at non-first position"
     test_code_generation(3.0) do x
         [1, 2.1 * x[1], 2]
     end
 
     # mostly zeros
+    @info "mostly zeros"
     test_code_generation(3.0) do x
         [x[1]^2, 0, 0]
     end
 
     # all non-constant
+    @info "all non-constant"
     test_code_generation(3.0) do x
         [2.1 * x[1], x[1]^2, sqrt(x[1])]
+    end
+
+    @info "evaluate with exotic eltype"
+    test_code_generation((1.0)) do x
+        [1, 2.1 * x[1], 2]
     end
 end
 
