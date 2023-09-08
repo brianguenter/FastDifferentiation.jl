@@ -412,20 +412,6 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
         end
 
         add_edge!(graph(subgraph), new_edge)
-
-        #test
-        gr = graph(subgraph)
-        for one_edge in unique_edges(gr)
-            low_index = bott_vertex(one_edge)
-            nd = node(gr, low_index)
-
-            if !is_variable(nd) && !is_constant(nd)
-                @assert any(reachable_variables(one_edge))
-
-            end
-        end
-        #end test
-
     end
 end
 
