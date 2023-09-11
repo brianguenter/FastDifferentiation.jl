@@ -9,15 +9,12 @@ DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
 NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
-TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [weakdeps]
@@ -41,7 +38,10 @@ TestItems = "0.1"
 julia = "1.8"
 
 [extras]
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
 
 [targets]
-test = ["Test"]
+test = ["Test","TestItemRunner","TestItems","Memoize"]
