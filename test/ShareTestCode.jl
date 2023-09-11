@@ -11,7 +11,7 @@ using FastDifferentiation
 const FD = FastDifferentiation
 export FD
 
-include("../TestPrograms/TestCode.jl")
+include("TestPrograms/TestCode.jl")
 
 """If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
 function compute_dominance_tables(graph::FD.DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
