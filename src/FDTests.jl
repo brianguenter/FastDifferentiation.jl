@@ -1851,7 +1851,85 @@ end
 
         @assert isapprox(func1(Float64[]), mat)
         @assert isapprox(func2(Float64[]), mat)
+    end
+end
 
+@testitem "more init with constant" begin
+    using FastDifferentiation
+    using FastDifferentiation: Node
+
+    function test_code_generation(f, input)
+        correct_result = f(input)
+        x_node = make_variables(:x, length(input))
+        f_node = Node.(f(x_node))
+
+        # out of place
+        f_callable = make_function(f_node, x_node)
+        @show f_callable
+        result = f_callable(input)
+        @test isapprox(result, correct_result)
+        @test typeof(result) <: typeof(correct_result)
+
+        # in_place, init_with_zeros
+        f_callable_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=true)
+        @show f_callable_init!
+        result = similar(correct_result)
+        f_callable_init!(result, input) == correct_result
+        @test isapprox(result, correct_result)
+
+        # in_place, !init_with_zeros
+        f_callable_no_init! = make_function(f_node, x_node; in_place=true, init_with_zeros=false)
+        @show f_callable_no_init!
+        result = similar(correct_result)
+        result_copy = copy(result)
+        f_callable_no_init!(result, input)
+        for i in eachindex(result)
+            if !iszero(correct_result[i])
+                @test isapprox(result[i], correct_result[i])
+            end
+        end
+    end
+
+    # systematically enumerate the four different branches of `make_Expr`:
+    # all constant, mostly zeros
+    @info "all constant, mostly zeros"
+    test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    end
+
+    # all constant, some zeros
+    @info "all constant, some zeros"
+    test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
+        [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
+    end
+
+    # mostly constants
+    @info "mostly constants"
+    test_code_generation(3.0) do x
+        [2.1 * x[1], 1, 2]
+    end
+
+    # non-constant at non-first position
+    @info "non-constant at non-first position"
+    test_code_generation(3.0) do x
+        [1, 2.1 * x[1], 2]
+    end
+
+    # mostly zeros
+    @info "mostly zeros"
+    test_code_generation(3.0) do x
+        [x[1]^2, 0, 0]
+    end
+
+    # all non-constant
+    @info "all non-constant"
+    test_code_generation(3.0) do x
+        [2.1 * x[1], x[1]^2, sqrt(x[1])]
+    end
+
+    @info "evaluate with exotic eltype"
+    test_code_generation(Complex(1.0)) do x
+        [1, 2.1 * x[1], 2]
     end
 end
 
