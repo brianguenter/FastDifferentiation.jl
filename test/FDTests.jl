@@ -1350,7 +1350,7 @@ end
     chebyshev_order = 20
     FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
     mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
-    FD_func(FD.variables...) = vec(mn_func(FD.variables...))
+    FD_func(variables...) = vec(mn_func(variables...))
 
     func_wrap(x) = FD_func(x)[1]
 
@@ -1365,7 +1365,7 @@ end
     end
 
     tmp = Matrix{Float64}(undef, 1, 1)
-    FD_graph = chebyshev(FastSymbolic(), chebyshev_order)
+    FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
     sym_func = FD.make_function(FD.jacobian(FD.roots(FD_graph), FD.variables(FD_graph)), FD.variables(FD_graph), in_place=false)
 
     #the in place form of jacobian function
@@ -1552,6 +1552,7 @@ end
 end
 
 @testitem "SArray return" begin
+    include("ShareTestCode.jl")
     using StaticArrays
     import FastDifferentiation as FD
 
@@ -1610,14 +1611,14 @@ end
 
     sph_func = FDTests.spherical_harmonics(7)
     sph_jac = jacobian(FD.roots(sph_func),FD.variables(sph_func))
-    mn_func1 = FD.make_function(sph_jac, FD.FD.variables(sph_func))
+    mn_func1 = FD.make_function(sph_jac, FD.variables(sph_func))
 
     rev_jac = similar(sph_jac)
     for (i, root) in pairs(FD.roots(sph_func))
-        rev_jac[i, :] .= FD.reverse_AD(root, FD.FD.variables(sph_func))
+        rev_jac[i, :] .= FD.reverse_AD(root, FD.variables(sph_func))
     end
 
-    mn_func2 = FD.make_function(rev_jac, FD.FD.variables(sph_func))
+    mn_func2 = FD.make_function(rev_jac, FD.variables(sph_func))
 
     test_vector = rand(3)
     @test isapprox(mn_func1(test_vector), mn_func2(test_vector), atol=1e-11)
