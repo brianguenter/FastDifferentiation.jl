@@ -1,146 +1,5 @@
-module FDTests
-using DiffRules
-using StaticArrays
-using Memoize
-using DataStructures
-
-using ..FastDifferentiation
-
-
-
-const FD = FastDifferentiation
-export FD
-
 using TestItems
 
-include("../TestPrograms/TestCode.jl")
-
-"""If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`"""
-function compute_dominance_tables(graph::FD.DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
-    if compute_dominators
-        start_vertices = FD.root_index_to_postorder_number(graph)
-    else
-        start_vertices = FD.variable_index_to_postorder_number(graph)
-    end
-
-    doms = Dict{T,T}[]   #create one idom table for each root
-
-    for (start_index, node_postorder_number) in pairs(start_vertices)
-        push!(doms, FastDifferentiation.compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
-    end
-    return doms
-end
-export compute_dominance_tables
-
-
-function simple_dag(cache::Union{IdDict,Nothing}=IdDict())
-    FD.@variables zz y
-    return expr_to_dag(zz^2 + y * (zz^2), cache), zz, y
-end
-export simple_dag
-
-function simple_numbered_dag()
-    FD.@variables zz
-    return expr_to_dag(zz * cos(zz^2))
-end
-export simple_numbered_dag
-
-function dominators_dag()
-    FD.@variables zz
-    return expr_to_dag(zz * (cos(zz) + sin(zz))), zz
-end
-export dominators_dag
-
-#Each line in the postorder listing has two spaces at the end which causes a line break. Don't delete the trailing spaces or the formatting will get messed up.
-"""
-Every line in this comment is terminated by 2 spaces to make markdown format properly.
-
-creates dag with this postorder:  
-1    x  
-2    cos (x)  
-3    sin (x)  
-4    k1 = (cos(x) * sin(x))  
-5    sin (k1)  
-6    k2 = exp(sin(x))  
-7    (k1 * k2)  
-8    (sin(k1) + (k1 * k2))  
-
-with this edge table:  
-nodenum  
-1    [(2, 1), (3, 1)]  
-2    [(2, 1), (4, 2)]  
-3    [(3, 1), (4, 3), (6, 3)]  
-4    [(4, 2), (4, 3), (5, 4), (7, 4)]  
-5    [(5, 4), (8, 5)]  
-6    [(6, 3), (7, 6)]  
-7    [(7, 4), (7, 6), (8, 7)]  
-8    [(8, 5), (8, 7)]  
-
-with this idoms/pidoms table:  
-nodenum   idoms    pidoms  
-1         8        1  
-2         4        1  
-3         8        1  
-4         8        1  
-5         8        4  
-6         7        3  
-7         8        1  
-8         8        1  
-
-with these factorable subgraphs  
-(8,4), (8,3), (8,1), (1,4), (1,7), (1,8)
-"""
-function complex_dominator_dag()
-    FD.@variables x
-
-    sinx = FD.Node(sin, MVector(x))
-    cosx = FD.Node(cos, MVector(x))
-    A = FD.Node(*, MVector(cosx, sinx))
-    sinA = FD.Node(sin, MVector(A))
-    expsin = FD.Node(*, MVector(A, FD.Node(exp, MVector(sinx))))
-    plus = FD.Node(+, MVector(sinA, expsin))
-    return plus
-end
-export complex_dominator_dag
-
-complex_dominator_graph() = FD.DerivativeGraph(complex_dominator_dag())
-export complex_dominator_graph
-
-function R2_R2_function()
-    FD.@variables x y
-
-    n2 = x * y
-    n4 = n2 * y
-    n5 = n2 * n4
-
-    return FD.DerivativeGraph([n5, n4])
-end
-export R2_R2_function
-
-function simple_dominator_graph()
-    FD.@variables x
-
-    ncos = FD.Node(cos, x)
-    nplus = FD.Node(+, ncos, x)
-    ntimes = FD.Node(*, ncos, nplus)
-    four_2_subgraph = FD.Node(+, nplus, ncos)
-    one_3_subgraph = FD.Node(+, FD.Node(*, FD.Node(-1), FD.Node(sin, x)), FD.Node(1))
-    return x, FD.DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
-end
-export simple_dominator_graph
-
-"""returns 4 factorable subgraphs in this order: (4,2),(1,3),(1,4),(4,1)"""
-function simple_factorable_subgraphs()
-    _, graph, _, _ = simple_dominator_graph()
-    temp = extract_all!(FD.compute_factorable_subgraphs(graph))
-    return graph, [
-        temp[findfirst(x -> FastDifferentiation.FD.vertices(x) == (4, 2), temp)],
-        temp[findfirst(x -> FastDifferentiation.FD.vertices(x) == (1, 3), temp)],
-        temp[findfirst(x -> FastDifferentiation.FD.vertices(x) == (1, 4), temp)],
-        temp[findfirst(x -> FastDifferentiation.FD.vertices(x) == (4, 1), temp)]
-    ]
-end
-export simple_factorable_subgraphs
 @testitem "FD.isa_connected_path 1" begin # case when path is one edge long
     using DataStructures
     import FastDifferentiation as FD
@@ -386,11 +245,11 @@ end
 end
 
 @testitem "FD.compute_factorable_subgraphs" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     using DataStructures
 
     import FastDifferentiation as FD
-    dgraph = FD.DerivativeGraph(complex_dominator_dag())
+    dgraph = FD.DerivativeGraph(FDTests.complex_dominator_dag())
 
     sub_heap = FD.compute_factorable_subgraphs(dgraph)
     subs = extract_all!(sub_heap)
@@ -742,8 +601,8 @@ end
 end
 
 @testitem "dominators FD.DerivativeGraph" begin
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
-    using FastDifferentiation.FDTests
 
 
 
@@ -754,9 +613,9 @@ end
     f1 = FD.Node(*, n5, xy) #postorder 5
     n3 = FD.Node(3) #postorder # 6
     f2 = FD.Node(*, xy, n3) #postorder # 7
-    FD.roots = [f1, f2]
-    graph = FD.DerivativeGraph(FD.roots)
-    idoms = compute_dominance_tables(graph, true)
+    rts = [f1, f2]
+    graph = FD.DerivativeGraph(rts)
+    idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 5, 4 => 5, 2 => 4, 3 => 4, 5 => 5),
@@ -777,9 +636,9 @@ end
     n7 = FD.Node(*, n5, n6) #7
     nexp = FD.Node(exp, n6) # 8
 
-    FD.roots = [n7, nexp]
-    graph = FD.DerivativeGraph(FD.roots)
-    idoms = compute_dominance_tables(graph, true)
+    rts = [n7, nexp]
+    graph = FD.DerivativeGraph(rts)
+    idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 2, 2 => 5, 3 => 7, 4 => 5, 5 => 7, 6 => 7, 7 => 7),
@@ -792,7 +651,7 @@ end
         end
     end
 
-    pidoms = compute_dominance_tables(graph, false)
+    pidoms = FDTests.compute_dominance_tables(graph, false)
 
     correct_post_dominators = [
         (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 8 => 6),
@@ -808,10 +667,10 @@ end
 
 
 @testitem "dom_subgraph && pdom_subgraph" begin
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
     using FastDifferentiation: dom_subgraph, pdom_subgraph
-    using FastDifferentiation.FDTests
 
 
     FD.@variables x y
@@ -819,10 +678,10 @@ end
     ncos = FD.Node(cos, x) #pos
     ntimes1 = FD.Node(*, ncos, x)
     ntimes2 = FD.Node(*, ncos, ntimes1)
-    FD.roots = [ntimes2, ntimes1]
-    graph = FD.DerivativeGraph(FD.roots)
-    idoms = compute_dominance_tables(graph, true)
-    pidoms = compute_dominance_tables(graph, false)
+    rts = [ntimes2, ntimes1]
+    graph = FD.DerivativeGraph(rts)
+    idoms = FDTests.compute_dominance_tables(graph, true)
+    pidoms = FDTests.compute_dominance_tables(graph, false)
 
     r1_doms = ((4, 1), (4, 2))
     v1_pdoms = ((1, 3), (1, 4))
@@ -885,11 +744,11 @@ end
 end
 
 @testitem "factor_order" begin
-    using FastDifferentiation.FDTests
+include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
-    _, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
+    _, graph, four_2_subgraph, one_3_subgraph = FDTests.simple_dominator_graph()
 
 
 
@@ -901,20 +760,20 @@ end
     four_2 = subgraphs[findfirst(x -> x.subgraph == (4, 2), subgraphs)]
     one_4 = subgraphs[findfirst(x -> x.subgraph == (1, 4), subgraphs)]
 
-    @test factor_order(one_3, four_one) == true
-    @test factor_order(four_2, four_one) == true
-    @test factor_order(one_3, four_2) == false
-    @test factor_order(four_2, one_3) == false
-    @test factor_order(four_one, one_3) == false
-    @test factor_order(four_one, four_2) == false
+    @test FD.factor_order(one_3, four_one) == true
+    @test FD.factor_order(four_2, four_one) == true
+    @test FD.factor_order(one_3, four_2) == false
+    @test FD.factor_order(four_2, one_3) == false
+    @test FD.factor_order(four_one, one_3) == false
+    @test FD.factor_order(four_one, four_2) == false
 
 
-    @test factor_order(one_3, one_4) == true
-    @test factor_order(four_2, one_4) == true
-    @test factor_order(one_3, four_2) == false
-    @test factor_order(four_2, one_3) == false
-    @test factor_order(one_4, one_3) == false
-    @test factor_order(one_4, four_2) == false #one_3 should be sorted before one_4
+    @test FD.factor_order(one_3, one_4) == true
+    @test FD.factor_order(four_2, one_4) == true
+    @test FD.factor_order(one_3, four_2) == false
+    @test FD.factor_order(four_2, one_3) == false
+    @test FD.factor_order(one_4, one_3) == false
+    @test FD.factor_order(one_4, four_2) == false #one_3 should be sorted before one_4
 
     equal_subgraphs(x, y) = FD.dominating_node(x) == FD.dominating_node(y) && FD.dominated_node(x) == FD.dominated_node(y) && FD.times_used(x) == FD.times_used(y) && FD.reachable_dominance(x) == FD.reachable_dominance(y)
 
@@ -936,11 +795,11 @@ end
 end
 
 @testitem "subgraph_edges" begin
-    using FastDifferentiation.FDTests
+   include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
-    dgraph = FD.DerivativeGraph([complex_dominator_dag()])
+    dgraph = FD.DerivativeGraph([FDTests.complex_dominator_dag()])
 
     _1_4_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
 
@@ -953,23 +812,23 @@ end
     _8_1_sub = subs[findfirst(x -> FD.vertices(x) == (8, 1), subs)]
     _1_8_sub = subs[findfirst(x -> FD.vertices(x) == (1, 8), subs)]
 
-    @test issetequal(_1_4_sub_ref, subgraph_edges(_1_4_sub))
+    @test issetequal(_1_4_sub_ref, FD.subgraph_edges(_1_4_sub))
     FD.factor_subgraph!(_1_4_sub)
     _1_7_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
 
 
-    @test issetequal(_1_7_sub_ref, subgraph_edges(_1_7_sub))
-    @test issetequal(_8_4_sub_ref, subgraph_edges(_8_4_sub))
+    @test issetequal(_1_7_sub_ref, FD.subgraph_edges(_1_7_sub))
+    @test issetequal(_8_4_sub_ref, FD.subgraph_edges(_8_4_sub))
     FD.factor_subgraph!(_8_4_sub)
     _8_1_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
-    @test issetequal(_8_1_sub_ref, subgraph_edges(_8_1_sub))
-    @test issetequal(_8_1_sub_ref, subgraph_edges(_1_8_sub))
+    @test issetequal(_8_1_sub_ref, FD.subgraph_edges(_8_1_sub))
+    @test issetequal(_8_1_sub_ref, FD.subgraph_edges(_1_8_sub))
 
 end
 
 @testitem "subgraph_edges with branching" begin
     import FastDifferentiation as FD
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
 
 
     FD.@variables x
@@ -978,12 +837,12 @@ end
     gr = FD.DerivativeGraph((cos(x) * cos(x)) + x)
     # Vis.draw_dot(gr)
     # Vis.draw_dot(gr)
-    sub = FactorableSubgraph{Int64,FD.DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
+    sub = FD.FactorableSubgraph{Int64,FD.DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
 
-    edges_4_1 = collect(subgraph_edges(sub))
+    edges_4_1 = collect(FD.subgraph_edges(sub))
 
-    sub = FactorableSubgraph{Int64,FD.PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
-    edges_1_4 = collect(subgraph_edges(sub))
+    sub = FD.FactorableSubgraph{Int64,FD.PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
+    edges_1_4 = collect(FD.subgraph_edges(sub))
 
     @test count(x -> FD.vertices(x) == (4, 3), edges_4_1) == 1
     @test count(x -> FD.vertices(x) == (4, 1), edges_4_1) == 1
@@ -997,10 +856,10 @@ end
 end
 
 @testitem "deconstruct_subgraph" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
-    graph, subs = simple_factorable_subgraphs()
+    graph, subs = FDTests.simple_factorable_subgraphs()
 
     all_edges = collect(FD.unique_edges(graph))
 
@@ -1010,11 +869,11 @@ end
     _2_1 = all_edges[findfirst(x -> FD.vertices(x) == (2, 1), all_edges)]
     _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
 
-    ed, nod = deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
+    ed, nod = FD.deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
     @test issetequal([4, 2, 3], nod)
     @test issetequal((_4_2, _4_3, _3_2), ed)
 
-    ed, nod = deconstruct_subgraph(subs[2])
+    ed, nod = FD.deconstruct_subgraph(subs[2])
     @test issetequal((_3_2, _3_1, _2_1), ed)
     @test issetequal([1, 2, 3], nod)
 
@@ -1028,12 +887,12 @@ end
     _2_1 = all_edges[findfirst(x -> FD.vertices(x) == (2, 1), all_edges)]
     _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
 
-    ed, nod = deconstruct_subgraph(subs[3])
+    ed, nod = FD.deconstruct_subgraph(subs[3])
     println(ed)
     sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
     @test issetequal(sub_4_1, ed)
     @test issetequal([1, 2, 3, 4], nod)
-    ed, nod = deconstruct_subgraph(subs[4])
+    ed, nod = FD.deconstruct_subgraph(subs[4])
     @test issetequal(sub_4_1, ed)
     @test issetequal([1, 2, 3, 4], nod)
 end
@@ -1243,11 +1102,11 @@ end
 
 
 @testitem "evaluate_subgraph" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
 
-    _, graph, _, _ = simple_dominator_graph()
+    _, graph, _, _ = FDTests.simple_dominator_graph()
 
     sub = FD.postdominator_subgraph(graph, 1, 3, BitVector([1]), BitVector([1]), BitVector([1]))
 end
@@ -1349,30 +1208,30 @@ end
 
 
 @testitem "factor ℝ¹->ℝ¹ " begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FiniteDifferences
     import FastDifferentiation as FD
 
-    x, graph, _, _ = simple_dominator_graph()
+    x, graph, _, _ = FDTests.simple_dominator_graph()
 
-    factor!(graph)
+    FD.factor!(graph)
     fedge = FD.edges(graph, 1, 4)[1]
     tmp0 = FD.make_function([FD.value(fedge)], [x])
     dfsimp(x) = tmp0([x])[1]
-    x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new FD.Node(x)
+    x, graph, _, _ = FDTests.simple_dominator_graph() #x is a new variable so have to make a new FD.Node(x)
 
-    tmp00 = FD.make_function([root(graph, 1)], [x])
+    tmp00 = FD.make_function([FD.root(graph, 1)], [x])
     origfsimp(x) = tmp00([x])[1]
     @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
-    graph = complex_dominator_graph()
-    factor!(graph)
+    graph = FDTests.complex_dominator_graph()
+    FD.factor!(graph)
     fedge = FD.edges(graph, 1, 8)[1]
     tmp1 = FD.make_function([FD.value(fedge)], FD.variables(graph))
     df(x) = tmp1(x)[1]
 
-    graph = complex_dominator_graph()
-    tmp2 = FD.make_function([root(graph, 1)], FD.variables(graph))
+    graph = FDTests.complex_dominator_graph()
+    tmp2 = FD.make_function([FD.root(graph, 1)], FD.variables(graph))
     origf(x) = tmp2(x)[1]
 
     for test_val in -3.0:0.013:3.0
@@ -1417,15 +1276,15 @@ end
 end
 
 @testitem "sparse_jacobian" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
     FD.@variables x y z
 
     sph_order = 10
-    FD_graph = spherical_harmonics(sph_order, x, y, z)
-    sprse = sparse_jacobian(FD.FD.roots(FD_graph), [x, y, z])
-    dense = jacobian(FD.FD.roots(FD_graph), [x, y, z])
+    FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
+    sprse = sparse_jacobian(FD.roots(FD_graph), [x, y, z])
+    dense = jacobian(FD.roots(FD_graph), [x, y, z])
 
     for index in CartesianIndices(dense)
         @test !xor(FD.is_zero(sprse[index]), FD.is_zero(dense[index])) #See https://vscode.dev/github/brianguenter/FastDifferentiation.jl/blob/main/src/ExpressionGraph.jl#L271. sprse zero elements
@@ -1437,14 +1296,14 @@ end
 end
 
 @testitem "sparse jacobian exe" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
 
     FD.@variables x y z
     input_vars = [x, y, z]
     sph_order = 10
-    FD_graph = spherical_harmonics(sph_order, x, y, z)
+    FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
     sprse = sparse_jacobian(FD.roots(FD_graph), input_vars)
     dense = jacobian(FD.roots(FD_graph), input_vars)
     sprse_exe = FD.make_function(sprse, input_vars)
@@ -1459,11 +1318,11 @@ end
 end
 
 @testitem "spherical harmonics jacobian evaluation test" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FiniteDifferences
     import FastDifferentiation as FD
 
-    FD_graph = spherical_harmonics(10)
+    FD_graph = FDTests.spherical_harmonics(10)
     mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
     FD_func(vars...) = vec(mn_func(vars))
 
@@ -1485,11 +1344,11 @@ end
 
 @testitem "Chebyshev jacobian evaluation test" begin
     import FiniteDifferences
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
     chebyshev_order = 20
-    FD_graph = chebyshev(FastSymbolic(), chebyshev_order)
+    FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
     mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
     FD_func(FD.variables...) = vec(mn_func(FD.variables...))
 
@@ -1542,11 +1401,11 @@ end
 
 @testitem "FD.jacobian_times_v" begin
     import FastDifferentiation as FD
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
 
     order = 10
 
-    FD_graph = spherical_harmonics(order)
+    FD_graph = FDTests.spherical_harmonics(order)
     FD_func = FD.roots(FD_graph)
     func_vars = FD.variables(FD_graph)
 
@@ -1572,11 +1431,11 @@ end
 
 @testitem "jacobian_transpose_v" begin
     import FastDifferentiation as FD
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
 
     order = 10
 
-    FD_graph = spherical_harmonics(order)
+    FD_graph = FDTests.spherical_harmonics(order)
     FD_func = FD.roots(FD_graph)
     func_vars = FD.variables(FD_graph)
 
@@ -1695,7 +1554,6 @@ end
 @testitem "SArray return" begin
     using StaticArrays
     import FastDifferentiation as FD
-    using FastDifferentiation.FDTests
 
     FD.@variables x y
     j = jacobian([x^2 * y^2, cos(x + y), log(x / y)], [x, y])
@@ -1705,7 +1563,7 @@ end
     @test typeof(j_exe2([1.0, 2.0])) <: StaticArray
 
     test_vec = [1.1, 2.3, 3.1]
-    sph_func = spherical_harmonics(4)
+    sph_func = FDTests.spherical_harmonics(4)
     sph_jac = jacobian(FD.roots(sph_func), FD.variables(sph_func))
     mn_func1 = FD.make_function(sph_jac, FD.variables(sph_func)) #return type of executable should be Array
     m, n = size(sph_jac)
@@ -1747,15 +1605,15 @@ end
 end
 
 @testitem "reverse_AD" begin
-    using FastDifferentiation.FDTests
+    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
-    sph_func = spherical_harmonics(7)
-    sph_jac = jacobian(FD.FD.roots(sph_func), FD.FD.variables(sph_func))
+    sph_func = FDTests.spherical_harmonics(7)
+    sph_jac = jacobian(FD.roots(sph_func),FD.variables(sph_func))
     mn_func1 = FD.make_function(sph_jac, FD.FD.variables(sph_func))
 
     rev_jac = similar(sph_jac)
-    for (i, root) in pairs(FD.FD.roots(sph_func))
+    for (i, root) in pairs(FD.roots(sph_func))
         rev_jac[i, :] .= FD.reverse_AD(root, FD.FD.variables(sph_func))
     end
 
