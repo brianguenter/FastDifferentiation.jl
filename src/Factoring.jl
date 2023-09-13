@@ -395,6 +395,13 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T}) where {T}
             new_edge = make_factored_edge(subgraph, sum)
         else
             sum = evaluate_subgraph(subgraph)
+            # if value(sum) == 0
+            #     display(subgraph)
+            #     write_dot("sph.svg", graph(subgraph), value_labels=true, reachability_labels=false, start_nodes=[24])
+            # end
+
+            # # @assert value(sum) != 0
+
             new_edge = make_factored_edge(subgraph, sum)
         end
         add_non_dom_edges!(subgraph)

@@ -66,7 +66,7 @@ export N
 end
 export Y
 
-SHFunctions(max_l, x::Node, y::Node, z::Node) = SHFunctions(Vector{Node}(undef, 0), max_l, x, y, z)
+SHFunctions(max_l, x::FD.Node, y::FD.Node, z::FD.Node) = SHFunctions(Vector{FD.Node}(undef, 0), max_l, x, y, z)
 
 function SHFunctions(shfunc, max_l, x, y, z)
     for l in 0:max_l-1
@@ -80,7 +80,7 @@ end
 export SHFunctions
 
 function spherical_harmonics(::FastSymbolic, model_size::Integer, x, y, z)
-    graph = DerivativeGraph(SHFunctions(model_size, x, y, z))
+    graph = FD.DerivativeGraph(SHFunctions(model_size, x, y, z))
     return graph
 end
 

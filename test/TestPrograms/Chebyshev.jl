@@ -9,8 +9,8 @@
 end
 export Chebyshev
 
-@memoize function Chebyshev(n, x::Node)
-    @assert is_variable(x)
+@memoize function Chebyshev(n, x::FD.Node)
+    @assert FD.is_variable(x)
 
     if n == 0
         return 1
@@ -22,14 +22,14 @@ export Chebyshev
 end
 export Chebyshev
 
-Chebyshev_exe(n, x::Node) = make_function(DerivativeGraph([Chebyshev(n, x)]))
+Chebyshev_exe(n, x::FD.Node) = make_function(FD.DerivativeGraph([Chebyshev(n, x)]))
 
 
 function chebyshev(::FastSymbolic, model_size)
     @variables x
 
     # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
-    return DerivativeGraph([Chebyshev(model_size, x)])
+    return FD.DerivativeGraph([Chebyshev(model_size, x)])
 end
 export chebyshev
 

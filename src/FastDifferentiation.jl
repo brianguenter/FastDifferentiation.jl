@@ -10,6 +10,8 @@ import Base: iterate
 using UUIDs
 using SparseArrays
 using DataStructures
+
+
 module AutomaticDifferentiation
 struct NoDeriv
 end
@@ -51,9 +53,5 @@ include("CodeGeneration.jl")
 function make_dot_file end
 function draw_dot end
 function write_dot end
-
-include("FDTests.jl")
-
-
 
 end # module
