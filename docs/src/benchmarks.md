@@ -39,10 +39,9 @@ Environment:
 | Rosenbrock gradient | [^1] | 1.13 | 629.23 | 281.72 | **1.00** | 3967.02 |
 | Simple matrix Jacobian | [^1] | **1.00** | 41.16 | 52.39 | [^50] | 123.91 |
 | Spherical harmonics Jacobian | [^1] | **1.00** | 29.00 | [^40] | [^51] | [^6] |
-[^1]: **FD** sparse was slower than **FD** dense so results are only shown for dense.
+
 [^1]: **FD** sparse was slower than **FD** dense so results are only shown for dense.
 [^50]: Enzyme prints "Warning: using fallback BLAS replacements, performance may be degraded", followed by stack overflow error or endless loop.
-[^1]: **FD** sparse was slower than **FD** dense so results are only shown for dense.
 [^40]: ReverseDiff failed on Spherical harmonics.
 [^51]: Enzyme crashes Julia REPL for SHFunctions benchmark.
 [^6]: Zygote doesn't work with Memoize
@@ -58,6 +57,7 @@ Enzyme (array) is written to accept a vector input and return a matrix output to
 
 
 It is worth nothing that both FD sparse and FD dense are faster than the hand optimized Jacobian.
+
 [^41]: ODE not implemented for ReverseDiff
 
 
