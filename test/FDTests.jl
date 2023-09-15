@@ -744,7 +744,7 @@ end
 end
 
 @testitem "factor_order" begin
-include("ShareTestCode.jl")
+    include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
@@ -795,7 +795,7 @@ include("ShareTestCode.jl")
 end
 
 @testitem "subgraph_edges" begin
-   include("ShareTestCode.jl")
+    include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
@@ -1610,7 +1610,7 @@ end
     import FastDifferentiation as FD
 
     sph_func = FDTests.spherical_harmonics(7)
-    sph_jac = jacobian(FD.roots(sph_func),FD.variables(sph_func))
+    sph_jac = jacobian(FD.roots(sph_func), FD.variables(sph_func))
     mn_func1 = FD.make_function(sph_jac, FD.variables(sph_func))
 
     rev_jac = similar(sph_jac)
@@ -1788,6 +1788,3 @@ end
         [1, 2.1 * x[1], 2]
     end
 end
-
-
-end #module
