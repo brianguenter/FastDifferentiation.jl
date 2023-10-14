@@ -3,4 +3,4 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FastDifferentiation = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
 
 [compat]
-Documenter = "0.27"
+Documenter = "1.0"

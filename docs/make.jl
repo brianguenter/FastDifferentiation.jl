@@ -13,7 +13,8 @@ makedocs(
         "Symbolic processing" => "symbolicprocessing.md",
         "Future work" => "futurework.md",
         "API" => "api.md"
-    ]
+    ],
+    warnonly=Documenter.except(:autodocs_block)
 )
 
 deploydocs(
