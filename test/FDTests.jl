@@ -1789,3 +1789,14 @@ end
     end
 end
 
+@testitem "no variables in function" begin
+    @variables x y
+
+    f = x + y
+    h = hessian(f, [x, y])
+    hexe = make_function(h, [x, y])
+
+    @test isapprox(hexe([1, 1]), [0 0; 0 0])
+end
+
+

@@ -174,8 +174,6 @@ struct DerivativeGraph{T<:Integer}
 
         edges = partial_edges(roots, postorder_number, expression_cache, length(var_array), length(roots))
 
-        @assert length(var_array) != 0 "No variables in your function. Your function must have at least one variable."
-
         sort!(var_array, by=x -> postorder_number[x]) #sort by postorder number from lowest to highest
 
         root_index_to_postorder_number = Vector{index_type}(undef, length(roots)) #roots are handled differently than variables because variable node can only occur once in list of variables but root node can occur multiple times in list of roots
@@ -188,7 +186,12 @@ struct DerivativeGraph{T<:Integer}
             root_postorder_to_index[postorder_number] = i
         end
 
-        variable_index_to_postorder_number = [postorder_number[x] for x in var_array]
+        if length(var_array) == 0
+            variable_index_to_postorder_number = index_type[] #special case when have no variables
+        else
+            variable_index_to_postorder_number = [postorder_number[x] for x in var_array]
+        end
+
         variable_postorder_to_index = IdDict{index_type,index_type}()
         for (i, postorder_number) in pairs(variable_index_to_postorder_number)
             variable_postorder_to_index[postorder_number] = i
