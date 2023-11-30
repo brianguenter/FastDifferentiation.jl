@@ -385,6 +385,12 @@ function derivative(A::AbstractArray{<:Node}, variables::T...) where {T<:Node}
 end
 export derivative
 
+"""Convenience `derivative` for scalar functions. Takes a scalar input and returns a scalar output"""
+function derivative(A::Node, variables::T...) where {T<:Node}
+    derivative([A], variables...)[1]
+end
+
+
 """
     _derivative(A::AbstractArray{<:Node}, variable::Node)
 
