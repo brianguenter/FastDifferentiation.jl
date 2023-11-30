@@ -387,6 +387,8 @@ export derivative
 
 """Convenience `derivative` for scalar functions. Takes a scalar input and returns a scalar output"""
 function derivative(A::Node, variables::T...) where {T<:Node}
+    temp = derivative([A], variables...)
+    @assert length(temp) == 1
     derivative([A], variables...)[1]
 end
 
