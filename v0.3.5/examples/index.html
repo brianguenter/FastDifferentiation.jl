@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · FastDifferentiation.jl</title><meta name="title" content="Examples · FastDifferentiation.jl"/><meta property="og:title" content="Examples · FastDifferentiation.jl"/><meta property="twitter:title" content="Examples · FastDifferentiation.jl"/><meta name="description" content="Documentation for FastDifferentiation.jl."/><meta property="og:description" content="Documentation for FastDifferentiation.jl."/><meta property="twitter:description" content="Documentation for FastDifferentiation.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">FastDifferentiation.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><a class="tocitem" href="../limitations/">Limitations</a></li><li><a class="tocitem" href="../howitworks/">How it works</a></li><li class="is-active"><a class="tocitem" href>Examples</a></li><li><a class="tocitem" href="../makefunction/">How to use make_function</a></li><li><a class="tocitem" href="../benchmarks/">Benchmarks</a></li><li><a class="tocitem" href="../symbolicprocessing/">Symbolic processing</a></li><li><a class="tocitem" href="../futurework/">Future work</a></li><li><a class="tocitem" href="../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/brianguenter/FastDifferentiation.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/brianguenter/FastDifferentiation.jl/blob/main/docs/src/examples.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h1><p><strong>FD</strong> uses a global cache for common subexpression elimination so the <strong>FD</strong> symbolics preprocessing step is not thread safe. </p><p>Under ordinary conditions the memory used by the cache won&#39;t be an issue. But, if you have a long session where you are creating many complex functions it is possible the cache will use too much memory. If this happens call the function <code>clear_cache</code> after you have completely processed your expression.</p><p>The most common way to use <strong>FD</strong> is this:</p><ul><li>create variables</li><li>do operations on those variables to create the function you want to differentiate</li><li>compute a symbolic derivative of the function</li><li>pass the symbolic derivative to <code>make_function</code> to generate a function to efficiently evaluate the derivative</li></ul><h5 id="Creating-Variables"><a class="docs-heading-anchor" href="#Creating-Variables">Creating Variables</a><a id="Creating-Variables-1"></a><a class="docs-heading-anchor-permalink" href="#Creating-Variables" title="Permalink"></a></h5><p>Scalar variables</p><pre><code class="language-julia hljs">using FastDifferentiation
+
+@variables x y z
+</code></pre><p>Arrays of variables of arbitrary dimension</p><pre><code class="language-julia hljs">julia&gt; make_variables(:x,3)
+3-element Vector{FastDifferentiation.Node}:
+ x1
+ x2
+ x3
+
+julia&gt; make_variables(:x,2,3)
+2×3 Matrix{FastDifferentiation.Node}:
+ x1_1  x1_2  x1_3
+ x2_1  x2_2  x2_3
+
+julia&gt; make_variables(:x,2,3,2)
+2×3×2 Array{FastDifferentiation.Node, 3}:
+[:, :, 1] =
+ x1_1_1  x1_2_1  x1_3_1
+ x2_1_1  x2_2_1  x2_3_1
+
+[:, :, 2] =
+ x1_1_2  x1_2_2  x1_3_2
+ x2_1_2  x2_2_2  x2_3_2</code></pre><h5 id="Compute-derivatives"><a class="docs-heading-anchor" href="#Compute-derivatives">Compute derivatives</a><a id="Compute-derivatives-1"></a><a class="docs-heading-anchor-permalink" href="#Compute-derivatives" title="Permalink"></a></h5><p>Compute higher order derivatives</p><pre><code class="language-julia hljs">julia&gt; @variables x y
+y
+
+julia&gt; f = x^3*y^3
+((x ^ 3) * (y ^ 3))
+
+julia&gt; derivative([f],x,y,x) #take derivative wrt x, then y, then x
+1-element Vector{FastDifferentiation.Node{typeof(*), 2}}:
+ (18 * (x * (y ^ 2)))
+
+ julia&gt; derivative([cos(x*y);;;exp(x*y)],x,y,x) #derivative accepts input arrays of any dimension
+1×1×2 Array{FastDifferentiation.Node{typeof(+), 2}, 3}:
+[:, :, 1] =
+ ((-(y) * cos((x * y))) + ((((x * -(y)) * -(sin((x * y)))) + -(cos((x * y)))) * y))
+
+[:, :, 2] =
+ (((((x * y) + 1) * exp((x * y))) * y) + (y * exp((x * y))))</code></pre><p>Compute derivative of a function and make executable</p><pre><code class="language-julia hljs"># compute Jacobian and generate function to evaluate it
+julia&gt; f1 = cos(x) * y
+(cos(x) * y)
+
+julia&gt; f2 = sin(y) * x
+(sin(y) * x)
+
+julia&gt; symb = jacobian([f1, f2], [x, y]) #the vector [x,y] tells make_function 
+# how to order the arguments to the generated function
+2×2 Matrix{Node}:
+ (y * -(sin(x)))  cos(x)
+ sin(y)           (x * cos(y))
+
+julia&gt; jac_exe = make_function(symb,[x,y]) 
+...
+julia&gt; jac_exe([1.0,2.0]) #jac_exe was created with variable ordering [x,y] 
+# so x will get the value 1.0, y 2.0
+2×2 Matrix{Float64}:
+ -1.68294    0.540302
+  0.909297  -0.416147</code></pre><pre><code class="language-julia hljs"># compute Hessian and generate function to evaluate it
+@variables x y z
+
+julia&gt; h_symb1 = hessian(x^2*y^2*z^2,[x,y,z])
+3×3 Matrix{FastDifferentiation.Node}:
+ (2 * ((z ^ 2) * (y ^ 2)))        (((2 * x) * (2 * y)) * (z ^ 2))  (((2 * x) * (2 * z)) * (y ^ 2))
+ (((2 * y) * (2 * x)) * (z ^ 2))  (2 * ((z ^ 2) * (x ^ 2)))        (((2 * y) * (2 * z)) * (x ^ 2))
+ (((2 * z) * (2 * x)) * (y ^ 2))  (((2 * z) * (2 * y)) * (x ^ 2))  (2 * ((x ^ 2) * (y ^ 2)))
+
+julia&gt; hexe_1 = make_function(h_symb1,[x,y,z]) #the vector [x,y,z] tells make_function 
+# how to order the arguments to the generated function
+...
+julia&gt; hexe_1([1.0,2.0,3.0]) #hexe_1 was created with variable ordering [x,y,z] 
+# so x will get the value 1.0, y 2.0, and z 3.0
+3×3 Matrix{Float64}:
+ 72.0  72.0  48.0
+ 72.0  18.0  24.0
+ 48.0  24.0   8.0</code></pre><p>Compute any subset of the columns of the Jacobian:</p><pre><code class="language-julia hljs">julia&gt; symb = jacobian([x*y,y*z,x*z],[x,y,z]) #all columns
+3×3 Matrix{Node}:
+ y    x    0.0
+ 0.0  z    y
+ z    0.0  x
+
+julia&gt; symb = jacobian([x*y,y*z,x*z],[x,y]) #first two columns
+3×2 Matrix{Node}:
+ y    x
+ 0.0  z
+ z    0.0
+
+julia&gt; symb = jacobian([x*y,y*z,x*z],[z,y]) #second and third columns, ordered so ∂f/∂z is 1st column of the output, ∂f/∂y the 2nd
+3×2 Matrix{Node}:
+ 0.0  x
+ y    z
+ x    0.0</code></pre><h5 id="Sparse-Jacobians-and-Hessians"><a class="docs-heading-anchor" href="#Sparse-Jacobians-and-Hessians">Sparse Jacobians and Hessians</a><a id="Sparse-Jacobians-and-Hessians-1"></a><a class="docs-heading-anchor-permalink" href="#Sparse-Jacobians-and-Hessians" title="Permalink"></a></h5><p>The functions <code>sparse_jacobian, sparse_hessian</code> compute sparse symbolic derivatives. When you pass a sparse symbolic function matrix to <code>make_function</code> it will generate an executable which expects an in place sparse matrix to hold the result. For functions with sparse Jacobians or Hessians this can be orders of magnitude faster than using a dense in place matrix.</p><pre><code class="language-julia hljs">julia&gt; hess = sparse_hessian(x^3 + y^3 + z^3, [x,y,z])        
+3×3 SparseArrays.SparseMatrixCSC{FastDifferentiation.Node, Int64} with 3 stored entries:
+ (6 * x)        ⋅        ⋅
+       ⋅  (6 * y)        ⋅
+       ⋅        ⋅  (6 * z)
+
+
+julia&gt; res = similar(hess,Float64) #make sparse matrix with proper sparsity to pass to the generated function
+3×3 SparseArrays.SparseMatrixCSC{Float64, Int64} with 3 stored entries:
+ 0.0   ⋅    ⋅ 
+  ⋅   0.0   ⋅
+  ⋅    ⋅   0.0
+
+julia&gt; sp_f = make_function(hess,[x,y,z])
+...
+
+julia&gt; sp_f([1.0,2.0,3.0],res)
+3×3 SparseArrays.SparseMatrixCSC{Float64, Int64} with 3 stored entries:
+ 6.0    ⋅     ⋅
+  ⋅   12.0    ⋅
+  ⋅     ⋅   18.0</code></pre><h5 id="Less-commonly-used-functions"><a class="docs-heading-anchor" href="#Less-commonly-used-functions">Less commonly used functions</a><a id="Less-commonly-used-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Less-commonly-used-functions" title="Permalink"></a></h5><p>Compute <code>Hv</code> without forming the full Hessian matrix. This is useful if the Hessian is very large</p><pre><code class="language-julia hljs">julia&gt; @variables x y
+y
+
+julia&gt; f = x^2 * y^2
+((x ^ 2) * (y ^ 2))
+
+julia&gt; hv_fast, v_vec2 = hessian_times_v(f, [x, y])
+...
+
+julia&gt; hv_fast_exe = make_function(hv_fast, [[x, y]; v_vec2]) #need v_vec2 because hv_fast is a function of x,y,v1,v2 and have to specify the order of all inputs to the executable
+...
+julia&gt; hv_fast_exe([1.0,2.0,3.0,4.0]) #first two vector elements are x,y last two are v1,v2
+2-element Vector{Float64}:
+ 56.0
+ 32.0</code></pre><p>Symbolic and executable Jᵀv and Jv (see this <a href="https://arxiv.org/abs/1812.01892">paper</a> for applications of this operation).</p><pre><code class="language-julia hljs">julia&gt; (f1,f2) = cos(x)*y,sin(y)*x
+((cos(x) * y), (sin(y) * x))
+
+julia&gt; jv,vvec = jacobian_times_v([f1,f2],[x,y])
+...
+
+julia&gt; jv_exe = make_function(jv,[[x,y];vvec])
+...
+
+julia&gt; jv_exe([1.0,2.0,3.0,4.0]) #first 2 arguments are x,y values and last two are v vector values
+
+2×1 Matrix{Float64}:
+ -2.8876166853748195
+  1.0633049342884753
+
+julia&gt; jTv,rvec = jacobian_transpose_v([f1,f2],[x,y])
+...
+
+julia&gt; jtv_exe = make_function(jTv,[[x,y];rvec])
+...
+julia&gt; jtv_exe([1.0,2.0,3.0,4.0])
+2-element Vector{Float64}:
+ -1.4116362015446517
+ -0.04368042858415033</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howitworks/">« How it works</a><a class="docs-footer-nextpage" href="../makefunction/">How to use make_function »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.0 on <span class="colophon-date" title="Thursday 30 November 2023 21:24">Thursday 30 November 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
