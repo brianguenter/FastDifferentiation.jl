@@ -145,7 +145,7 @@ export sparse_jacobian
 Returns a vector of Node, where each element in the vector is the symbolic form of `Jv`. Also returns `v_vector` a vector of the `v` variables. This is useful if you want to generate a function to evaluate `Jv` and you want to separate the inputs to the function and the `v` variables."""
 function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
     graph = DerivativeGraph(terms)
-    v_vector = make_variables(gensym(), domain_dimension(graph))
+    v_vector = make_variables(gensym(), length(partial_variables))
     factor!(graph)
     for (variable, one_v) in zip(partial_variables, v_vector)
         new_edges = PathEdge[]
@@ -245,9 +245,7 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
         end
     end
 
-    outdim = domain_dimension(graph)
-
-    result = Vector{Node}(undef, outdim)
+    result = Vector{Node}(undef, length(partial_variables))
 
     for i in eachindex(result)
         result[i] = Node(0.0)
@@ -259,14 +257,14 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
         for root_index in 1:codomain_dimension(graph)
             var_index = variable_node_to_index(graph, var)
             if var_index !== nothing
-                result[var_index] += evaluate_path(graph, root_index, var_index)
+                result[i] += evaluate_path(graph, root_index, var_index)
             else
-                result[var_index] = zero(Node) #TODO fix this so get more generic zero value
+                result[i] = zero(Node) #TODO fix this so get more generic zero value
             end
         end
     end
 
-    return result, r_vector #need v_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by v_vector
+    return result, r_vector #need r_vector values if want to make executable after making symbolic form. Need to differentiate between variables that were in original graph and variables introduced by r_vector
 end
 export jacobian_transpose_v
 
