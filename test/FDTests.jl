@@ -1399,8 +1399,9 @@ end
     @test DA == derivative(A, nq1)
 end
 
-@testitem "FD.jacobian_times_v" begin
+@testitem "jacobian_times_v" begin
     import FastDifferentiation as FD
+    using Random
     include("ShareTestCode.jl")
 
     order = 10
@@ -1427,10 +1428,43 @@ end
         @test isapprox(slow_val, fast_val, rtol=1e-9)
     end
 
+    #test for https://github.com/brianguenter/FastDifferentiation.jl/issues/60
+    function heat(u, p, t)
+        gamma, dx = p
+        dxxu = (circshift(u, 1) .- 2 * u .+ circshift(u, -1)) / dx^2
+        return gamma * dxxu
+    end
+
+
+    Ns = 5
+    xmin, xmax = 0.0, 1.0
+    dx = (xmax - xmin) / (Ns - 1)
+
+    xs = collect(LinRange(xmin, xmax, Ns))
+    using FastDifferentiation
+    FastDifferentiation.@variables uv pv tv
+    uvs = make_variables(:uv, Ns)
+    pvs = make_variables(:pv, 2)
+    tvs = make_variables(:tv, 1)
+    fv = heat(uvs, pvs, tvs)
+    js = FastDifferentiation.jacobian(fv, uvs) # The Jacobian js is of shape Ns x Ns
+
+    vjps, rvs = FastDifferentiation.jacobian_times_v(fv, uvs) # The variable vjps is of shape Ns+2 and rvs is of shape Ns
+
+    input_vec = [uvs; pvs; tvs; rvs]
+    jv = make_function(FastDifferentiation.Node.(js * rvs), input_vec)
+    jtv2 = make_function(vjps, input_vec)
+
+    for i in 1:100
+        rng = Random.Xoshiro(123)
+        tvec = rand(rng, length(input_vec))
+        @test isapprox(jv(tvec), jtv2(tvec))
+    end
 end
 
 @testitem "jacobian_transpose_v" begin
     import FastDifferentiation as FD
+    using Random
     include("ShareTestCode.jl")
 
     order = 10
@@ -1454,6 +1488,39 @@ end
         fast_val = fast(input)
 
         @test isapprox(slow_val, fast_val, rtol=1e-8)
+    end
+
+    #test for https://github.com/brianguenter/FastDifferentiation.jl/issues/60
+    function heat(u, p, t)
+        gamma, dx = p
+        dxxu = (circshift(u, 1) .- 2 * u .+ circshift(u, -1)) / dx^2
+        return gamma * dxxu
+    end
+
+
+    Ns = 5
+    xmin, xmax = 0.0, 1.0
+    dx = (xmax - xmin) / (Ns - 1)
+
+    xs = collect(LinRange(xmin, xmax, Ns))
+    using FastDifferentiation
+    FastDifferentiation.@variables uv pv tv
+    uvs = make_variables(:uv, Ns)
+    pvs = make_variables(:pv, 2)
+    tvs = make_variables(:tv, 1)
+    fv = heat(uvs, pvs, tvs)
+    js = FastDifferentiation.jacobian(fv, uvs) # The Jacobian js is of shape Ns x Ns
+
+    jvps, vvs = FastDifferentiation.jacobian_transpose_v(fv, uvs) # The variable jvps is of shape Ns and rvs is of shape Ns+2
+
+    input_vec = [uvs; pvs; tvs; vvs]
+    jtv = make_function(FastDifferentiation.Node.(js'vvs), input_vec)
+    jtv2 = make_function(jvps, input_vec)
+
+    for i in 1:100
+        rng = Random.Xoshiro(123)
+        tvec = rand(rng, length(input_vec))
+        @test isapprox(jtv(tvec), jtv2(tvec))
     end
 end
 
