@@ -625,3 +625,32 @@ function number_of_operations(jacobian::AbstractArray{T}) where {T<:Node}
     end
     return count
 end
+
+function new_factor_subgraph!(a::FactorableSubgraph{T}) where {T}
+    local new_edge::PathEdge{T}
+    if subgraph_exists(subgraph)
+
+        if is_branching(subgraph) #handle the uncommon case of factorization creating new factorable subgraphs internal to subgraph
+            sum = evaluate_branching_subgraph(subgraph)
+            new_edge = make_factored_edge(subgraph, sum)
+        else
+            sum = evaluate_subgraph(subgraph)
+            # if value(sum) == 0
+            #     display(subgraph)
+            #     write_dot("sph.svg", graph(subgraph), value_labels=true, reachability_labels=false, start_nodes=[24])
+            # end
+
+            # # @assert value(sum) != 0
+
+            new_edge = make_factored_edge(subgraph, sum)
+        end
+        add_non_dom_edges!(subgraph)
+        #reset roots in R, if possible. All edges earlier in the path than the first vertex with more than one child cannot be reset.
+        edges_to_delete = reset_edge_masks!(subgraph)
+        for edge in edges_to_delete
+            delete_edge!(graph(subgraph), edge)
+        end
+
+        add_edge!(graph(subgraph), new_edge)
+    end
+end
