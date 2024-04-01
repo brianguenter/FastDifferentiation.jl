@@ -1866,4 +1866,25 @@ end
     @test isapprox(hexe([1, 1]), [0 0; 0 0])
 end
 
+@testitem "make_function returns wrong result with sparse Jacobian for very simple functions only" begin
+    #issue "https://github.com/brianguenter/FastDifferentiation.jl/issues/67#issue-2217019202"
+    x = make_variables(:x, 4)
+    y = diff(x)
+    jac_sparse = sparse_jacobian(y, x)
+    jac_sparse_exe = make_function(jac_sparse, x)
+    temp = jac_sparse_exe(rand(4))
+
+    correct = [-1.0 1.0 0.0 0.0;
+        0.0 -1.0 1.0 0.0;
+        0.0 0.0 -1.0 1.0]
+    @test correct == temp
+    #used to return the vector of nonzeros stored in the sparse matrix instead of the sparse matrix itself
+    # 6-element Vector{Float64}:
+    #  -1.0
+    #   1.0
+    #  -1.0
+    #   1.0
+    #  -1.0
+    #   1.0
+end
 

@@ -224,6 +224,7 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
         if in_place
             return :((result, input_variables) -> $body)
         else
+            push!(body.args, :(return result))
             return :((input_variables) -> $body)
         end
     else
