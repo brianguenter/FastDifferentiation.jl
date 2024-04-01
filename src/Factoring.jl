@@ -103,21 +103,24 @@ Base.isless(::FactorOrder, a, b) = factor_order(a, b)
 
 """returns true if a should be sorted before b"""
 function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
-    if times_used(a) > times_used(b) #num_uses of contained subgraphs always ≥ num_uses of containing subgraphs. Contained subgraphs should always be factored first. It might be that a ⊄ b, but it's still correct to factor a before b.
-        return true
-    elseif times_used(b) > times_used(a)
-        return false
-    else # if a ⊂ b then diff(a) < diff(b) where diff(x) = abs(dominating_node(a) - dominated_node(a)). Might be that a ⊄ b but it's safe to factor a first and if a ⊂ b then it will always be factored first.
-        diffa = node_difference(a)
-        diffb = node_difference(b)
 
-        if diffa < diffb
-            return true
-        else
-            return false #can factor a,b in either order 
-        end
+    diffa = node_difference(a)
+    diffb = node_difference(b)
+
+
+    # if a ⊂ b then diff(a) < diff(b) where diff(x) = abs(dominating_node(a) - dominated_node(a)). Might be that a ⊄ b but it's safe to factor a first.
+    # This tests only guarantees that if a ⊂ b then a will be factored first. It could be that diff(a) < diff(b) but that a ⊄ b in which case most
+    # efficient option would be to factor whichever of a,b has highest times used. But determining subgraph containment precisely is time consuming.
+    # This ordering heuristic doesn't seem to affect efficiency of computed derivatives much but is significantly faster. 
+    if diffa < diffb
+        return true
+    elseif times_used(a) > times_used(b) #If a is used more times than b then factor a first. More efficient.
+        return true
+    else
+        return false
     end
 end
+
 
 
 sort_in_factor_order!(a::AbstractVector{T}) where {T<:FactorableSubgraph} = sort!(a, lt=factor_order)
