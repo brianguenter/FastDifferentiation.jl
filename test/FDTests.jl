@@ -1888,3 +1888,23 @@ end
     #   1.0
 end
 
+@testitem "incorrect inference for matrix arithmetic" begin
+    "Type inference is not precise enough when performing arithmetic operations on matrices of Node. These all return Matrix{Any} instead of Matrix{Node} which can cause errors when trying to compute Jacobians."
+
+    @variables a1 a2 b1 b2 c1 c2 d1 d2
+
+
+    thing1 = [a1 b1; c1 d1]
+
+    thing2 = [a2 b2; c2 d2]
+
+
+    function type_test(matrix::Matrix{T}) where {T}
+        return T <: FastDifferentiation.Node
+    end
+
+    @assert type_test(thing1 * thing2)
+    @assert type_test(thing1 - thing2)
+    @assert type_test(thing1 + thing2)
+end
+
