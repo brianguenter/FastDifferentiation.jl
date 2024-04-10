@@ -168,6 +168,10 @@ struct DerivativeGraph{T<:Integer}
     function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64)
         postorder_number = IdDict{Node,index_type}()
 
+        for (i, root) in pairs(roots)
+            roots[i] = create_NoOp(root)
+        end
+
         (postorder_number, nodes, var_array) = postorder(roots)
 
         expression_cache = IdDict()

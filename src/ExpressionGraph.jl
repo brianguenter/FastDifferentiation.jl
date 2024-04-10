@@ -517,7 +517,7 @@ function postorder(roots::AbstractVector{T}) where {T<:Node}
     variables = Vector{Node}(undef, 0)
 
     for root in roots
-        _postorder_nodes!(create_NoOp(root), nodes, variables, node_to_index)
+        _postorder_nodes!(root, nodes, variables, node_to_index)
     end
     return node_to_index, nodes, variables
 end
