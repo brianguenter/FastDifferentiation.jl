@@ -386,6 +386,22 @@ derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
 function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]), EXPRESSION_CACHE)
 
+"""When constructing `DerivativeGraph` with repeated values in roots, e.g.,
+```julia
+@variables x
+f = sin(x)
+gr = DerivativeGraph([f,f,f])
+```
+all three of the f values reference the same element. To ensure that `partial_edges` creates an edge for each one of the roots we need a `NoOp` function. The derivative of `NoOp` is 1.0; the sole purpose of this node type is to ensure that the resulting derivative graph has a separate edge for each repeated root value. There are other ways this might be accomplished but this is the simplest, since it can be performed on the original `Node` graph before the recursive `partial_edges` traversal."""
+struct NoOp
+end
+
+function create_NoOp(child)
+    return Node(NoOp(), child)
+end
+
+derivative(NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
+
 function derivative(a::Node, index::Val{1})
     # if is_variable(a)
     #     if arity(a) == 0
@@ -501,7 +517,7 @@ function postorder(roots::AbstractVector{T}) where {T<:Node}
     variables = Vector{Node}(undef, 0)
 
     for root in roots
-        _postorder_nodes!(root, nodes, variables, node_to_index)
+        _postorder_nodes!(create_NoOp(root), nodes, variables, node_to_index)
     end
     return node_to_index, nodes, variables
 end
