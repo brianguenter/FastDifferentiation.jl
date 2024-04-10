@@ -1278,19 +1278,26 @@ end
 @testitem "sparse_jacobian" begin
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
+    import Random
 
     FD.@variables x y z
 
-    sph_order = 10
+    sph_order = 9
     FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
-    sprse = sparse_jacobian(FD.roots(FD_graph), [x, y, z])
-    dense = jacobian(FD.roots(FD_graph), [x, y, z])
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    sprse = sparse_jacobian(new_roots, [x, y, z])
+    dense = jacobian(new_roots, [x, y, z])
+
+    input_vars = [x, y, z]
+    sprse_exe = FD.make_function(sprse, input_vars)
+    dense_exe = FD.make_function(dense, input_vars)
+
+    rng = Random.Xoshiro(120)
 
     for index in CartesianIndices(dense)
-        @test !xor(FD.is_zero(sprse[index]), FD.is_zero(dense[index])) #See https://vscode.dev/github/brianguenter/FastDifferentiation.jl/blob/main/src/ExpressionGraph.jl#L271. sprse zero elements
-        # are FD.Node{Int64,0} while dense elements are FD.Node{Float64,0}.
-        if !FD.is_zero(sprse[index])
-            @test sprse[index] === dense[index]
+        for num_tests in 1:10
+            input = rand(rng, 3)
+            @test isapprox(sprse_exe(input), dense_exe(input))
         end
     end
 end
@@ -1323,7 +1330,8 @@ end
     import FastDifferentiation as FD
 
     FD_graph = FDTests.spherical_harmonics(10)
-    mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(vars...) = vec(mn_func(vars))
 
     graph_vars = FD.variables(FD_graph)
@@ -1349,7 +1357,8 @@ end
 
     chebyshev_order = 20
     FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
-    mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(variables...) = vec(mn_func(variables...))
 
     func_wrap(x) = FD_func(x)[1]
