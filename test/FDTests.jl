@@ -1265,7 +1265,7 @@ end
 
     computed_jacobian = FD.make_function(jac, [x, y])
 
-    #verify the computed and hand caluclated jacobians agree.
+    #verify the computed and hand calculated jacobians agree.
     for _x in -1.0:0.01:1.0
         for _y in -1.0:0.3:1.0
             for index in CartesianIndices(correct_jacobian)
@@ -1777,13 +1777,13 @@ end
         nmat2 = SMatrix{size,size,FD.Node}(FD.Node.(mat))
         nmat = FD.Node.(mat)
 
-        println(nmat2)
+
         func1 = FD.make_function(nmat, FD.Node[])
         func2 = FD.make_function(nmat2, FD.Node[])
-        println(func2)
 
-        @assert isapprox(func1(Float64[]), mat)
-        @assert isapprox(func2(Float64[]), mat)
+
+        @test isapprox(func1(Float64[]), mat)
+        @test isapprox(func2(Float64[]), mat)
     end
 end
 
@@ -1876,6 +1876,9 @@ end
 end
 
 @testitem "make_function returns wrong result with sparse Jacobian for very simple functions only" begin
+    import LinearAlgebra
+    import ForwardDiff
+
     #issue "https://github.com/brianguenter/FastDifferentiation.jl/issues/67#issue-2217019202"
     x = make_variables(:x, 4)
     y = diff(x)
@@ -1895,6 +1898,37 @@ end
     #   1.0
     #  -1.0
     #   1.0
+
+
+
+    # for scalar -> array functions only
+
+    function prepare_pullback(f)
+        x_var = only(make_variables(:x))
+        y_var = f(x_var)
+        x_vec_var = [x_var]
+        y_vec_var = vec(y_var)
+        vj_vec_var, v_vec_var = jacobian_transpose_v(y_vec_var, x_vec_var)
+        vjp_exe = make_function(vj_vec_var, [x_vec_var; v_vec_var]; in_place=false)
+        return vjp_exe
+    end
+
+    function value_and_pullback(f, x::Number, dy::AbstractArray, vjp_exe)
+        y = f(x)
+        v_vec = vcat(x, vec(dy))
+        vj_vec = vjp_exe(v_vec)
+        return y, only(vj_vec)
+    end
+
+    fill_array(x::Number) = fill(x, 2, 2)
+    x = 1.0
+    dy = reshape(1:4, 2, 2)
+
+    correct = LinearAlgebra.dot(ForwardDiff.derivative(fill_array, x), dy) # expected result is 10.0
+
+    (_, FD_value) = value_and_pullback(fill_array, x, dy, prepare_pullback(fill_array)) # actual result
+    @test isapprox(correct, FD_value)
+
 end
 
 @testitem "incorrect inference for matrix arithmetic" begin
@@ -1912,8 +1946,8 @@ end
         return T <: FastDifferentiation.Node
     end
 
-    @assert type_test(thing1 * thing2)
-    @assert type_test(thing1 - thing2)
-    @assert type_test(thing1 + thing2)
+    @test type_test(thing1 * thing2)
+    @test type_test(thing1 - thing2)
+    @test type_test(thing1 + thing2)
 end
 
