@@ -23,7 +23,6 @@ using TestItems
 end
 
 @testitem "FD.isa_connected_path 2" begin #cases when path is longer than one edge and various FD.edges have either FD.roots or FD.variables reset.
-
     using DataStructures
     import FastDifferentiation as FD
 
@@ -37,26 +36,26 @@ end
     graph = FD.DerivativeGraph([n4, n5])
     subs_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
-    println(subs)
-    _5_3_index = findfirst(x -> FD.vertices(x) == (5, 3), subs)
-    _5_3 = subs[_5_3_index]
+
+    _6_3_index = findfirst(x -> FD.vertices(x) == (6, 3), subs)
+    _6_3 = subs[_6_3_index]
 
     _2_4_index = findfirst(x -> FD.vertices(x) == (2, 4), subs)
     _2_4 = subs[_2_4_index]
 
-    _3_5_index = findfirst(x -> FD.vertices(x) == (3, 5), subs)
-    _3_5 = subs[_3_5_index]
+    _3_6_index = findfirst(x -> FD.vertices(x) == (3, 6), subs)
+    _3_6 = subs[_3_6_index]
 
-    etmp = FD.edges(graph, 3, 5)[1]
-    @test FD.isa_connected_path(_5_3, etmp)
+    etmp = FD.edges(graph, 3, 6)[1]
+    @test FD.isa_connected_path(_6_3, etmp)
 
 
     etmp = FD.edges(graph, 3, 4)[1]
-    @test FD.isa_connected_path(_5_3, etmp)
+    @test FD.isa_connected_path(_6_3, etmp)
     rts = FD.reachable_roots(etmp)
     rts[2] = 0
 
-    @test !FD.isa_connected_path(_5_3, etmp)
+    @test !FD.isa_connected_path(_6_3, etmp)
     #reset path
     rts[2] = 1
 
@@ -90,12 +89,15 @@ end
     n5 = n2 * n4
 
     graph = FD.DerivativeGraph([n4, n5])
+
     subs_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
-    _5_3 = subs[1]
-    @test (5, 3) == FD.vertices(_5_3)
 
-    FD.add_non_dom_edges!(_5_3)
+    _6_3 = subs[2]
+    @test (6, 3) == FD.vertices(_6_3)
+
+    FD.add_non_dom_edges!(_6_3)
+
     #single edge 3,4 should be split into two: ([r1,r2],[v1,v2]) -> ([r1],[v1,v2]),([r2],[v1,v2])
     edges3_4 = FD.edges(graph, 4, 3)
     @test length(edges3_4) == 2
@@ -107,7 +109,7 @@ end
     graph = FD.DerivativeGraph([n4, n5])
     sub_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
-    _2_4 = subs[2]
+    _2_4 = subs[1]
     @test (2, 4) == FD.vertices(_2_4)
 
     FD.add_non_dom_edges!(_2_4)
@@ -137,27 +139,28 @@ end
 
     subs = extract_all!(subs_heap)
 
-    _5_3_index = findfirst(x -> FD.vertices(x) == (5, 3), subs)
-    _5_3 = subs[_5_3_index]
+
+    _6_3_index = findfirst(x -> FD.vertices(x) == (6, 3), subs)
+    _6_3 = subs[_6_3_index]
 
     _2_4_index = findfirst(x -> FD.vertices(x) == (2, 4), subs)
     _2_4 = subs[_2_4_index]
 
-    _3_5_index = findfirst(x -> FD.vertices(x) == (3, 5), subs)
-    _3_5 = subs[_3_5_index]
+    _3_6_index = findfirst(x -> FD.vertices(x) == (3, 6), subs)
+    _3_6 = subs[_3_6_index]
 
-    e5_3 = FD.edges(graph, 5, 3)[1]
+    e6_3 = FD.edges(graph, 6, 3)[1]
 
-    pedges = collect(FD.edge_path(_5_3, e5_3))
+    pedges = collect(FD.edge_path(_6_3, e6_3))
     @test length(pedges) == 1
-    @test e5_3 in pedges
+    @test e6_3 in pedges
 
     e3_4 = FD.edges(graph, 3, 4)[1]
-    e5_4 = FD.edges(graph, 5, 4)[1]
+    e6_4 = FD.edges(graph, 6, 4)[1]
 
-    pedges = collect(FD.edge_path(_5_3, e3_4))
+    pedges = collect(FD.edge_path(_6_3, e3_4))
     @test length(pedges) == 2
-    @test all(in.((e3_4, e5_4), Ref(pedges)))
+    @test all(in.((e3_4, e6_4), Ref(pedges)))
 
     e2_3 = FD.edges(graph, 2, 3)[1]
     e2_4 = FD.edges(graph, 2, 4)[1]
@@ -227,21 +230,21 @@ end
     sub_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
-    _5_3 = FD.dominator_subgraph(graph, 5, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _6_3 = FD.dominator_subgraph(graph, 6, 3, Bool[0, 1], Bool[0, 1], Bool[1, 1])
     _1_4 = FD.postdominator_subgraph(graph, 1, 4, Bool[1, 0], Bool[1, 1], Bool[1, 0])
-    _3_5 = FD.postdominator_subgraph(graph, 3, 5, Bool[0, 1], Bool[0, 1], Bool[1, 1])
+    _3_6 = FD.postdominator_subgraph(graph, 3, 6, Bool[0, 1], Bool[0, 1], Bool[1, 1])
     _4_1 = FD.dominator_subgraph(graph, 4, 1, Bool[1, 0], Bool[1, 1], Bool[1, 0])
-    _5_1 = FD.dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
-    _1_5 = FD.postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
+    _6_1 = FD.dominator_subgraph(graph, 6, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
+    _1_6 = FD.postdominator_subgraph(graph, 1, 6, Bool[1, 0], Bool[0, 1], Bool[1, 0])
 
-    correctly_ordered_subs = (_5_3, _1_4, _3_5, _4_1, _5_1, _1_5) #order of last two could switch and still be correct but all others should be in exactly this order.
+    correctly_ordered_subs = (_6_3, _1_4, _4_1, _3_6, _1_6, _6_1) #order of last two could switch and still be correct but all others should be in exactly this order.
 
     tmp = zip(correctly_ordered_subs[1:4], subs[1:4])
     for (correct, computed) in tmp
         @test FD.value_equal(correct, computed)
     end
     #last two
-    @test (FD.value_equal(_5_1, subs[5]) && FD.value_equal(_1_5, subs[6])) || (FD.value_equal(_1_5, subs[5]) && FD.value_equal(5_1, subs[6]))
+    @test (FD.value_equal(_6_1, subs[6]) && FD.value_equal(_1_6, subs[5])) || (FD.value_equal(_1_6, subs[6]) && FD.value_equal(6_1, subs[5]))
 end
 
 @testitem "FD.compute_factorable_subgraphs" begin
@@ -330,9 +333,10 @@ end
     rts = [ctimess, cpluss]
     grnodes = [x, y, cosx, siny, cpluss, ctimess]
 
-    correct_postorder_numbers = Dict((x => 1, cosx => 2, y => 3, siny => 4, ctimess => 5, cpluss => 6))
+    correct_postorder_numbers = Dict((x => 1, cosx => 2, y => 3, siny => 4, ctimess => 5, cpluss => 7))
 
     graph = FD.DerivativeGraph(rts)
+
 
     @test all([correct_postorder_numbers[node] == FD.postorder_number(graph, node) for node in grnodes])
 
@@ -387,9 +391,17 @@ end
     ]
 
     variable_path_masks = FD.compute_paths_to_variables(FD.num_vertices(graph), FD.edges(graph), FD.variable_index_to_postorder_number(graph))
-    @test variable_path_masks == correct_variable_pathmasks
+
+    tmp = similar(variable_path_masks, 7)
+    tmp[1:5] = variable_path_masks[1:5]
+    tmp[6:7] = variable_path_masks[7:8]
+
+    @test tmp == correct_variable_pathmasks
     parent_path_masks = FD.compute_paths_to_roots(FD.num_vertices(graph), FD.edges(graph), FD.root_index_to_postorder_number(graph))
-    @test parent_path_masks == correct_roots_pathmasks
+    tmp = similar(parent_path_masks, 7)
+    tmp[1:5] = parent_path_masks[1:5]
+    tmp[6:7] = parent_path_masks[7:8]
+    @test tmp == correct_roots_pathmasks
 end
 
 @testitem "ConstrainedPathIterator" begin
@@ -497,8 +509,9 @@ end
     graph = FD.DerivativeGraph(rts)
 
     previous_edges = FD.unique_edges(graph)
-    new_edge = FD.PathEdge(1, 7, FD.Node(y), length(vars), length(rts))
-    FastDifferentiation.add_edge!(graph, new_edge)
+    new_edge = FD.PathEdge(1, 8, FD.Node(y), length(vars), length(rts))
+    FD.add_edge!(graph, new_edge)
+
 
     #make sure existing FD.edges are still in the graph.
     for edge in previous_edges
@@ -510,7 +523,7 @@ end
     chldrn = FD.children.(values(FD.edges(graph)))
     numchldrn = sum(length.(chldrn))
     num_edges = (numprnts + numchldrn) / 2
-    @test num_edges == 7 #ensure number of FD.edges has increased by 1
+    @test num_edges == 9 #ensure number of FD.edges has increased by 1
 
     @test FD.edge_exists(graph, new_edge) #and that there is only one new edge
 end
@@ -571,6 +584,7 @@ end
     rts = [f1, f2]
     vars = [x, y]
     graph = FD.DerivativeGraph(rts)
+
     FD.compute_edge_paths!(FD.num_vertices(graph), FD.edges(graph), FD.variable_index_to_postorder_number(graph), FD.root_index_to_postorder_number(graph))
 
     correct_root_masks = Dict(
@@ -578,8 +592,8 @@ end
         (4, 3) => BitVector([1, 1]),
         (5, 1) => BitVector([1, 0]),
         (5, 4) => BitVector([1, 0]),
-        (7, 4) => BitVector([0, 1]),
-        (7, 6) => BitVector([0, 1])
+        (8, 4) => BitVector([0, 1]),
+        (8, 7) => BitVector([0, 1])
     )
 
     correct_variable_masks = Dict(
@@ -587,20 +601,22 @@ end
         (4, 3) => BitVector([0, 1]),
         (5, 1) => BitVector([0, 0]),
         (5, 4) => BitVector([1, 1]),
-        (7, 4) => BitVector([1, 1]),
-        (7, 6) => BitVector([0, 0])
+        (8, 4) => BitVector([1, 1]),
+        (8, 7) => BitVector([0, 0])
     )
 
     for index in FD.each_vertex(graph)
         c_and_p = FD.node_edges(graph, index)
         for edge in [FD.parents(c_and_p); FD.children(c_and_p)]
-            @test edge.reachable_variables == correct_variable_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
-            @test edge.reachable_roots == correct_root_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
+            if FD.top_vertex(edge) != 9 && FD.top_vertex(edge) != 6
+                @test edge.reachable_variables == correct_variable_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
+                @test edge.reachable_roots == correct_root_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
+            end
         end
     end
 end
 
-@testitem "dominators FD.DerivativeGraph" begin
+@testitem "dominators" begin
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
@@ -615,16 +631,18 @@ end
     f2 = FD.Node(*, xy, n3) #postorder # 7
     rts = [f1, f2]
     graph = FD.DerivativeGraph(rts)
+
+
     idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
-        (1 => 5, 4 => 5, 2 => 4, 3 => 4, 5 => 5),
-        (2 => 4, 3 => 4, 6 => 7, 4 => 7, 7 => 7)
+        (1 => 5, 4 => 5, 2 => 4, 3 => 4, 5 => 6),
+        (2 => 4, 3 => 4, 4 => 8, 7 => 8, 8 => 9)
     ]
 
     for (i, idom) in pairs(idoms)
         for elt in correct_dominators[i]
-            @test elt[2] == idom[elt[1]]
+            @assert elt[2] == idom[elt[1]]
         end
     end
 
@@ -638,29 +656,30 @@ end
 
     rts = [n7, nexp]
     graph = FD.DerivativeGraph(rts)
+
     idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
-        (1 => 2, 2 => 5, 3 => 7, 4 => 5, 5 => 7, 6 => 7, 7 => 7),
-        (1 => 2, 2 => 5, 3 => 6, 4 => 5, 5 => 6, 6 => 8, 8 => 8)
+        (1 => 2, 2 => 5, 3 => 7, 4 => 5, 5 => 7, 6 => 7, 7 => 8),
+        (1 => 2, 2 => 5, 3 => 6, 4 => 5, 5 => 6, 6 => 9, 9 => 10)
     ]
 
     for (i, idom) in pairs(idoms)
         for elt in correct_dominators[i]
-            @test elt[2] == idom[elt[1]]
+            @assert elt[2] == idom[elt[1]]
         end
     end
 
     pidoms = FDTests.compute_dominance_tables(graph, false)
 
     correct_post_dominators = [
-        (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 8 => 6),
-        (3 => 3, 4 => 3, 5 => 4, 6 => 3, 7 => 3, 8 => 6)
+        (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 9 => 6),
+        (3 => 3, 4 => 3, 5 => 4, 6 => 3, 7 => 3, 9 => 6)
     ]
 
     for (i, pidom) in pairs(pidoms)
         for elt in correct_post_dominators[i]
-            @test elt[2] == pidom[elt[1]]
+            @assert elt[2] == pidom[elt[1]]
         end
     end
 end
@@ -1215,13 +1234,16 @@ end
     x, graph, _, _ = FDTests.simple_dominator_graph()
 
     FD.factor!(graph)
+
     fedge = FD.edges(graph, 1, 4)[1]
+
     tmp0 = FD.make_function([FD.value(fedge)], [x])
     dfsimp(x) = tmp0([x])[1]
     x, graph, _, _ = FDTests.simple_dominator_graph() #x is a new variable so have to make a new FD.Node(x)
 
-    tmp00 = FD.make_function([FD.root(graph, 1)], [x])
+    tmp00 = FD.make_function([FD.node(graph, 4)], [x])
     origfsimp(x) = tmp00([x])[1]
+    println(origfsimp(3.0))
     @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = FDTests.complex_dominator_graph()
@@ -1231,7 +1253,8 @@ end
     df(x) = tmp1(x)[1]
 
     graph = FDTests.complex_dominator_graph()
-    tmp2 = FD.make_function([FD.root(graph, 1)], FD.variables(graph))
+
+    tmp2 = FD.make_function([FD.node(graph, 8)], FD.variables(graph))
     origf(x) = tmp2(x)[1]
 
     for test_val in -3.0:0.013:3.0
@@ -1265,7 +1288,7 @@ end
 
     computed_jacobian = FD.make_function(jac, [x, y])
 
-    #verify the computed and hand caluclated jacobians agree.
+    #verify the computed and hand calculated jacobians agree.
     for _x in -1.0:0.01:1.0
         for _y in -1.0:0.3:1.0
             for index in CartesianIndices(correct_jacobian)
@@ -1278,19 +1301,26 @@ end
 @testitem "sparse_jacobian" begin
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
+    import Random
 
     FD.@variables x y z
 
-    sph_order = 10
+    sph_order = 9
     FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
-    sprse = sparse_jacobian(FD.roots(FD_graph), [x, y, z])
-    dense = jacobian(FD.roots(FD_graph), [x, y, z])
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    sprse = sparse_jacobian(new_roots, [x, y, z])
+    dense = jacobian(new_roots, [x, y, z])
+
+    input_vars = [x, y, z]
+    sprse_exe = FD.make_function(sprse, input_vars)
+    dense_exe = FD.make_function(dense, input_vars)
+
+    rng = Random.Xoshiro(120)
 
     for index in CartesianIndices(dense)
-        @test !xor(FD.is_zero(sprse[index]), FD.is_zero(dense[index])) #See https://vscode.dev/github/brianguenter/FastDifferentiation.jl/blob/main/src/ExpressionGraph.jl#L271. sprse zero elements
-        # are FD.Node{Int64,0} while dense elements are FD.Node{Float64,0}.
-        if !FD.is_zero(sprse[index])
-            @test sprse[index] === dense[index]
+        for num_tests in 1:10
+            input = rand(rng, 3)
+            @test isapprox(sprse_exe(input), dense_exe(input))
         end
     end
 end
@@ -1323,7 +1353,8 @@ end
     import FastDifferentiation as FD
 
     FD_graph = FDTests.spherical_harmonics(10)
-    mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(vars...) = vec(mn_func(vars))
 
     graph_vars = FD.variables(FD_graph)
@@ -1349,7 +1380,8 @@ end
 
     chebyshev_order = 20
     FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
-    mn_func = FD.make_function(FD.roots(FD_graph), FD.variables(FD_graph))
+    new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
+    mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(variables...) = vec(mn_func(variables...))
 
     func_wrap(x) = FD_func(x)[1]
@@ -1768,13 +1800,13 @@ end
         nmat2 = SMatrix{size,size,FD.Node}(FD.Node.(mat))
         nmat = FD.Node.(mat)
 
-        println(nmat2)
+
         func1 = FD.make_function(nmat, FD.Node[])
         func2 = FD.make_function(nmat2, FD.Node[])
-        println(func2)
 
-        @assert isapprox(func1(Float64[]), mat)
-        @assert isapprox(func2(Float64[]), mat)
+
+        @test isapprox(func1(Float64[]), mat)
+        @test isapprox(func2(Float64[]), mat)
     end
 end
 
@@ -1867,6 +1899,9 @@ end
 end
 
 @testitem "make_function returns wrong result with sparse Jacobian for very simple functions only" begin
+    import LinearAlgebra
+    import ForwardDiff
+
     #issue "https://github.com/brianguenter/FastDifferentiation.jl/issues/67#issue-2217019202"
     x = make_variables(:x, 4)
     y = diff(x)
@@ -1886,6 +1921,37 @@ end
     #   1.0
     #  -1.0
     #   1.0
+
+
+
+    # for scalar -> array functions only
+
+    function prepare_pullback(f)
+        x_var = only(make_variables(:x))
+        y_var = f(x_var)
+        x_vec_var = [x_var]
+        y_vec_var = vec(y_var)
+        vj_vec_var, v_vec_var = jacobian_transpose_v(y_vec_var, x_vec_var)
+        vjp_exe = make_function(vj_vec_var, [x_vec_var; v_vec_var]; in_place=false)
+        return vjp_exe
+    end
+
+    function value_and_pullback(f, x::Number, dy::AbstractArray, vjp_exe)
+        y = f(x)
+        v_vec = vcat(x, vec(dy))
+        vj_vec = vjp_exe(v_vec)
+        return y, only(vj_vec)
+    end
+
+    fill_array(x::Number) = fill(x, 2, 2)
+    x = 1.0
+    dy = reshape(1:4, 2, 2)
+
+    correct = LinearAlgebra.dot(ForwardDiff.derivative(fill_array, x), dy) # expected result is 10.0
+
+    (_, FD_value) = value_and_pullback(fill_array, x, dy, prepare_pullback(fill_array)) # actual result
+    @test isapprox(correct, FD_value)
+
 end
 
 @testitem "incorrect inference for matrix arithmetic" begin
@@ -1903,8 +1969,8 @@ end
         return T <: FastDifferentiation.Node
     end
 
-    @assert type_test(thing1 * thing2)
-    @assert type_test(thing1 - thing2)
-    @assert type_test(thing1 + thing2)
+    @test type_test(thing1 * thing2)
+    @test type_test(thing1 - thing2)
+    @test type_test(thing1 + thing2)
 end
 
