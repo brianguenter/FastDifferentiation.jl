@@ -400,7 +400,7 @@ function create_NoOp(child)
     return Node(NoOp(), child)
 end
 
-derivative(NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
+derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
 function derivative(a::Node, index::Val{1})
     # if is_variable(a)
