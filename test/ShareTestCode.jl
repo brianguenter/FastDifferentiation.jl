@@ -1,5 +1,4 @@
 module FDTests
-using DiffRules
 using StaticArrays
 using Memoize
 using DataStructures
