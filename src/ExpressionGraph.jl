@@ -27,7 +27,7 @@ export @variables
 
 
 struct Node <: Number
-    node_value::Union{Function,<:Real,Symbol}
+    node_value
     children::Union{Nothing,MVector{N,Node}} where {N} #initially used SVector but this was incredibly inefficient. Possibly because the compiler was inlining the entire graph into a single static structure, which could lead to very long == and hashing times.
 
 
