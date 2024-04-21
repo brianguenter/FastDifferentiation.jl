@@ -168,16 +168,21 @@ struct DerivativeGraph{T<:Integer}
     function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64)
         postorder_number = IdDict{Node,index_type}()
 
-        (postorder_number, nodes, var_array) = postorder(roots)
+        new_roots = Vector{Node}(undef, length(roots))
+        for (i, root) in pairs(roots)
+            new_roots[i] = create_NoOp(root)
+        end
+
+        (postorder_number, nodes, var_array) = postorder(new_roots)
 
         expression_cache = IdDict()
 
-        edges = partial_edges(roots, postorder_number, expression_cache, length(var_array), length(roots))
+        edges = partial_edges(new_roots, postorder_number, expression_cache, length(var_array), length(new_roots))
 
         sort!(var_array, by=x -> postorder_number[x]) #sort by postorder number from lowest to highest
 
-        root_index_to_postorder_number = Vector{index_type}(undef, length(roots)) #roots are handled differently than variables because variable node can only occur once in list of variables but root node can occur multiple times in list of roots
-        for (i, x) in pairs(roots)
+        root_index_to_postorder_number = Vector{index_type}(undef, length(new_roots)) #new_roots are handled differently than variables because variable node can only occur once in list of variables but root node can occur multiple times in list of new_roots
+        for (i, x) in pairs(new_roots)
             root_index_to_postorder_number[i] = postorder_number[x]
         end
 
@@ -205,7 +210,7 @@ struct DerivativeGraph{T<:Integer}
         return new{index_type}(
             postorder_number,
             nodes,
-            roots,
+            new_roots,
             var_array,
             root_index_to_postorder_number,
             root_postorder_to_index,

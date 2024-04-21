@@ -1,23 +1,6 @@
 
 
-#until I can think of a better way of structuring the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately. Many other parts of the algorithm are difficult to multithread. Processing is also so quick that only large graphs would benefit from multithreading. Don't know how common these will be.
-const EXPRESSION_CACHE = IdDict()
 
-function check_cache(a::Tuple{Vararg}, cache)
-    cache_val = get(cache, a, nothing)
-    if cache_val === nothing
-        cache[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
-    end
-
-    return cache[a]
-end
-
-"""
-    clear_cache()
-
-Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for their existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
-clear_cache() = empty!(EXPRESSION_CACHE)
-export clear_cache
 
 """
 @variables args...
@@ -60,6 +43,25 @@ struct Node <: Number
 
     Node(a::S) where {S<:Symbol} = new(a, nothing)
 end
+
+#until I can think of a better way of structuring the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately. Many other parts of the algorithm are difficult to multithread. Processing is also so quick that only large graphs would benefit from multithreading. Don't know how common these will be.
+const EXPRESSION_CACHE = IdDict{Any,Node}()
+
+function check_cache(a::Tuple{Vararg}, cache::IdDict{Any,Node})::Node
+    cache_val = get(cache, a, nothing)
+    if cache_val === nothing
+        cache[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
+    end
+
+    return cache[a]
+end
+
+"""
+    clear_cache()
+
+Clears the global expression cache. To maximize efficiency of expressions the differentation system automatically eliminates common subexpressions by checking for their existence in the global expression cache. Over time this cache can become arbitrarily large. Best practice is to clear the cache before you start defining expressions, define your expressions and then clear the cache."""
+clear_cache() = empty!(EXPRESSION_CACHE)
+export clear_cache
 
 struct Differential
     variables_wrt::MVector{N,Node} where {N}
@@ -181,7 +183,7 @@ function simplify_check_cache(::typeof(^), a, b, cache)
     end
 end
 
-function simplify_check_cache(::typeof(*), na, nb, cache)
+function simplify_check_cache(::typeof(*), na, nb, cache)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -242,7 +244,7 @@ function matching_terms(lchild, rchild)
     end
 end
 
-function simplify_check_cache(::typeof(+), na, nb, cache)
+function simplify_check_cache(::typeof(+), na, nb, cache)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -267,7 +269,7 @@ function simplify_check_cache(::typeof(+), na, nb, cache)
     end
 end
 
-function simplify_check_cache(::typeof(-), na, nb, cache)
+function simplify_check_cache(::typeof(-), na, nb, cache)::Node
     a = Node(na)
     b = Node(nb)
     if a === b
@@ -288,7 +290,7 @@ function simplify_check_cache(::typeof(-), na, nb, cache)
     end
 end
 
-function simplify_check_cache(::typeof(/), na, nb, cache)
+function simplify_check_cache(::typeof(/), na, nb, cache)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -303,13 +305,13 @@ end
 
 
 
-simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)
+simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)::Node
 
 """
     simplify_check_cache(::typeof(-), a, cache)
 
 Special case only for unary -. No simplifications are currently applied to any other unary functions"""
-function simplify_check_cache(::typeof(-), a, cache)
+function simplify_check_cache(::typeof(-), a, cache)::Node
     na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
         return children(na)[1]
@@ -383,6 +385,22 @@ end
 derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 
 function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]), EXPRESSION_CACHE)
+
+"""When constructing `DerivativeGraph` with repeated values in roots, e.g.,
+```julia
+@variables x
+f = sin(x)
+gr = DerivativeGraph([f,f,f])
+```
+all three of the f values reference the same element. To ensure that `partial_edges` creates an edge for each one of the roots we need a `NoOp` function. The derivative of `NoOp` is 1.0; the sole purpose of this node type is to ensure that the resulting derivative graph has a separate edge for each repeated root value. There are other ways this might be accomplished but this is the simplest, since it can be performed on the original `Node` graph before the recursive `partial_edges` traversal."""
+struct NoOp
+end
+
+function create_NoOp(child)
+    return Node(NoOp(), child)
+end
+
+derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
 function derivative(a::Node, index::Val{1})
     # if is_variable(a)

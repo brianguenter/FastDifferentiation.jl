@@ -1,7 +1,7 @@
 name = "FastDifferentiation"
 uuid = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
 authors = ["BrianGuenter"]
-version = "0.3.6"
+version = "0.3.9"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -38,10 +38,10 @@ TestItems = "0.1"
 julia = "1.8"
 
 [extras]
+Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
 
 [targets]
-test = ["Test","TestItemRunner","TestItems","Memoize"]
+test = ["Test", "TestItemRunner", "TestItems", "Memoize"]
