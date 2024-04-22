@@ -230,19 +230,19 @@ function find_term(a::Node)
     return term, constant
 end
 
-function matching_terms(lchild, rchild)
-    if lchild === rchild
-        return (1, 1, lchild)
-    else
-        lterm, lconstant = find_term(lchild)
-        rterm, rconstant = find_term(rchild)
-        if lterm !== nothing && rterm !== nothing && lterm === rterm
-            return (lconstant, rconstant, lterm)
-        else
-            return nothing
-        end
-    end
-end
+# function matching_terms(lchild, rchild)
+#     if lchild === rchild
+#         return (1, 1, lchild)
+#     else
+#         lterm, lconstant = find_term(lchild)
+#         rterm, rconstant = find_term(rchild)
+#         if lterm !== nothing && rterm !== nothing && lterm === rterm
+#             return (lconstant, rconstant, lterm)
+#         else
+#             return nothing
+#         end
+#     end
+# end
 
 function simplify_check_cache(::typeof(+), na, nb, cache)::Node
     a = Node(na)
@@ -262,8 +262,8 @@ function simplify_check_cache(::typeof(+), na, nb, cache)::Node
         return Node(value(a) + value(children(b)[1])) + children(b)[2]
     elseif a === b
         return 2 * a
-    elseif (tmp = matching_terms(a, b)) !== nothing
-        return (tmp[1] + tmp[2]) * tmp[3]
+        # elseif (tmp = matching_terms(a, b)) !== nothing
+        #     return (tmp[1] + tmp[2]) * tmp[3]
     else
         return check_cache((+, a, b), cache)
     end
@@ -283,8 +283,8 @@ function simplify_check_cache(::typeof(-), na, nb, cache)::Node
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) - value(b))
 
-    elseif (tmp = matching_terms(a, b)) !== nothing
-        return (tmp[1] - tmp[2]) * tmp[3]
+        # elseif (tmp = matching_terms(a, b)) !== nothing
+        #     return (tmp[1] - tmp[2]) * tmp[3]
     else
         return check_cache((-, a, b), cache)
     end
