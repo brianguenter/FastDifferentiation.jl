@@ -1974,3 +1974,43 @@ end
     @test type_test(thing1 + thing2)
 end
 
+@testitem "check fix for incorrect algebraic simplification" begin #test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/76#issue-2255470350
+    using LinearAlgebra
+
+    D = 3
+
+    r_i_vars = make_variables(:ri, D)
+    r_j_vars = make_variables(:rj, D)
+    r_k_vars = make_variables(:rk, D)
+
+    r_ij = r_i_vars .- r_j_vars
+    r_ik = r_i_vars .- r_k_vars
+    r_ij_norm = sqrt(sum(x -> x^2, r_ij))
+    r_ik_norm = sqrt(sum(x -> x^2, r_ik))
+
+
+    H2_symbolic_ij = Array{FastDifferentiation.Node}(undef, D, D)
+    H2_symbolic_ji = Array{FastDifferentiation.Node}(undef, D, D)
+
+    #f = dot(r_ij, r_ik)^2
+    f = dot(r_ij, r_ik)
+
+    for a in range(1, D)
+        for b in range(1, D)
+            H2_symbolic_ij[a, b] = derivative([f], r_i_vars[a], r_j_vars[b])[1]
+            H2_symbolic_ji[a, b] = derivative([f], r_j_vars[b], r_i_vars[a])[1]
+        end
+    end
+
+    r_vars = [r_i_vars; r_j_vars; r_k_vars]
+    r_test = [4.0725, 1.3575, 9.5025, 2.715, 0.0, 8.145, 5.43, 2.715, 8.145]
+
+    H2_exec_ij = make_function(H2_symbolic_ij, r_vars)
+    H2_exec_ji = make_function(H2_symbolic_ji, r_vars)
+
+    block_ij = H2_exec_ij(r_test)
+    block_ji = H2_exec_ji(r_test)
+
+    @test all(block_ij .≈ block_ji)
+end
+
