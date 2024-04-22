@@ -1774,6 +1774,12 @@ end
     import FastDifferentiation as FD
     FD.@variables x
 
+    f = x + x
+    @test f === 2 * x
+    f = (-1 * x) + x
+    @test f == 0
+    f = x + (-1 * x)
+    @test f == 0
     f = 2x + 3x
     @test f === 5 * x
     f2 = -x + x
@@ -1973,6 +1979,12 @@ end
     @test type_test(thing1 - thing2)
     @test type_test(thing1 + thing2)
 end
+
+# @testitem "simplest test for incorrect algebraic simplification" begin
+#     @variables ri1 rj1 rk1
+#     g = (ri1 - rk1) + (ri1 - rj1)
+#     @test typeof(value(g)) ==
+# end
 
 @testitem "check fix for incorrect algebraic simplification" begin #test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/76#issue-2255470350
     using LinearAlgebra
