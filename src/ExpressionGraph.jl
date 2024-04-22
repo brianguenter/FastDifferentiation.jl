@@ -216,31 +216,26 @@ function simplify_check_cache(::typeof(*), na, nb, cache)::Node
     end
 end
 
-function find_term(a::Node)
-    if typeof(value(a)) == typeof(-)
-        constant = -1
-        term = children(a)[1]
-    elseif typeof(value(a)) == typeof(*) && is_constant(children(a)[1])
-        constant = children(a)[1]
-        term = children(a)[2]
+constant_product(a::Node) = value(a) == Base.:* && is_constant(children(a)[1])
+
+function constant_and_term(a::Node)
+    if constant_product(a)
+        return children(a)[1], children(a)[2]
+    elseif is_negate(a)
+        return -1, children(a)[1]
     else
-        constant = nothing
-        term = nothing
+        return 1, a
     end
-    return term, constant
 end
 
-function matching_terms(lchild, rchild)
-    if lchild === rchild
-        return (1, 1, lchild)
+"""Used as a helper function for simplifying c1*a ± c2*a => (c1 ± c2)*a where c1,c2 are constants"""
+function constant_sum_simplification(lchild::Node, rchild::Node)
+    lconstant, lterm = constant_and_term(lchild)
+    rconstant, rterm = constant_and_term(rchild)
+    if lterm === rterm
+        return (lconstant, rconstant, lterm)
     else
-        lterm, lconstant = find_term(lchild)
-        rterm, rconstant = find_term(rchild)
-        if lterm !== nothing && rterm !== nothing && lterm === rterm
-            return (lconstant, rconstant, lterm)
-        else
-            return nothing
-        end
+        return nothing
     end
 end
 
@@ -262,7 +257,7 @@ function simplify_check_cache(::typeof(+), na, nb, cache)::Node
         return Node(value(a) + value(children(b)[1])) + children(b)[2]
     elseif a === b
         return 2 * a
-    elseif (tmp = matching_terms(a, b)) !== nothing
+    elseif (tmp = constant_sum_simplification(a, b)) !== nothing #simplify c1*a + c2*a => (c1+c2)*a where c1,c2 are constants
         return (tmp[1] + tmp[2]) * tmp[3]
     else
         return check_cache((+, a, b), cache)
@@ -282,8 +277,7 @@ function simplify_check_cache(::typeof(-), na, nb, cache)::Node
         return a + children(b)[1]
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) - value(b))
-
-    elseif (tmp = matching_terms(a, b)) !== nothing
+    elseif (tmp = constant_sum_simplification(a, b)) !== nothing #simplify c1*a - c2*a => (c1-c2)*a where c1,c2 are constants
         return (tmp[1] - tmp[2]) * tmp[3]
     else
         return check_cache((-, a, b), cache)
