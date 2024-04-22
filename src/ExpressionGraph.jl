@@ -216,6 +216,34 @@ function simplify_check_cache(::typeof(*), na, nb, cache)::Node
     end
 end
 
+function find_term(a::Node)
+    if typeof(value(a)) == typeof(-)
+        constant = -1
+        term = children(a)[1]
+    elseif typeof(value(a)) == typeof(*) && is_constant(children(a)[1])
+        constant = children(a)[1]
+        term = children(a)[2]
+    else
+        constant = nothing
+        term = nothing
+    end
+    return term, constant
+end
+
+function matching_terms(lchild, rchild)
+    if lchild === rchild
+        return (1, 1, lchild)
+    else
+        lterm, lconstant = find_term(lchild)
+        rterm, rconstant = find_term(rchild)
+        if lterm !== nothing && rterm !== nothing && lterm === rterm
+            return (lconstant, rconstant, lterm)
+        else
+            return nothing
+        end
+    end
+end
+
 function simplify_check_cache(::typeof(+), na, nb, cache)::Node
     a = Node(na)
     b = Node(nb)
