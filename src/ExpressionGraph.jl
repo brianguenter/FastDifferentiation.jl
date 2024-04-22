@@ -282,6 +282,8 @@ function simplify_check_cache(::typeof(-), na, nb, cache)::Node
         return a + children(b)[1]
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) - value(b))
+    elseif (tmp = matching_terms(a, b)) !== nothing
+        return (tmp[1] - tmp[2]) * tmp[3]
     else
         return check_cache((-, a, b), cache)
     end
