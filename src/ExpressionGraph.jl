@@ -224,8 +224,8 @@ function find_term(a::Node)
         constant = children(a)[1]
         term = children(a)[2]
     else
-        constant = nothing
-        term = nothing
+        constant = 1
+        term = a
     end
     return term, constant
 end
