@@ -526,7 +526,7 @@ end
 
 Returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
 function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {S<:Node}
-    if !is_constant(node) #do not include constant nodes in derivative graph. They play no part in derivative computation and cause errors in reachability calculations
+    if !is_constant(a) #do not include constant nodes in derivative graph. They play no part in derivative computation and cause errors in reachability calculations
         if get(visited, a, nothing) === nothing
             if arity(a) != 0
                 for child in children(a)
