@@ -526,16 +526,18 @@ end
 
 Returns vector of `Node` entries in the tree in postorder, i.e., if `result[i] == a::Node` then the postorder number of `a` is`i`. Not Multithread safe."""
 function _postorder_nodes!(a::Node, nodes::AbstractVector{S}, variables::AbstractVector{S}, visited::IdDict{Node,Int64}) where {S<:Node}
-    if get(visited, a, nothing) === nothing
-        if arity(a) != 0
-            for child in children(a)
-                _postorder_nodes!(child, nodes, variables, visited)
+    if !is_constant(node) #do not include constant nodes in derivative graph. They play no part in derivative computation and cause errors in reachability calculations
+        if get(visited, a, nothing) === nothing
+            if arity(a) != 0
+                for child in children(a)
+                    _postorder_nodes!(child, nodes, variables, visited)
+                end
+            elseif is_variable(a)
+                push!(variables, a)
             end
-        elseif is_variable(a)
-            push!(variables, a)
+            push!(nodes, a)
+            visited[a] = length(keys(visited)) + 1 #node has not been added to visited yet so the count will be one less than needed.
         end
-        push!(nodes, a)
-        visited[a] = length(keys(visited)) + 1 #node has not been added to visited yet so the count will be one less than needed.
     end
     return nothing
 end
