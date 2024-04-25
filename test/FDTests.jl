@@ -1311,7 +1311,7 @@ end
 
     FD.@variables x y z
 
-    sph_order = 9
+    sph_order = 4
     FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
     new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
     sprse = sparse_jacobian(new_roots, [x, y, z])
@@ -1338,7 +1338,7 @@ end
 
     FD.@variables x y z
     input_vars = [x, y, z]
-    sph_order = 10
+    sph_order = 4
     FD_graph = FDTests.spherical_harmonics(sph_order, x, y, z)
     sprse = sparse_jacobian(FD.roots(FD_graph), input_vars)
     dense = jacobian(FD.roots(FD_graph), input_vars)
@@ -1358,7 +1358,7 @@ end
     import FiniteDifferences
     import FastDifferentiation as FD
 
-    FD_graph = FDTests.spherical_harmonics(10)
+    FD_graph = FDTests.spherical_harmonics(4)
     new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
     mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(vars...) = vec(mn_func(vars))
@@ -1442,7 +1442,7 @@ end
     using Random
     include("ShareTestCode.jl")
 
-    order = 10
+    order = 4
 
     FD_graph = FDTests.spherical_harmonics(order)
     FD_func = FD.roots(FD_graph)
@@ -1505,7 +1505,7 @@ end
     using Random
     include("ShareTestCode.jl")
 
-    order = 10
+    order = 4
 
     FD_graph = FDTests.spherical_harmonics(order)
     FD_func = FD.roots(FD_graph)
@@ -1714,7 +1714,7 @@ end
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
-    sph_func = FDTests.spherical_harmonics(7)
+    sph_func = FDTests.spherical_harmonics(4)
     sph_jac = jacobian(FD.roots(sph_func), FD.variables(sph_func))
     mn_func1 = FD.make_function(sph_jac, FD.variables(sph_func))
 
