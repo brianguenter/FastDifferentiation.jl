@@ -2042,16 +2042,6 @@ end
                                            (exp((x1 - x2) - (x1 - x2) * x3) + exp((x1 - x2) * x3)),
     ]
 
-    graph = FD.DerivativeGraph(f)
-
     FD.jacobian(f, [x1])
-
-    f1 = [
-        x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3,
-        x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3 /
-                                   (x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3),
-    ]
-
-    FD.jacobian(f1, [x1])
 end
 
