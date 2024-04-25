@@ -361,47 +361,45 @@ end
     import FastDifferentiation as FD
 
     FD.@variables x y
-
-    xy = FD.Node(*, x, y) #postorder # 4
-    n5 = FD.Node(5) #postorder # 1
-    f1 = FD.Node(*, n5, xy) #postorder 5
-    n3 = FD.Node(3) #postorder # 6
-    f2 = FD.Node(*, xy, n3) #postorder # 7
+    #x postorder number = 1, y postorder number = 2
+    xy = FD.Node(*, x, y) #postorder # 3
+    n5 = FD.Node(5)
+    f1 = FD.Node(*, n5, xy) #postorder 4
+    n3 = FD.Node(3)
+    f2 = FD.Node(*, xy, n3) #postorder # 6
     rts = [f1, f2]
-    graph = FD.DerivativeGraph(rts)
 
-    #x,y,xy shared by both FD.roots. n5,f1 only on f1 path, n3,f2 only on f2 path
+    #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
+
+    graph = FD.DerivativeGraph(rts)
+    #root 1 postorder number = 5, root 2 postorder number = 7
+    #x,y,xy shared by both FD.roots. f1 only on root 1 path, f2 only on root 2 path
     correct_roots_pathmasks = [
+        BitArray([1, 1]),
+        BitArray([1, 1]),
+        BitArray([1, 1]),
         BitArray([1, 0]),
-        BitArray([1, 1]),
-        BitArray([1, 1]),
-        BitArray([1, 1]),
         BitArray([1, 0]),
         BitArray([0, 1]),
         BitArray([0, 1])]
 
     correct_variable_pathmasks = [
-        BitArray([0, 0]),
         BitArray([1, 0]),
         BitArray([0, 1]),
         BitArray([1, 1]),
         BitArray([1, 1]),
-        BitArray([0, 0]),
+        BitArray([1, 1]),
+        BitArray([1, 1]),
         BitArray([1, 1])
     ]
 
     variable_path_masks = FD.compute_paths_to_variables(FD.num_vertices(graph), FD.edges(graph), FD.variable_index_to_postorder_number(graph))
 
-    tmp = similar(variable_path_masks, 7)
-    tmp[1:5] = variable_path_masks[1:5]
-    tmp[6:7] = variable_path_masks[7:8]
+    @test variable_path_masks == correct_variable_pathmasks
 
-    @test tmp == correct_variable_pathmasks
     parent_path_masks = FD.compute_paths_to_roots(FD.num_vertices(graph), FD.edges(graph), FD.root_index_to_postorder_number(graph))
-    tmp = similar(parent_path_masks, 7)
-    tmp[1:5] = parent_path_masks[1:5]
-    tmp[6:7] = parent_path_masks[7:8]
-    @test tmp == correct_roots_pathmasks
+
+    @test parent_path_masks == correct_roots_pathmasks
 end
 
 @testitem "ConstrainedPathIterator" begin
@@ -411,13 +409,17 @@ end
 
     #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
 
-    xy = FD.Node(*, x, y) #postorder # 4
-    n5 = FD.Node(5) #postorder # 1
-    f1 = FD.Node(*, n5, xy) #postorder 5
-    n3 = FD.Node(3) #postorder # 6
-    f2 = FD.Node(*, xy, n3) #postorder # 7
+    #x postorder number = 1, y postorder number = 2
+    xy = FD.Node(*, x, y) #postorder # 3
+    n5 = FD.Node(5)
+    f1 = FD.Node(*, n5, xy) #postorder 4
+    n3 = FD.Node(3)
+    f2 = FD.Node(*, xy, n3) #postorder # 6
     rts = [f1, f2]
     graph = FD.DerivativeGraph(rts)
+
+    #root 1 postorder number = 5, root 2 postorder number = 7
+
     root_masks = FD.compute_paths_to_roots(FD.num_vertices(graph), FD.edges(graph), FD.root_index_to_postorder_number(graph))
     variable_masks = FD.compute_paths_to_variables(FD.num_vertices(graph), FD.edges(graph), FD.variable_index_to_postorder_number(graph))
 
@@ -466,7 +468,7 @@ end
         push!(children, child)
     end
     @test length(children) == 1
-    @test children[1] == 3
+    @test children[1] == 2
 end
 
 @testitem "edge_exists" begin
@@ -497,16 +499,17 @@ end
     import FastDifferentiation as FD
 
 
-    FD.@variables x y
-
-    xy = FD.Node(*, x, y) #postorder # 4
-    n5 = FD.Node(5) #postorder # 1
-    f1 = FD.Node(*, n5, xy) #postorder 5
-    n3 = FD.Node(3) #postorder # 6
-    f2 = FD.Node(*, xy, n3) #postorder # 7
+    #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
+    @variables x y
+    #x postorder number = 1, y postorder number = 2
+    xy = FD.Node(*, x, y) #postorder # 3
+    n5 = FD.Node(5)
+    f1 = FD.Node(*, n5, xy) #postorder 4
+    n3 = FD.Node(3)
+    f2 = FD.Node(*, xy, n3) #postorder # 6
     rts = [f1, f2]
-    vars = [x, y]
     graph = FD.DerivativeGraph(rts)
+    vars = [x, y]
 
     previous_edges = FD.unique_edges(graph)
     new_edge = FD.PathEdge(1, 8, FD.Node(y), length(vars), length(rts))
@@ -523,7 +526,7 @@ end
     chldrn = FD.children.(values(FD.edges(graph)))
     numchldrn = sum(length.(chldrn))
     num_edges = (numprnts + numchldrn) / 2
-    @test num_edges == 9 #ensure number of FD.edges has increased by 1
+    @test num_edges == 7 #ensure number of FD.edges has increased by 1
 
     @test FD.edge_exists(graph, new_edge) #and that there is only one new edge
 end
@@ -576,41 +579,44 @@ end
 
     FD.@variables x y
 
-    xy = FD.Node(*, x, y) #postorder # 4
-    n5 = FD.Node(5) #postorder # 1
-    f1 = FD.Node(*, n5, xy) #postorder 5
-    n3 = FD.Node(3) #postorder # 6
-    f2 = FD.Node(*, xy, n3) #postorder # 7
+    #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
+
+    #x postorder number = 1, y postorder number = 2
+    xy = FD.Node(*, x, y) #postorder # 3
+    n5 = FD.Node(5)
+    f1 = FD.Node(*, n5, xy) #postorder 4
+    n3 = FD.Node(3)
+    f2 = FD.Node(*, xy, n3) #postorder # 6
     rts = [f1, f2]
-    vars = [x, y]
     graph = FD.DerivativeGraph(rts)
+    vars = [x, y]
 
     FD.compute_edge_paths!(FD.num_vertices(graph), FD.edges(graph), FD.variable_index_to_postorder_number(graph), FD.root_index_to_postorder_number(graph))
 
     correct_root_masks = Dict(
-        (4, 2) => BitVector([1, 1]),
-        (4, 3) => BitVector([1, 1]),
-        (5, 1) => BitVector([1, 0]),
+        (3, 2) => BitVector([1, 1]),
+        (4, 3) => BitVector([1, 0]),
+        (3, 1) => BitVector([1, 1]),
         (5, 4) => BitVector([1, 0]),
-        (8, 4) => BitVector([0, 1]),
-        (8, 7) => BitVector([0, 1])
+        (6, 3) => BitVector([0, 1]),
+        (7, 6) => BitVector([0, 1])
     )
 
     correct_variable_masks = Dict(
-        (4, 2) => BitVector([1, 0]),
-        (4, 3) => BitVector([0, 1]),
-        (5, 1) => BitVector([0, 0]),
+        (3, 2) => BitVector([0, 1]),
+        (4, 3) => BitVector([1, 1]),
+        (3, 1) => BitVector([1, 0]),
         (5, 4) => BitVector([1, 1]),
-        (8, 4) => BitVector([1, 1]),
-        (8, 7) => BitVector([0, 0])
+        (6, 3) => BitVector([1, 1]),
+        (7, 6) => BitVector([1, 1])
     )
 
     for index in FD.each_vertex(graph)
         c_and_p = FD.node_edges(graph, index)
         for edge in [FD.parents(c_and_p); FD.children(c_and_p)]
             if FD.top_vertex(edge) != 9 && FD.top_vertex(edge) != 6
-                @test edge.reachable_variables == correct_variable_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
-                @test edge.reachable_roots == correct_root_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
+                @assert edge.reachable_variables == correct_variable_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
+                @assert edge.reachable_roots == correct_root_masks[(FD.top_vertex(edge), FD.bott_vertex(edge))]
             end
         end
     end
@@ -620,15 +626,15 @@ end
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
-
-
     FD.@variables x y
+    #ℝ²->ℝ² function (f1,f2) = (5*(x*y),(x*y)*3)
 
-    xy = FD.Node(*, x, y) #postorder # 4
-    n5 = FD.Node(5) #postorder # 1
-    f1 = FD.Node(*, n5, xy) #postorder 5
-    n3 = FD.Node(3) #postorder # 6
-    f2 = FD.Node(*, xy, n3) #postorder # 7
+    #x postorder number = 1, y postorder number = 2
+    xy = FD.Node(*, x, y) #postorder # 3
+    n5 = FD.Node(5)
+    f1 = FD.Node(*, n5, xy) #postorder 4
+    n3 = FD.Node(3)
+    f2 = FD.Node(*, xy, n3) #postorder # 6
     rts = [f1, f2]
     graph = FD.DerivativeGraph(rts)
 
@@ -636,8 +642,8 @@ end
     idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
-        (1 => 5, 4 => 5, 2 => 4, 3 => 4, 5 => 6),
-        (2 => 4, 3 => 4, 4 => 8, 7 => 8, 8 => 9)
+        (1 => 3, 4 => 5, 3 => 4, 5 => 5),
+        (2 => 3, 3 => 6, 6 => 7, 7 => 7)
     ]
 
     for (i, idom) in pairs(idoms)
@@ -660,8 +666,8 @@ end
     idoms = FDTests.compute_dominance_tables(graph, true)
 
     correct_dominators = [
-        (1 => 2, 2 => 5, 3 => 7, 4 => 5, 5 => 7, 6 => 7, 7 => 8),
-        (1 => 2, 2 => 5, 3 => 6, 4 => 5, 5 => 6, 6 => 9, 9 => 10)
+        (1 => 2, 2 => 5, 5 => 7, 6 => 7, 7 => 8),
+        (3 => 6, 4 => 5, 5 => 6, 6 => 9, 9 => 10)
     ]
 
     for (i, idom) in pairs(idoms)
@@ -673,8 +679,8 @@ end
     pidoms = FDTests.compute_dominance_tables(graph, false)
 
     correct_post_dominators = [
-        (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 9 => 6),
-        (3 => 3, 4 => 3, 5 => 4, 6 => 3, 7 => 3, 9 => 6)
+        (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 8 => 7),
+        (3 => 3, 4 => 3, 5 => 4, 6 => 3, 9 => 6, 10 => 9)
     ]
 
     for (i, pidom) in pairs(pidoms)
@@ -2024,5 +2030,28 @@ end
     block_ji = H2_exec_ji(r_test)
 
     @test all(block_ij .≈ block_ji)
+end
+
+@testitem "check fix for incorrect reachability caused by edges to constant nodes in derivative graph" begin #test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/40#issuecomment-1714602092
+    using FastDifferentiation: FastDifferentiation as FD
+    x1, x2, x3 = FD.make_variables(:x, 3)
+
+    f = [
+        exp((x1 - x2) - (x1 - x2) * x3) + exp((x1 - x2) * x3),
+        -exp((x1 - x2) - (x1 - x2) * x3) - exp((x1 - x2) * x3) /
+                                           (exp((x1 - x2) - (x1 - x2) * x3) + exp((x1 - x2) * x3)),
+    ]
+
+    graph = FD.DerivativeGraph(f)
+
+    FD.jacobian(f, [x1])
+
+    f1 = [
+        x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3,
+        x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3 /
+                                   (x1 - x2 - (x1 - x2) * x3 + (x1 - x2) * x3),
+    ]
+
+    FD.jacobian(f1, [x1])
 end
 
