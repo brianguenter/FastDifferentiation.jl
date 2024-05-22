@@ -93,7 +93,7 @@ end
     subs_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(subs_heap)
 
-    _6_3 = subs[2]
+    _6_3 = subs[3]
     @test (6, 3) == FD.vertices(_6_3)
 
     FD.add_non_dom_edges!(_6_3)
@@ -2032,8 +2032,13 @@ end
     @test all(block_ij .≈ block_ji)
 end
 
-@testitem "check fix for incorrect reachability caused by edges to constant nodes in derivative graph" begin #test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/40#issuecomment-1714602092
+@testitem "check fix for incorrect reachability caused by edges to constant nodes in derivative graph" begin
+    #test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/40#issuecomment-1714602092
+    #also test for fix for bug https://github.com/brianguenter/FastDifferentiation.jl/issues/80#issue-2311521137
+
     using FastDifferentiation: FastDifferentiation as FD
+    using DataStructures
+
     x1, x2, x3 = FD.make_variables(:x, 3)
 
     f = [
@@ -2041,7 +2046,19 @@ end
         -exp((x1 - x2) - (x1 - x2) * x3) - exp((x1 - x2) * x3) /
                                            (exp((x1 - x2) - (x1 - x2) * x3) + exp((x1 - x2) * x3)),
     ]
+    graph = FD.DerivativeGraph(f)
+    subgraph_list = FD.compute_factorable_subgraphs(graph)
+    temp = extract_all!(subgraph_list)
+    for i in 1:length(temp)-1
+        @test FD.node_difference(temp[i]) <= FD.node_difference(temp[i+1])
+    end
 
-    FD.jacobian(f, [x1])
+    #ensure that jacobian computes without throwing exception
+    @test try
+        jacobian(f, [x1, x2, x3])
+        true
+    catch
+        false
+    end
 end
 
