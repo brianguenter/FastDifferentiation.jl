@@ -114,6 +114,8 @@ function factor_order(a::FactorableSubgraph, b::FactorableSubgraph)
     # This ordering heuristic doesn't seem to affect efficiency of computed derivatives much but is significantly faster. 
     if diffa < diffb
         return true
+    elseif diffa > diffb
+        return false
     elseif times_used(a) > times_used(b) #If a is used more times than b then factor a first. More efficient.
         return true
     else
