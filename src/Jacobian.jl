@@ -371,7 +371,10 @@ julia> derivative(A,t,t)
  6    0.0
 ```
 """
-function derivative(A::AbstractArray{<:Node}, variables::T...) where {T<:Node}
+function derivative(A::AbstractArray{<:Node}, variables...)
+    if variables === ()
+        throw(ErrorException("derivative function requires at least one variable argument to be differentiated with respect to. You had none."))
+    end
     var = variables[1]
     mat = _derivative(A, var)
     rest = variables[2:end]
@@ -384,7 +387,10 @@ end
 export derivative
 
 """Convenience `derivative` for scalar functions. Takes a scalar input and returns a scalar output"""
-function derivative(A::Node, variables::T...) where {T<:Node}
+function derivative(A::Node, variables...)
+    if variables === ()
+        throw(ErrorException("derivative function requires at least one variable argument to be differentiated with respect to. You had none."))
+    end
     temp = derivative([A], variables...)
     @assert length(temp) == 1
     derivative([A], variables...)[1]

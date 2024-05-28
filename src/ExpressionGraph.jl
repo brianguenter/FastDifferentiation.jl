@@ -631,7 +631,7 @@ julia> make_variables(:x,2,3,2)
  x2_1_2  x2_2_2  x2_3_2
 ```
  """
-function make_variables(name::Symbol, array_size::T...) where {T}
+function make_variables(name::Symbol, array_size...)
     result = Array{Node,length(array_size)}(undef, array_size...)
 
     for i in CartesianIndices((UnitRange.(1, array_size)))
