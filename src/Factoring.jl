@@ -150,16 +150,14 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
     pdom_subgraphs = Dict{Tuple{T,T},BitVector}()
     dom_subgraphs = Dict{Tuple{T,T},BitVector}()
 
-    function set_dom_bits!(subgraph::Union{Nothing,Tuple{T,T}}, all_subgraphs::Dict, var_or_root_index::Integer, bit_dimension::Integer) where {T<:Integer}
-        if subgraph !== nothing
-            existing_subgraph = get(all_subgraphs, subgraph, nothing)
-            if existing_subgraph !== nothing
-                all_subgraphs[subgraph][var_or_root_index] = 1
-            else
-                tmp = falses(bit_dimension)
-                tmp[var_or_root_index] = 1
-                all_subgraphs[subgraph] = tmp
-            end
+    function set_dom_bits!(subgraph::Tuple{T,T}, all_subgraphs::Dict, var_or_root_index::Integer, bit_dimension::Integer) where {T<:Integer}
+        existing_subgraph = get(all_subgraphs, subgraph, nothing)
+        if existing_subgraph !== nothing
+            all_subgraphs[subgraph][var_or_root_index] = 1
+        else
+            tmp = falses(bit_dimension)
+            tmp[var_or_root_index] = 1
+            all_subgraphs[subgraph] = tmp
         end
     end
 
@@ -171,7 +169,9 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
         for dominated in keys(temp_dom)
             dsubgraph = dom_subgraph(graph, root_index, dominated, temp_dom)
-            set_dom_bits!(dsubgraph, dom_subgraphs, root_index, codomain_dimension(graph))
+            if dsubgraph !== nothing
+                set_dom_bits!(dsubgraph, dom_subgraphs, root_index, codomain_dimension(graph))
+            end
         end
     end
 
@@ -181,7 +181,9 @@ function compute_factorable_subgraphs(graph::DerivativeGraph{T}) where {T}
 
         for dominated in keys(temp_dom)
             psubgraph = pdom_subgraph(graph, variable_index, dominated, temp_dom)
-            set_dom_bits!(psubgraph, pdom_subgraphs, variable_index, domain_dimension(graph))
+            if psubgraph !== nothing
+                set_dom_bits!(psubgraph, pdom_subgraphs, variable_index, domain_dimension(graph))
+            end
         end
     end
 
