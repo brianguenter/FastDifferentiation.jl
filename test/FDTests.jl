@@ -341,7 +341,7 @@ end
     @test all([correct_postorder_numbers[node] == FD.postorder_number(graph, node) for node in grnodes])
 
     correct_partials = Dict((cosx => [partial_cosx], siny => [partial_siny], ctimess => partial_times, cpluss => partial_plus))
-    #TODO need to use finite differences instead of Symbolics. 
+    #TODO need to use finite differences instead of Symbolics.
     # for (node, partials) in pairs(correct_partials)
     #     for (i, one_partial) in pairs(partials)
     #         f1 = to_symbolics(partial_value(graph, node, i))
@@ -1732,6 +1732,7 @@ end
 
 @testitem "in place init_with_zeros" begin
     import FastDifferentiation as FD
+    include("expr_analysis.jl")
 
     FD.@variables x y
     A = [x 0; 0 y]
@@ -1742,37 +1743,86 @@ end
     @test isapprox(mat, [1 0; 0 1])
     fn2 = FD.make_function(A, [x, y], in_place=true, init_with_zeros=false)
     mat = [10 10; 10 10]
-    println(mat)
     fn2(mat, [1, 1])
     @test isapprox(mat, [1 10; 10 1])
 
-    #NOT a test because of difficulty and fragility of parsing generated code. You have to verify these by looking at the output.
-    p = make_variables(:p, 21)
+    function check_expected_statements(p, in_place, init_with_zeros, return_tuple)
+        ex = make_Expr(p, p, in_place, init_with_zeros, return_tuple)
+        statements = extract_statements(ex)
 
-    println("NO array zero statement")
-    show(make_Expr(p, p, true, true))
-    show(make_Expr(p, p, true, false))
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+        element_type = :(result_element_type = promote_type($(Float64), eltype(input_variables)))
+        result_construction = :(result = Array{result_element_type}(undef, $(length(p),)))
+        if !in_place && !return_tuple
+            @test element_type ∈ statements
+            @test result_construction ∈ statements
+        else
+            @test element_type ∉ statements
+            @test result_construction ∉ statements
+        end
 
-    p[21] = 0
+        array_zero_statement = :(result .= zero(result_element_type))
+        if !return_tuple && (init_with_zeros || !in_place) && count(iszero, p) > 0.5 * length(p)
+            @test array_zero_statement ∈ statements
+        else
+            @test array_zero_statement ∉ statements
+        end
 
-    println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, true, true))
-    println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, true, false))
-    println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+        if init_with_zeros
+            for i in eachindex(p)
+                if iszero(p)
+                    @test :(result[$i] = 0) ∈ statements
+                end
+            end
+        elseif !return_tuple
+            for i in eachindex(p)
+                if iszero(p[i])
+                    @test :(result[$i] = 0) ∉ statements
+                    @test all(statement -> statement.args[1] != :(result[$i]), statements)
+                end
+            end
+        elseif return_tuple
+            for i in eachindex(p)
+                sym = Symbol("result_$i")
+                if iszero(p)
+                    @test :($sym = 0) ∈ statements
+                else
+                    println("\n"^10)
+                    if !any(s -> MacroTools.@capture(s, $sym = RHS_), statements)
+                        @show p (in_place, init_with_zeros, return_tuple) sym statements
+                    end
+                    @test any(s -> MacroTools.@capture(s, $sym = RHS_), statements)
+                end
+            end
+        end
 
-    p[20] = 0
-    println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, true, true))
-    println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, true, false))
-    println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+        returned_tuple = Expr(:tuple, Tuple(Symbol("result_$i") for i ∈ 1:length(p))...)
+        if in_place
+            @test :(return nothing) ∈ statements
+        elseif return_tuple
+            @test :(return $returned_tuple) ∈ statements
+        else
+            @test :(return result) ∈ statements
+        end
+    end
+
+    N = 21
+    for in_place in [true, false]
+        for init_with_zeros in [true, false]
+            for return_tuple in [true, false]
+                if in_place && return_tuple
+                    continue
+                end
+                p = make_variables(:p, N)
+                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
+                p[N] = 0
+                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
+                p[N-1] = 0
+                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
+                p[1:(N÷2)] .= 0
+                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
+            end
+        end
+    end
 end
 
 
@@ -2061,4 +2111,3 @@ end
         false
     end
 end
-

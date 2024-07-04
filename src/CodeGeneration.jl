@@ -4,7 +4,7 @@
 
 
 Computes a number representing the sparsity of the array of expressions. If `nelts` is the number of elements in the array and `nzeros` is the number of zero elements in the array
-then `sparsity = (nelts-nzeros)/nelts`. 
+then `sparsity = (nelts-nzeros)/nelts`.
 
 Frequently used in combination with a call to `make_function` to determine whether to set keyword argument `init_with_zeros` to false."""
 function sparsity(sym_func::AbstractArray{<:Node})
@@ -117,10 +117,15 @@ end
         func_array::AbstractArray{<:Node},
         input_variables::AbstractVector{<:Node},
         in_place::Bool,
-        init_with_zeros::Bool
+        init_with_zeros::Bool,
+        return_tuple::Bool=false
     )
 """
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool, return_tuple::Bool=false) where {T<:Node,S<:Node}
+    if in_place && return_tuple
+        throw(ArgumentError("return_tuple=true is not supported when in_place=true"))
+    end
+
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
@@ -135,7 +140,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     is_mostly_zero = num_zeros > 5 * num_const
 
     # figure out if we have clear majority of terms and select the initialization strategy accordingly
-    if (is_all_constant && is_mostly_zero) || (!is_all_constant && num_zeros > zero_threshold * length(func_array))
+    if return_tuple
+        initialization_strategy = :undef
+    elseif (is_all_constant && is_mostly_zero) || (!is_all_constant && num_zeros > zero_threshold * length(func_array))
         initialization_strategy = :zero
     elseif (is_all_constant && !is_mostly_zero) || (!is_all_constant && num_const > const_threshold * length(func_array))
         initialization_strategy = :const
@@ -146,7 +153,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     # declare result element type, and result variable if not provided by the user
     if in_place
         push!(body.args, :(result_element_type = eltype(input_variables)))
-    else
+    elseif !return_tuple
         push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
         push!(body.args, undef_array_declaration(func_array))
     end
@@ -163,22 +170,30 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         node_to_index[node] = i
     end
 
-    for (i, node) in pairs(func_array)
-        # skip all terms that we have computed above during construction
-        if is_constant(node) && initialization_strategy === :const || # already initialized as constant above
-           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
-            continue
+    result_tuple_variables = Tuple(Symbol("result_$i") for i ∈ 1:length(func_array))
+    for ((i, node), result_tuple_variable) in zip(pairs(func_array), result_tuple_variables)
+        # skip all terms that we have computed above during construction unless returning a tuple
+        if !return_tuple && (is_constant(node) && initialization_strategy === :const || # already initialized as constant above
+           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros)) # was already initialized as zero above or we don't want to initialize with zeros
+           continue
         end
         node_body, variable = function_body!(node, node_to_index, node_to_var)
         for arg in node_body.args
             push!(body.args, arg)
         end
-        push!(body.args, :(result[$i] = $variable))
+        if return_tuple
+            push!(body.args, :($result_tuple_variable = $variable))
+        else
+            push!(body.args, :(result[$i] = $variable))
+        end
     end
 
     # return result or nothing if in_place
     if in_place
         push!(body.args, :(return nothing))
+    elseif return_tuple
+        result_tuple = Expr(:tuple, result_tuple_variables...)
+        push!(body.args, :(return $result_tuple))
     else
         push!(body.args, return_expression(func_array))
     end
@@ -200,11 +215,16 @@ export make_Expr
     make_Expr(
         A::SparseMatrixCSC{<:Node,<:Integer},
         input_variables::AbstractVector{<:Node},
-        in_place::Bool, init_with_zeros::Bool
+        in_place::Bool, init_with_zeros::Bool,
+        return_tuple::Bool=false
     )
 
 `init_with_zeros` argument is not used for sparse matrices."""
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node,Ti}
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool, return_tuple::Bool=false) where {T<:Node,S<:Node,Ti}
+    if return_tuple
+        throw(ArgumentError("return_tuple=true is not supported for sparse matrices"))
+    end
+
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
@@ -260,7 +280,8 @@ export make_Expr
     make_function(
         func_array::AbstractArray{<:Node},
         input_variables::AbstractVector{<:Node}...;
-        in_place::Bool=false, init_with_zeros::Bool=true
+        in_place::Bool=false, init_with_zeros::Bool=true,
+        return_tuple::Bool=false
     )
 
 Makes a function to evaluate the symbolic expressions in `func_array`. Every variable that is used in `func_array` must also be in `input_variables`. However, it will not cause an error if variables in `input_variables` are not variables used by `func_array`.
@@ -279,7 +300,7 @@ julia> jac = jacobian([f],[x]) #the Jacobian has a single constant element, 1, a
 
  julia> fjac = make_function(jac,[x])
  ...
- 
+
  julia> fjac(2.0) #the value 2.0 is passed in for the variable x but has no effect on the output. Does not cause a runtime exception.
  1×1 Matrix{Float64}:
   1.0
@@ -311,14 +332,15 @@ julia> result
 If the array is sparse then the keyword argument `init_with_zeros` has no effect. If the array is dense and `in_place=true` then the keyword argument `init_with_zeros` affects how the in place array is initialized. If `init_with_zeros = true` then the in place array is initialized with zeros. If `init_with_zeros=false` it is the user's responsibility to initialize the array with zeros before passing it to the runtime generated function.
 
 This can be useful for modestly sparse dense matrices with say at least 1/4 of the array entries non-zero. In this case a sparse matrix may not be as efficient as a dense matrix. But a large fraction of time could be spent unnecessarily setting elements to zero. In this case you can initialize the in place Jacobian array once with zeros before calling the run time generated function.
+
+Alternatively, if `return_tuple=true` then the function will return a tuple of the results.  Note that only one of `in_place` and `return_tuple` can be true, otherwise an ArgumentError will be thrown.
 """
-function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
+function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true, return_tuple::Bool=false) where {T<:Node}
     vars = variables(func_array) #all unique variables in func_array
     all_input_vars = vcat(input_variables...)
 
     @assert vars ⊆ all_input_vars "Some of the variables in your function (the func_array argument) were not in the input_variables argument. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
-    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
+    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros, return_tuple))
 end
 export make_function
-
