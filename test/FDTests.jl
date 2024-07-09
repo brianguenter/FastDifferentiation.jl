@@ -1746,13 +1746,13 @@ end
     fn2(mat, [1, 1])
     @test isapprox(mat, [1 10; 10 1])
 
-    function check_expected_statements(p, in_place, init_with_zeros, return_tuple)
-        ex = make_Expr(p, p, in_place, init_with_zeros, return_tuple)
+    function check_expected_statements(p, in_place, init_with_zeros)
+        ex = make_Expr(p, p, in_place, init_with_zeros)
         statements = extract_statements(ex)
 
         element_type = :(result_element_type = promote_type($(Float64), eltype(input_variables)))
         result_construction = :(result = Array{result_element_type}(undef, $(length(p),)))
-        if !in_place && !return_tuple
+        if !in_place
             @test element_type ∈ statements
             @test result_construction ∈ statements
         else
@@ -1761,7 +1761,7 @@ end
         end
 
         array_zero_statement = :(result .= zero(result_element_type))
-        if !return_tuple && (init_with_zeros || !in_place) && count(iszero, p) > 0.5 * length(p)
+        if (init_with_zeros || !in_place) && count(iszero, p) > 0.5 * length(p)
             @test array_zero_statement ∈ statements
         else
             @test array_zero_statement ∉ statements
@@ -1773,33 +1773,17 @@ end
                     @test :(result[$i] = 0) ∈ statements
                 end
             end
-        elseif !return_tuple
+        else
             for i in eachindex(p)
                 if iszero(p[i])
                     @test :(result[$i] = 0) ∉ statements
                     @test all(statement -> statement.args[1] != :(result[$i]), statements)
                 end
             end
-        elseif return_tuple
-            for i in eachindex(p)
-                sym = Symbol("result_$i")
-                if iszero(p)
-                    @test :($sym = 0) ∈ statements
-                else
-                    println("\n"^10)
-                    if !any(s -> MacroTools.@capture(s, $sym = RHS_), statements)
-                        @show p (in_place, init_with_zeros, return_tuple) sym statements
-                    end
-                    @test any(s -> MacroTools.@capture(s, $sym = RHS_), statements)
-                end
-            end
         end
 
-        returned_tuple = Expr(:tuple, Tuple(Symbol("result_$i") for i ∈ 1:length(p))...)
         if in_place
             @test :(return nothing) ∈ statements
-        elseif return_tuple
-            @test :(return $returned_tuple) ∈ statements
         else
             @test :(return result) ∈ statements
         end
@@ -1808,19 +1792,14 @@ end
     N = 21
     for in_place in [true, false]
         for init_with_zeros in [true, false]
-            for return_tuple in [true, false]
-                if in_place && return_tuple
-                    continue
-                end
-                p = make_variables(:p, N)
-                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
-                p[N] = 0
-                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
-                p[N-1] = 0
-                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
-                p[1:(N÷2)] .= 0
-                check_expected_statements(p, in_place, init_with_zeros, return_tuple)
-            end
+            p = make_variables(:p, N)
+            check_expected_statements(p, in_place, init_with_zeros)
+            p[N] = 0
+            check_expected_statements(p, in_place, init_with_zeros)
+            p[N-1] = 0
+            check_expected_statements(p, in_place, init_with_zeros)
+            p[1:(N÷2)] .= 0
+            check_expected_statements(p, in_place, init_with_zeros)
         end
     end
 end

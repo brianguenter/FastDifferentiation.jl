@@ -1,5 +1,4 @@
 import MacroTools
-import RuntimeGeneratedFunctions
 
 """
     extract_statements(ex::Expr)
