@@ -333,14 +333,14 @@ end
     rts = [ctimess, cpluss]
     grnodes = [x, y, cosx, siny, cpluss, ctimess]
 
-    correct_postorder_numbers = Dict((x => 1, cosx => 2, y => 3, siny => 4, ctimess => 5, cpluss => 7))
+    correct_postorder_numbers = IdDict((x => 1, cosx => 2, y => 3, siny => 4, ctimess => 5, cpluss => 7))
 
     graph = FD.DerivativeGraph(rts)
 
 
     @test all([correct_postorder_numbers[node] == FD.postorder_number(graph, node) for node in grnodes])
 
-    correct_partials = Dict((cosx => [partial_cosx], siny => [partial_siny], ctimess => partial_times, cpluss => partial_plus))
+    correct_partials = IdDict((cosx => [partial_cosx], siny => [partial_siny], ctimess => partial_times, cpluss => partial_plus))
     #TODO need to use finite differences instead of Symbolics. 
     # for (node, partials) in pairs(correct_partials)
     #     for (i, one_partial) in pairs(partials)
