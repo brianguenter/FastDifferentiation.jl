@@ -54,8 +54,8 @@ function number_methods(T, rhs1, rhs2, options=nothing)
             (f::$(typeof(f)))(a::$T, b::$T) = $rhs2
             (f::$(typeof(f)))(a::$T, b::Real) = $rhs2
             (f::$(typeof(f)))(a::Real, b::$T) = $rhs2
-            (f::$(typeof(f)))(a::$T, b::Number) = $rhs2
-            (f::$(typeof(f)))(a::Number, b::$T) = $rhs2
+            # (f::$(typeof(f)))(a::$T, b::Number) = $rhs2
+            # (f::$(typeof(f)))(a::Number, b::$T) = $rhs2
         end
 
         push!(exprs, expr)
