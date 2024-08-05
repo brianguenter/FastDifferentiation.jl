@@ -37,8 +37,8 @@ struct Node <: Real
     Node(a::T) where {T<:Real} = new(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
 
-    function Node(operation, args::MVector{N,T}) where {T<:Node,N} #use MVector rather than Vector. 40x faster.
-        return new(operation, args)
+    function Node(operation, args::MVector)  #use MVector rather than Vector. 40x faster.
+        return new(operation, Node.(args))
     end
 
     Node(a::S) where {S<:Symbol} = new(a, nothing)

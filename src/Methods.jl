@@ -54,8 +54,6 @@ function number_methods(T, rhs1, rhs2, options=nothing)
             (f::$(typeof(f)))(a::$T, b::$T) = $rhs2
             (f::$(typeof(f)))(a::$T, b::Real) = $rhs2
             (f::$(typeof(f)))(a::Real, b::$T) = $rhs2
-            # (f::$(typeof(f)))(a::$T, b::Number) = $rhs2
-            # (f::$(typeof(f)))(a::Number, b::$T) = $rhs2
         end
 
         push!(exprs, expr)
@@ -72,6 +70,21 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     push!(exprs, :(push!($previously_declared_for, $T)))
     Expr(:block, exprs...)
 end
+
+function bool_methods()
+    for func in (<, >, ≤, ≥, ≠, ==)
+        eval(:(Base.$(Symbol(func))(a::Node, b::Node) = Node($func, a, b);
+        Base.$(Symbol(func))(a::Node, b::Real) = Node(func, a, Node(b));
+        Base.$(Symbol(func))(a::Real, b::Node) = Node(func, Node(a), b)
+        ))
+    end
+
+    eval(:(Base.ifelse(a::Node, b::Node, c::Real) = Node(ifelse, MVector(a, b, Node(c)));
+    Base.ifelse(a::Node, b::Real, c::Node) = Node(ifelse, MVector(a, Node(b), c));
+    Base.ifelse(a::Node, b::Node, c::Node) = Node(ifelse, MVector(a, b, c))
+    ))
+end
+export bool_methods
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
     number_methods(T, rhs1, rhs2, options) |> esc
