@@ -71,21 +71,35 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     Expr(:block, exprs...)
 end
 
+const comparison_operators = (<, >, ≤, ≥, ≠, ==)
+const boolean_operators = (&, !, |, ⊻)
+const boolean_like_operators = (Base.sign, Base.signbit, Base.isreal, Base.isfinite, Base.iszero, Base.isnan, Base.isinf, Base.isinteger)
 #Define boolean methods
 """T is the type you want to define the boolean methods for. In this case Node"""
 macro boolean_methods(T)
-    for func in (<, >, ≤, ≥, ≠, ==)
+    for func in comparison_operators
         eval(:(Base.$(Symbol(func))(a::$T, b::$T) = $T($func, a, b);
         Base.$(Symbol(func))(a::$T, b::Real) = $T(func, a, $T(b));
         Base.$(Symbol(func))(a::Real, b::$T) = Node(func, $T(a), b)
         ))
     end
 
+    # for boolean_op in boolean_operators
+    #want to have tests in this method to ensure that the Node values are boolean in nature, i.e., one of 
+
     eval(:(Base.ifelse(a::$T, b, c) = $T(ifelse, MVector(a, b, c))
     ))
 end
 
-
+#methods may need to add to get good compatibility with the rest of Julia
+# Base.sign
+# Base.signbit
+# Base.isreal
+# Base.isfinite
+# Base.iszero
+# Base.isnan
+# Base.isinf
+# Base.isinteger
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
     number_methods(T, rhs1, rhs2, options) |> esc
