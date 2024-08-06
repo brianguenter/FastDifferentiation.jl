@@ -71,20 +71,21 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     Expr(:block, exprs...)
 end
 
-function bool_methods()
+#Define boolean methods
+"""T is the type you want to define the boolean methods for. In this case Node"""
+macro boolean_methods(T)
     for func in (<, >, ≤, ≥, ≠, ==)
-        eval(:(Base.$(Symbol(func))(a::Node, b::Node) = Node($func, a, b);
-        Base.$(Symbol(func))(a::Node, b::Real) = Node(func, a, Node(b));
-        Base.$(Symbol(func))(a::Real, b::Node) = Node(func, Node(a), b)
+        eval(:(Base.$(Symbol(func))(a::$T, b::$T) = $T($func, a, b);
+        Base.$(Symbol(func))(a::$T, b::Real) = $T(func, a, $T(b));
+        Base.$(Symbol(func))(a::Real, b::$T) = Node(func, $T(a), b)
         ))
     end
 
-    eval(:(Base.ifelse(a::Node, b::Node, c::Real) = Node(ifelse, MVector(a, b, Node(c)));
-    Base.ifelse(a::Node, b::Real, c::Node) = Node(ifelse, MVector(a, Node(b), c));
-    Base.ifelse(a::Node, b::Node, c::Node) = Node(ifelse, MVector(a, b, c))
+    eval(:(Base.ifelse(a::$T, b, c) = $T(ifelse, MVector(a, b, c))
     ))
 end
-export bool_methods
+
+
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
     number_methods(T, rhs1, rhs2, options) |> esc

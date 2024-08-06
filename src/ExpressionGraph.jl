@@ -657,3 +657,5 @@ export make_variables
 
 #create methods that accept Node arguments for all mathematical functions.
 @number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
+
+@boolean_methods(Node)

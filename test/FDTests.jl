@@ -2062,3 +2062,40 @@ end
     end
 end
 
+@testitem "conditional tests" begin
+    @variables x y
+
+    #boolean operators
+    f = x < y
+    @test ==(FastDifferentiation.value(f), <)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+    f = x > y
+    @test ==(FastDifferentiation.value(f), >)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+    f = x == y
+    @test ==(FastDifferentiation.value(f), ==)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+    f = x ≠ y
+    @test ==(FastDifferentiation.value(f), ≠)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+    f = x ≤ y
+    @test ==(FastDifferentiation.value(f), ≤)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+    f = x ≥ y
+    @test ==(FastDifferentiation.value(f), ≥)
+    @test FastDifferentiation.children(f)[1] === x
+    @test FastDifferentiation.children(f)[2] === y
+
+    #conditional
+    expr = x < y
+    f = ifelse(expr, x, y)
+    @test ==(FastDifferentiation.value(f), ifelse)
+    @test ===(FastDifferentiation.children(f)[1], expr)
+    @test ===(FastDifferentiation.children(f)[2], x)
+    @test ===(FastDifferentiation.children(f)[3], y)
+end
