@@ -76,7 +76,7 @@ const boolean_operators = (&, !, |, ⊻)
 const boolean_like_operators = (Base.sign, Base.signbit, Base.isreal, Base.isfinite, Base.iszero, Base.isnan, Base.isinf, Base.isinteger)
 #Define boolean methods
 """T is the type you want to define the boolean methods for. In this case Node"""
-macro boolean_methods(T)
+macro comparison_methods(T)
     for func in comparison_operators
         eval(:(Base.$(Symbol(func))(a::$T, b::$T) = $T($func, a, b);
         Base.$(Symbol(func))(a::$T, b::Real) = $T($func, a, $T(b));
@@ -89,6 +89,10 @@ macro boolean_methods(T)
 
     eval(:(Base.ifelse(a::$T, b, c) = $T(ifelse, MVector(a, b, c))
     ))
+end
+
+macro boolean_methods(T)
+    #
 end
 
 #methods may need to add to get good compatibility with the rest of Julia
