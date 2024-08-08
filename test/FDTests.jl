@@ -77,7 +77,7 @@ end
     function edge_fields_equal(edge1, edge2)
         return edge1.top_vertex == edge2.top_vertex &&
                edge1.bott_vertex == edge2.bott_vertex &&
-               edge1.edge_value == edge2.edge_value &&
+               edge1.edge_value === edge2.edge_value && #must compare Node types with === because have now defined conditionals for Node
                edge1.reachable_variables == edge2.reachable_variables &&
                edge1.reachable_roots == edge2.reachable_roots
     end
@@ -207,8 +207,8 @@ end
 
 
     a = x * y
-    @test derivative(a, Val(1)) == y
-    @test derivative(a, Val(2)) == x
+    @test derivative(a, Val(1)) === y
+    @test derivative(a, Val(2)) === x
 end
 
 @testitem "FD.compute_factorable_subgraphs test order" begin
@@ -979,7 +979,7 @@ end
 
     #first verify all nodes have the postorder numbers we expect
     for (i, nd) in pairs(gnodes)
-        @test FD.node(graph, i) == nd
+        @test FD.node(graph, i) === nd
     end
 
     sub_heap = FD.compute_factorable_subgraphs(graph)
@@ -1151,10 +1151,10 @@ end
     result = FD._symbolic_jacobian!(graph, [nx1, ny2])
 
     #symbolic equality will work here because of common subexpression caching.
-    @test result[1, 1] == cos(nx1 * ny2) * ny2
-    @test result[1, 2] == cos(nx1 * ny2) * nx1
-    @test result[2, 1] == -sin(nx1 * ny2) * ny2
-    @test result[2, 2] == (-sin(nx1 * ny2)) * nx1
+    @test result[1, 1] === cos(nx1 * ny2) * ny2
+    @test result[1, 2] === cos(nx1 * ny2) * nx1
+    @test result[2, 1] === -sin(nx1 * ny2) * ny2
+    @test result[2, 2] === (-sin(nx1 * ny2)) * nx1
 end
 
 
@@ -1290,7 +1290,7 @@ end
     copy_jac = FD._symbolic_jacobian(graph, [x, y])
     jac = FD._symbolic_jacobian!(graph, [x, y])
 
-    @test all(copy_jac .== jac) #make sure the jacobian computed by copying the graph has the same FD.variables as the one computed by destructively modifying the graph
+    @test all(copy_jac .=== jac) #make sure the jacobian computed by copying the graph has the same FD.variables as the one computed by destructively modifying the graph
 
     computed_jacobian = FD.make_function(jac, [x, y])
 
@@ -1434,7 +1434,7 @@ end
     ]
 
     @test isapprox(zeros(2, 2), FD.value.(derivative(A, nq2))) #taking derivative wrt variable not present in the graph returns all zero matrix
-    @test DA == derivative(A, nq1)
+    @test all(DA .=== derivative(A, nq1))
 end
 
 @testitem "jacobian_times_v" begin
@@ -1607,7 +1607,7 @@ end
     #test to make sure sparse_hessian/evaluate_path bug is not reintroduced (ref commit 4b4aeeb1990a15443ca87c15638dcaf7bd9d34d1)
     a = hessian(x * y, [x, y])
     b = sparse_hessian(x * y, [x, y])
-    @test all(a .== b)
+    @test all(a .=== b)
 end
 
 @testitem "hessian_times_v" begin
@@ -1783,9 +1783,9 @@ end
     f = x + x
     @test f === 2 * x
     f = (-1 * x) + x
-    @test f == 0
+    @test FastDifferentiation.value(f) == 0
     f = x + (-1 * x)
-    @test f == 0
+    @test FastDifferentiation.value(f) == 0
     f = 2x + 3x
     @test f === 5 * x
     f2 = -x + x
@@ -2062,7 +2062,7 @@ end
     end
 end
 
-@testitem "conditional tests" begin
+@testitem "conditionals" begin
     @variables x y
 
     #boolean operators
@@ -2098,4 +2098,15 @@ end
     @test ===(FastDifferentiation.children(f)[1], expr)
     @test ===(FastDifferentiation.children(f)[2], x)
     @test ===(FastDifferentiation.children(f)[3], y)
+end
+
+@testitem "conditional code generation" begin
+    @variables x y
+    f = ifelse(x < y, cos(x), sin(x))
+
+    input = [π / 2.0, 20.0]
+    exe = make_function([f], [x, y])
+    @test isapprox(cos(input[1]), exe(input)[1])
+    input = [π / 2.0, 1.0]
+    @test isapprox(sin(input[1]), exe(input)[1])
 end

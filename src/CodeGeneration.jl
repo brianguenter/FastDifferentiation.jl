@@ -316,7 +316,20 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
     vars = variables(func_array) #all unique variables in func_array
     all_input_vars = vcat(input_variables...)
 
-    @assert vars ⊆ all_input_vars "Some of the variables in your function (the func_array argument) were not in the input_variables argument. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
+    #Because FD defines == operator for Node, which does not return a boolean, many builtin Julia functions will not work as expected. For example:
+    #  vars ⊆ all_input_vars errors because internally issubset tests for equality between the node values using ==, not ===. == returns a Node value but the issubset function expects a Bool.
+
+    temp = Vector{eltype(vars)}(undef, 0)
+
+    input_dict = IdDict(zip(all_input_vars, all_input_vars))
+    for one_var in vars
+        value = get(input_dict, one_var, nothing)
+        if value === nothing
+            push!(temp, one_var)
+        end
+    end
+
+    @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
     @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
 end

@@ -79,8 +79,8 @@ const boolean_like_operators = (Base.sign, Base.signbit, Base.isreal, Base.isfin
 macro boolean_methods(T)
     for func in comparison_operators
         eval(:(Base.$(Symbol(func))(a::$T, b::$T) = $T($func, a, b);
-        Base.$(Symbol(func))(a::$T, b::Real) = $T(func, a, $T(b));
-        Base.$(Symbol(func))(a::Real, b::$T) = Node(func, $T(a), b)
+        Base.$(Symbol(func))(a::$T, b::Real) = $T($func, a, $T(b));
+        Base.$(Symbol(func))(a::Real, b::$T) = Node($func, $T(a), b)
         ))
     end
 
