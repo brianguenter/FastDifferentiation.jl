@@ -33,6 +33,7 @@ struct Node <: Real
 
     Node(f::S, a) where {S} = new(f, MVector{1,Node}(Node(a)))
     Node(f::S, a, b) where {S} = new(f, MVector{2,Node}(Node(a), Node(b))) #if a,b not a Node convert them.
+    Node(f::S, a, b, c) where {S} = new(f, MVector{3,Node}(Node(a), Node(b), Node(c))) #if a,b not a Node convert them.
 
     Node(a::T) where {T<:Real} = new(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
@@ -102,9 +103,7 @@ Base.typemin(::Type{Node}) = Node(-Inf)
 Base.typemax(::Type{Node}) = Node(Inf)
 Base.float(x::Node) = x
 
-# This one is needed because julia/base/float.jl only defines `isinf` for `Real`, but `Node
-# <: Number`.  (See https://github.com/brianguenter/FastDifferentiation.jl/issues/73)
-Base.isinf(x::Node) = !isnan(x) & !isfinite(x)
+
 
 
 Broadcast.broadcastable(a::Node) = (a,)
@@ -144,7 +143,7 @@ Base.isless(::Node, ::Number) = error_message()
 Base.isless(::Number, ::Node) = error_message()
 Base.isless(::Node, ::Node) = error_message()
 
-Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
+
 
 function is_zero(a::Node)
     #this: value(a) == 0 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
@@ -173,6 +172,7 @@ end
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
 simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
+simplify_check_cache(a, b, c, d, cache) = check_cache((a, b, c, d), cache) #this version handles ifelse
 
 is_nary(a::Node) = arity(a) > 2
 is_times(a::Node) = value(a) == *
@@ -657,5 +657,3 @@ export make_variables
 
 #create methods that accept Node arguments for all mathematical functions.
 @number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
-
-@comparison_methods(Node)
