@@ -96,6 +96,10 @@ Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
 Base.one(::Node) = Node(1)
 
+#special case for iszero. Some other libraries need iszero(a::Node) to return a boolean value. Other code may be okay with iszero return the expression Node(iszero,a), which would then be evaluated at run time in generated function. Unfortunately, SparseArrays requires the former so the sparse Jacobian/Hessian code won't work unless iszero returns Bool. Maybe there is a way to fix this but I suspect not easily.
+
+Base.iszero(a::Node) = is_constant(a) && iszero(value(a)) ? true : false
+
 # These are essentially copied from Symbolics.jl:
 # https://github.com/JuliaSymbolics/Symbolics.jl/blob/e4c328103ece494eaaab2a265524a64bfbe43dbd/src/num.jl#L31-L34
 Base.eps(::Type{Node}) = Node(0)
