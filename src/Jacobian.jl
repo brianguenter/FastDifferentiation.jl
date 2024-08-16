@@ -90,7 +90,6 @@ julia> jacobian([x*y,y*x],[x])
 jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
 export jacobian
 
-
 """
     _sparse_symbolic_jacobian!(
         graph::DerivativeGraph,
@@ -114,7 +113,7 @@ function _sparse_symbolic_jacobian!(graph::DerivativeGraph, partial_variables::A
             partial_index = variable_node_to_index(graph, partial_var) #make sure variable is in the domain of the graph
             if partial_index !== nothing
                 tmp = evaluate_path(graph, root, partial_index)
-                if !is_zero(tmp)
+                if !is_identically_zero(tmp)
                     push!(row_indices, root)
                     push!(col_indices, i)
                     push!(values, tmp)

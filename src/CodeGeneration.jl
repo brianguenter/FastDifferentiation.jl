@@ -8,7 +8,7 @@ then `sparsity = (nelts-nzeros)/nelts`.
 
 Frequently used in combination with a call to `make_function` to determine whether to set keyword argument `init_with_zeros` to false."""
 function sparsity(sym_func::AbstractArray{<:Node})
-    zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
+    zeros = mapreduce(x -> is_identically_zero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
     return zeros == 0 ? 1.0 : (tot - zeros) / tot
 end
@@ -124,8 +124,8 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
-    num_zeros = count(is_zero, (func_array))
-    num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
+    num_zeros = count(is_identically_zero, (func_array))
+    num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
 
 
     zero_threshold = 0.5
@@ -166,7 +166,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     for (i, node) in pairs(func_array)
         # skip all terms that we have computed above during construction
         if is_constant(node) && initialization_strategy === :const || # already initialized as constant above
-           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
+           is_identically_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
             continue
         end
         node_body, variable = function_body!(node, node_to_index, node_to_var)
@@ -185,11 +185,11 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # wrap in function body
     if in_place
-        return :((result, input_variables) -> @inbounds begin
+        return :((result, input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     else
-        return :((input_variables) -> @inbounds begin
+        return :((input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     end
@@ -248,9 +248,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
         push!(body.args, :(return result))
 
         if in_place
-            return :((result, input_variables) -> $body)
+            return :((result, input_variables::AbstractArray) -> $body)
         else
-            return :((input_variables) -> $body)
+            return :((input_variables::AbstractArray) -> $body)
         end
     end
 end

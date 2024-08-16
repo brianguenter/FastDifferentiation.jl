@@ -33,7 +33,7 @@ const previously_declared_for = Set([])
 const basic_monadic = [-, +]
 const basic_diadic = [+, -, *, /, //, \, ^]
 const diadic_non_differentiable = [max, min, copysign, &, |, ⊻, <, >, ≤, ≥, ≠, ==]
-const monadic_non_differentiable = [signbit, isreal, isfinite, isnan, isinf, isinteger, !]
+const monadic_non_differentiable = [signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
 
 # TODO: keep domains tighter than this
 function number_methods(T, rhs1, rhs2, options=nothing)
@@ -68,8 +68,9 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     end
 
     push!(exprs, :(push!($previously_declared_for, $T)))
-    Expr(:block, exprs...)
+    return Expr(:block, exprs...)
 end
+
 
 # """if the node value is 0 then can evaluate this at compile time. Otherwise have to return an expression which will be evaluated when executing function created by make_function"""
 # Base.iszero(a::Node) = node_value(a) == 0 ? true : simplify_check_cache()
@@ -79,7 +80,7 @@ end
 # Base.isinf(x::Node) = !isnan(x) & !isfinite(x)
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
-    eval(:(Base.ifelse(a::$T, b, c) = simplify_check_cache(Base.ifelse, a, b, c, EXPRESSION_CACHE)))
+    eval(:(Base.ifelse(a::$T, b::$T, c::$T) = simplify_check_cache(Base.ifelse, a, b, c, EXPRESSION_CACHE)))
 
     number_methods(T, rhs1, rhs2, options) |> esc
 end

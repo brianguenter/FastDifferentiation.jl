@@ -1643,10 +1643,34 @@ end
     using SparseArrays
     import FastDifferentiation as FD
 
+
+    function FD_sparse(a::AbstractArray{T}) where {T<:FD.Node}
+
+        values = FD.Node[]
+
+        inds = findall(!FD.is_identically_zero, a)
+        row_indices = getindex.(inds, 1)
+        col_indices = getindex.(inds, 2)
+        values = getindex.(Ref(a), inds)
+
+        return sparse(row_indices, col_indices, values, size(a)[1], size(a)[2])
+    end
+
+    m1 = FastDifferentiation.Node.([1 0 0; 0 2 0; 3 0 0])
+    m1_non_zeros = ([1, 2, 3], [1, 2, 1], FastDifferentiation.Node.([1, 2, 3]))
+
+    values = m1_non_zeros[3]
+    indices = collect(zip(m1_non_zeros[1], m1_non_zeros[2]))
+    sp = FD_sparse(m1)
+    for (i, index) in pairs(indices)
+        @test values[i] === getindex(m1, index...)
+    end
+
+
     FD.@variables a11 a12 a13 a21 a22 a23 a31 a32 a33
 
     vars = vec([a11 a12 a13 a21 a22 a23 a31 a32 a33])
-    spmat = sparse([a11 a12 a13; a21 a22 a23; a31 a32 a33])
+    spmat = FD_sparse([a11 a12 a13; a21 a22 a23; a31 a32 a33])
     f1 = FD.make_function(spmat, vars)
     inputs = [1 2 3 4 5 6 7 8 9]
     correct = [1 2 3; 4 5 6; 7 8 9]
