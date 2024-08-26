@@ -35,6 +35,8 @@ const basic_diadic = [+, -, *, /, //, \, ^]
 const diadic_non_differentiable = [max, min, copysign, &, |, ⊻, <, >, ≤, ≥, ≠, ==]
 const monadic_non_differentiable = [signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
 
+const not_currently_differentiable = vcat(diadic_non_differentiable, monadic_non_differentiable)
+
 # TODO: keep domains tighter than this
 function number_methods(T, rhs1, rhs2, options=nothing)
     exprs = []

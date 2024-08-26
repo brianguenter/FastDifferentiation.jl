@@ -414,10 +414,18 @@ end
 
 derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
+is_ifelse(a::Node) = value(a) == ifelse
+
+conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals $(Tuple(not_currently_differentiable))")
+
+is_conditional(a::Node) = is_ifelse(a) || value(a) in not_currently_differentiable
+
 function derivative(a::Node, index::Val{1})
     # if is_variable(a)
     #     if arity(a) == 0
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 1
         return derivative(value(a), (children(a)[1],), index)
@@ -429,7 +437,9 @@ function derivative(a::Node, index::Val{1})
 end
 
 function derivative(a::Node, index::Val{2})
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 2
         return derivative(value(a), (children(a)[1], children(a)[2]), index)
@@ -439,7 +449,9 @@ function derivative(a::Node, index::Val{2})
 end
 
 function derivative(a::Node, index::Val{i}) where {i}
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     else
         return derivative(value(a), (children(a)...,), index)
