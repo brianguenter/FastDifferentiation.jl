@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>How to use make_function · FastDifferentiation.jl</title><meta name="title" content="How to use make_function · FastDifferentiation.jl"/><meta property="og:title" content="How to use make_function · FastDifferentiation.jl"/><meta property="twitter:title" content="How to use make_function · FastDifferentiation.jl"/><meta name="description" content="Documentation for FastDifferentiation.jl."/><meta property="og:description" content="Documentation for FastDifferentiation.jl."/><meta property="twitter:description" content="Documentation for FastDifferentiation.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">FastDifferentiation.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><a class="tocitem" href="../limitations/">Limitations</a></li><li><a class="tocitem" href="../howitworks/">How it works</a></li><li><a class="tocitem" href="../examples/">Examples</a></li><li class="is-active"><a class="tocitem" href>How to use make_function</a><ul class="internal"><li><a class="tocitem" href="#make_function-options"><span><code>make_function</code> options</span></a></li><li><a class="tocitem" href="#Evaluate-a-function-and-derivatives"><span>Evaluate a function and derivatives</span></a></li><li><a class="tocitem" href="#Generating-code"><span>Generating code</span></a></li></ul></li><li><a class="tocitem" href="../benchmarks/">Benchmarks</a></li><li><a class="tocitem" href="../symbolicprocessing/">Symbolic processing</a></li><li><a class="tocitem" href="../futurework/">Future work</a></li><li><a class="tocitem" href="../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>How to use make_function</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>How to use make_function</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/brianguenter/FastDifferentiation.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/brianguenter/FastDifferentiation.jl/blob/main/docs/src/makefunction.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="How-to-use-make_function"><a class="docs-heading-anchor" href="#How-to-use-make_function">How to use <code>make_function</code>`</a><a id="How-to-use-make_function-1"></a><a class="docs-heading-anchor-permalink" href="#How-to-use-make_function" title="Permalink"></a></h1><h2 id="make_function-options"><a class="docs-heading-anchor" href="#make_function-options"><code>make_function</code> options</a><a id="make_function-options-1"></a><a class="docs-heading-anchor-permalink" href="#make_function-options" title="Permalink"></a></h2><p>The <code>make_function</code> procedure creates a runtime generated function from <strong>FD</strong> expressions. The signature for <code>make_function</code> is</p><p><code>make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{&lt;:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T&lt;:Node}</code></p><p>The type of the first argument, <code>func_array</code>, determines the type of the array that will hold the result of evaluating the <strong>FD</strong> expressions. These are rough rules of thumb for parameter settings for maximum performance:</p><ul><li>If <code>func_array</code> is dense and has more than 100 elements then <code>typeof(func_array)</code> should be a subtype of <code>Array</code> with <code>in_place=true</code>, <code>init_with_zeros=false</code> (but see caveat below)</li><li>If <code>func_array</code> is sparse (use the <a href="../api/#FastDifferentiation.sparsity-Tuple{AbstractArray{&lt;:FastDifferentiation.Node}}"><code>sparsity</code></a> function to measure this) then <code>typeof(func_array)</code> should be <code>SparseMatrixCSC</code> (automatically created by <a href="../api/#FastDifferentiation.sparse_jacobian-Union{Tuple{S}, Tuple{T}, Tuple{AbstractVector{T}, AbstractVector{S}}} where {T&lt;:FastDifferentiation.Node, S&lt;:FastDifferentiation.Node}"><code>sparse_jacobian</code></a> and <a href="../api/#FastDifferentiation.sparse_hessian-Union{Tuple{S}, Tuple{FastDifferentiation.Node, AbstractVector{S}}} where S&lt;:FastDifferentiation.Node"><code>sparse_hessian</code></a> functions) and <code>in_place=true</code>. The <code>init_with_zeros</code> argument has no effect for sparse arrays.</li><li>if <code>func_array</code> is small, less than 100 elements, then <code>typeof(func_array)</code> should be a subtype of StaticArray, <code>in_place=false</code>, <code>init_with_zeros=true</code>.</li></ul><p>The type of the second argument <code>input_variables</code> has no effect on performance of the runtime generated function.</p><p>If the third argument, <code>in_place</code>, = false then the generated code will create and return a zero initialized array at every call. If <code>in_place = true</code> the generated code has two arguments: an array to accept the result of the evaluation, and a vector of inputs. There will only be a performance advantage by setting <code>in_place = true</code> if the type of <code>func_array</code> is <code>Array</code> or <code>SparseMatrixCSC</code>.</p><p>The fourth argument, <code>init_with_zeros</code>, only has an effect when <code>in_place=true</code> <em>and</em> the type of <code>func_array</code> is <code>Array</code> or <code>SArray</code>. If <code>init_with_zeros = true</code> then the in place array argument will be initialized with zeros at each call. If it is false it will not be initialized with zeros. </p><p>This is useful when you are evaluating a function many times but not modifying the result array. You can initialize the in place array with zeros once before passing it to the runtime generated function. The runtime generated function will not alter identically zero elements so they will stay zero. Be careful though that some other function doesn&#39;t modify the in place array between calls to the runtime generated function. This could corrupt the identically zero elements.</p><p>Example: generated function returns static array</p><pre><code class="language-julia hljs">
+@variables x y
+
+julia&gt; func = SA[x^2+y,y*x,y^2]
+3-element SVector{3, FastDifferentiation.Node} with indices SOneTo(3):
+ ((x ^ 2) + y)
+       (y * x)
+       (y ^ 2)
+
+julia&gt; f_exe! = make_function(func,[x,y])
+...
+
+julia&gt; f_exe!([2.0,3.0])
+3-element SVector{3, Float64} with indices SOneTo(3):
+ 7.0
+ 6.0
+ 9.0</code></pre><p>Example: assume your result is a large dense array (&gt; 100 elements) and that you are using an in place array with no initialization. For dense arrays this should generate the fastest code:</p><pre><code class="nohighlight hljs">julia&gt; @variables x y z
+z
+
+julia&gt; p = [x^2 y^2; z^2 0]
+2×2 Matrix{FastDifferentiation.Node}:
+ (x ^ 2)  (y ^ 2)
+ (z ^ 2)        0
+
+julia&gt; floatp = similar(p,Float64)
+2×2 Matrix{Float64}:
+ 5.0e-324  1.08279e-311
+ 1.5e-323  1.08279e-311
+
+julia&gt; fexe! = make_function(p,[x,y,z],in_place=true,init_with_zeros=false)
+...
+
+
+julia&gt; fexe!(floatp,[1.0,2.0,3.0])
+4.0
+
+julia&gt; floatp
+2×2 Matrix{Float64}:
+ 1.0  4.0
+ 9.0  1.08279e-311
+</code></pre><p>Notice that <code>floatp[2,2]</code> is not 0. This is because <code>init_with_zeros=false</code>. If you need this array element to be zero then initialize it before making the call to <code>fexe!</code>.</p><p>You can use the <a href="../api/#FastDifferentiation.sparsity-Tuple{AbstractArray{&lt;:FastDifferentiation.Node}}"><code>sparsity</code></a> function to measure sparsity and determine whether you should use the dense or sparse derivative functions to pass as the <code>func_array</code> argument.</p><h2 id="Evaluate-a-function-and-derivatives"><a class="docs-heading-anchor" href="#Evaluate-a-function-and-derivatives">Evaluate a function and derivatives</a><a id="Evaluate-a-function-and-derivatives-1"></a><a class="docs-heading-anchor-permalink" href="#Evaluate-a-function-and-derivatives" title="Permalink"></a></h2><p>Sometimes you want to evaluate a function and one or more derivative orders. If you pack all the terms you want to evaluate into the argument to <code>make_function</code> then common terms will be detected and only computed once. This will be generally be more efficient than evaluating the function and derivatives separately:</p><pre><code class="language-julia hljs">julia&gt; f = [x^2*y^2,sqrt(x*y)]
+2-element Vector{FastDifferentiation.Node}:
+ ((x ^ 2) * (y ^ 2))
+       sqrt((x * y))
+
+julia&gt; jac = jacobian(f,[x,y])
+2×2 Matrix{FastDifferentiation.Node}:
+             ((y ^ 2) * (2 * x))              ((x ^ 2) * (2 * y))
+ ((1 / (2 * sqrt((x * y)))) * y)  ((1 / (2 * sqrt((x * y)))) * x)
+
+
+julia&gt; f_and_jac = make_function([vec(jac);f],[x,y])
+...
+
+julia&gt; tmp = f_and_jac([1.1,2.1])
+6-element Vector{Float64}:
+ 9.702000000000002
+ 0.6908492797077573
+ 5.082000000000001
+ 0.36187343222787294
+ 5.336100000000001
+ 1.5198684153570665
+
+julia&gt; jac_eval = reshape(view(tmp,1:4),2,2)
+2×2 reshape(view(::Vector{Float64}, 1:4), 2, 2) with eltype Float64:
+ 9.702     5.082
+ 0.690849  0.361873
+
+julia&gt; f_eval = view(tmp,5:6)
+2-element view(::Vector{Float64}, 5:6) with eltype Float64:
+ 5.336100000000001
+ 1.5198684153570665</code></pre><h2 id="Generating-code"><a class="docs-heading-anchor" href="#Generating-code">Generating code</a><a id="Generating-code-1"></a><a class="docs-heading-anchor-permalink" href="#Generating-code" title="Permalink"></a></h2><p>If you need to generate code that can be cut and pasted into another application you can use <code>make_Expr</code> instead of <code>make_function</code>. It has the same arguments except the <code>in_place</code> and <code>init_with_zeros</code> boolean arguments are not optional.</p><pre><code class="language-julia hljs">julia&gt; @variables x y
+y
+
+julia&gt; j = jacobian([x^2*y^2,cos(x+y),log(x/y)],[x,y])
+3×2 Matrix{FastDifferentiation.Node}:
+       ((y ^ 2) * (2 * x))                 ((x ^ 2) * (2 * y))
+           -(sin((x + y)))                     -(sin((x + y)))
+ ((1 / (x / y)) * (1 / y))  ((1 / (x / y)) * -(((x / y) / y)))
+
+julia&gt; in_place_no_init = make_Expr(j,[x,y],true,false)
+:((result, input_variables)-&gt;begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:127 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:127 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:128 =#
+                  begin
+                      var&quot;##431&quot; = input_variables[2] ^ 2
+                      var&quot;##432&quot; = 2 * input_variables[1]
+                      var&quot;##430&quot; = var&quot;##431&quot; * var&quot;##432&quot;
+                      result[CartesianIndex(1, 1)] = var&quot;##430&quot;
+                      var&quot;##435&quot; = input_variables[1] + input_variables[2]
+                      var&quot;##434&quot; = sin(var&quot;##435&quot;)
+                      var&quot;##433&quot; = -var&quot;##434&quot;
+                      result[CartesianIndex(2, 1)] = var&quot;##433&quot;
+                      var&quot;##438&quot; = input_variables[1] / input_variables[2]
+                      var&quot;##437&quot; = 1 / var&quot;##438&quot;
+                      var&quot;##439&quot; = 1 / input_variables[2]
+                      var&quot;##436&quot; = var&quot;##437&quot; * var&quot;##439&quot;
+                      result[CartesianIndex(3, 1)] = var&quot;##436&quot;
+                      var&quot;##441&quot; = input_variables[1] ^ 2
+                      var&quot;##442&quot; = 2 * input_variables[2]
+                      var&quot;##440&quot; = var&quot;##441&quot; * var&quot;##442&quot;
+                      result[CartesianIndex(1, 2)] = var&quot;##440&quot;
+                      result[CartesianIndex(2, 2)] = var&quot;##433&quot;
+                      var&quot;##445&quot; = var&quot;##438&quot; / input_variables[2]
+                      var&quot;##444&quot; = -var&quot;##445&quot;
+                      var&quot;##443&quot; = var&quot;##437&quot; * var&quot;##444&quot;
+                      result[CartesianIndex(3, 2)] = var&quot;##443&quot;
+                  end
+              end
+      end)
+
+julia&gt; in_place_zero_init = make_Expr(j,[x,y],true,true)
+:((result, input_variables)-&gt;begin
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:127 =#
+          #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:127 =# @inbounds begin
+                  #= c:\Users\seatt\source\FastDifferentiation.jl\src\CodeGeneration.jl:128 =#
+                  begin
+                      var&quot;##447&quot; = input_variables[2] ^ 2
+                      var&quot;##448&quot; = 2 * input_variables[1]
+                      var&quot;##446&quot; = var&quot;##447&quot; * var&quot;##448&quot;
+                      result[CartesianIndex(1, 1)] = var&quot;##446&quot;
+                      var&quot;##451&quot; = input_variables[1] + input_variables[2]
+                      var&quot;##450&quot; = sin(var&quot;##451&quot;)
+                      var&quot;##449&quot; = -var&quot;##450&quot;
+                      result[CartesianIndex(2, 1)] = var&quot;##449&quot;
+                      var&quot;##454&quot; = input_variables[1] / input_variables[2]
+                      var&quot;##453&quot; = 1 / var&quot;##454&quot;
+                      var&quot;##455&quot; = 1 / input_variables[2]
+                      var&quot;##452&quot; = var&quot;##453&quot; * var&quot;##455&quot;
+                      result[CartesianIndex(3, 1)] = var&quot;##452&quot;
+                      var&quot;##457&quot; = input_variables[1] ^ 2
+                      var&quot;##458&quot; = 2 * input_variables[2]
+                      var&quot;##456&quot; = var&quot;##457&quot; * var&quot;##458&quot;
+                      result[CartesianIndex(1, 2)] = var&quot;##456&quot;
+                      result[CartesianIndex(2, 2)] = var&quot;##449&quot;
+                      var&quot;##461&quot; = var&quot;##454&quot; / input_variables[2]
+                      var&quot;##460&quot; = -var&quot;##461&quot;
+                      var&quot;##459&quot; = var&quot;##453&quot; * var&quot;##460&quot;
+                      result[CartesianIndex(3, 2)] = var&quot;##459&quot;
+                  end
+              end
+      end)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Examples</a><a class="docs-footer-nextpage" href="../benchmarks/">Benchmarks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Tuesday 27 August 2024 23:25">Tuesday 27 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
