@@ -8,7 +8,7 @@ then `sparsity = (nelts-nzeros)/nelts`.
 
 Frequently used in combination with a call to `make_function` to determine whether to set keyword argument `init_with_zeros` to false."""
 function sparsity(sym_func::AbstractArray{<:Node})
-    zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
+    zeros = mapreduce(x -> is_identically_zero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
     return zeros == 0 ? 1.0 : (tot - zeros) / tot
 end
@@ -124,8 +124,8 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
-    num_zeros = count(is_zero, (func_array))
-    num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
+    num_zeros = count(is_identically_zero, (func_array))
+    num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
 
 
     zero_threshold = 0.5
@@ -166,7 +166,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     for (i, node) in pairs(func_array)
         # skip all terms that we have computed above during construction
         if is_constant(node) && initialization_strategy === :const || # already initialized as constant above
-           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
+           is_identically_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
             continue
         end
         node_body, variable = function_body!(node, node_to_index, node_to_var)
@@ -185,11 +185,11 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # wrap in function body
     if in_place
-        return :((result, input_variables) -> @inbounds begin
+        return :((result, input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     else
-        return :((input_variables) -> @inbounds begin
+        return :((input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     end
@@ -248,9 +248,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
         push!(body.args, :(return result))
 
         if in_place
-            return :((result, input_variables) -> $body)
+            return :((result, input_variables::AbstractArray) -> $body)
         else
-            return :((input_variables) -> $body)
+            return :((input_variables::AbstractArray) -> $body)
         end
     end
 end
@@ -316,7 +316,20 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
     vars = variables(func_array) #all unique variables in func_array
     all_input_vars = vcat(input_variables...)
 
-    @assert vars ⊆ all_input_vars "Some of the variables in your function (the func_array argument) were not in the input_variables argument. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
+    #Because FD defines == operator for Node, which does not return a boolean, many builtin Julia functions will not work as expected. For example:
+    #  vars ⊆ all_input_vars errors because internally issubset tests for equality between the node values using ==, not ===. == returns a Node value but the issubset function expects a Bool.
+
+    temp = Vector{eltype(vars)}(undef, 0)
+
+    input_dict = IdDict(zip(all_input_vars, all_input_vars))
+    for one_var in vars
+        value = get(input_dict, one_var, nothing)
+        if value === nothing
+            push!(temp, one_var)
+        end
+    end
+
+    @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
     @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
 end

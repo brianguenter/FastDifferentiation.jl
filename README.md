@@ -71,27 +71,7 @@ If you use FD in your work please share the functions you differentiate with me.
 **A**: If you multiply a matrix of **FD** variables times a vector of **FD** variables the matrix vector multiplication loop is effectively unrolled into scalar expressions. Matrix operations on large matrices will generate large executables and long preprocessing time. **FD** functions with up 10⁵ operations should still have reasonable preprocessing/compilation times (approximately 1 minute on a modern laptop) and good run time performance.
 
 **Q**: Does **FD** support conditionals?  
-**A**: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
-```julia
-@variables x y #create FD variables
-
-julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
-f (generic function with 2 methods)
-
-julia> f(0.0,x,y)
-cos(x)
-
-julia> f(1.0,x,y)
-sin(y)
-```
-but you can't do this:
-```julia
-julia> f(a,b) = a < b ? cos(a) : sin(b)
-f (generic function with 2 methods)
-
-julia> f(x,y)
-ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
-```
+**A**: Yes, but see the documentation for limitations. Full functionality will come in a future release.
 
 # Release Notes
 <details>

@@ -33,12 +33,13 @@ struct Node <: Real
 
     Node(f::S, a) where {S} = new(f, MVector{1,Node}(Node(a)))
     Node(f::S, a, b) where {S} = new(f, MVector{2,Node}(Node(a), Node(b))) #if a,b not a Node convert them.
+    Node(f::S, a, b, c) where {S} = new(f, MVector{3,Node}(Node(a), Node(b), Node(c))) #if a,b not a Node convert them.
 
     Node(a::T) where {T<:Real} = new(a, nothing) #convert numbers to Node
     Node(a::T) where {T<:Node} = a #if a is already a special node leave it alone
 
-    function Node(operation, args::MVector{N,T}) where {T<:Node,N} #use MVector rather than Vector. 40x faster.
-        return new(operation, args)
+    function Node(operation, args::MVector)  #use MVector rather than Vector. 40x faster.
+        return new(operation, Node.(args))
     end
 
     Node(a::S) where {S<:Symbol} = new(a, nothing)
@@ -95,6 +96,11 @@ Base.zero(::Node) = Node(0)
 Base.one(::Type{Node}) = Node(1)
 Base.one(::Node) = Node(1)
 
+#special case for iszero. Some other libraries need iszero(a::Node) to return a boolean value. Other code may be okay with iszero return the expression Node(iszero,a), which would then be evaluated at run time in generated function. Unfortunately, SparseArrays requires the former so the sparse Jacobian/Hessian code won't work unless iszero returns Bool. Maybe there is a way to fix this but I suspect not easily.
+
+
+
+
 # These are essentially copied from Symbolics.jl:
 # https://github.com/JuliaSymbolics/Symbolics.jl/blob/e4c328103ece494eaaab2a265524a64bfbe43dbd/src/num.jl#L31-L34
 Base.eps(::Type{Node}) = Node(0)
@@ -102,9 +108,7 @@ Base.typemin(::Type{Node}) = Node(-Inf)
 Base.typemax(::Type{Node}) = Node(Inf)
 Base.float(x::Node) = x
 
-# This one is needed because julia/base/float.jl only defines `isinf` for `Real`, but `Node
-# <: Number`.  (See https://github.com/brianguenter/FastDifferentiation.jl/issues/73)
-Base.isinf(x::Node) = !isnan(x) & !isfinite(x)
+
 
 
 Broadcast.broadcastable(a::Node) = (a,)
@@ -144,9 +148,9 @@ Base.isless(::Node, ::Number) = error_message()
 Base.isless(::Number, ::Node) = error_message()
 Base.isless(::Node, ::Node) = error_message()
 
-Base.iszero(a::Node) = value(a) == 0 #need this because sparse matrix and other code in linear algebra may call it. If it is not defined get a type promotion error.
 
-function is_zero(a::Node)
+"""True if the value of a variable is identically zero and false otherwise."""
+function is_identically_zero(a::Node)
     #this: value(a) == 0 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
     if is_tree(a) || is_variable(a)
         return false
@@ -173,6 +177,7 @@ end
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
 simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
+simplify_check_cache(a, b, c, d, cache) = check_cache((a, b, c, d), cache) #this version handles ifelse
 
 is_nary(a::Node) = arity(a) > 2
 is_times(a::Node) = value(a) == *
@@ -201,11 +206,11 @@ function simplify_check_cache(::typeof(*), na, nb, cache)::Node
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
     #c1*c2 = c3, (c1*x)*(c2*x) = c3*x
-    if is_zero(a) && is_zero(b)
+    if is_identically_zero(a) && is_identically_zero(b)
         return Node(value(a) + value(b)) #user may have mixed types for numbers so use automatic promotion to widen the type.
-    elseif is_zero(a) #b is not zero
+    elseif is_identically_zero(a) #b is not zero
         return a #use this node rather than creating a zero since a has the type encoded in it
-    elseif is_zero(b) #a is not zero
+    elseif is_identically_zero(b) #a is not zero
         return b #use this node rather than creating a zero since b has the type encoded in it
     elseif is_one(a)
         return b #At this point in processing the type of b may be impossible to determine, for example if b = sin(x) and the value of x won't be known till the expression is evaluated. No easy way to promote the type of b here if a has a wider type than b will eventually be determined to have. Example: a = BigFloat(1.0), b = sin(x). If the value of x is Float32 when the function is evaluated then would expect the type of the result to be BigFloat. But it will be Float32. Need to figure out a type of Node that will eventually generate code something like this: b = promote_type(a,b)(b) where the types of a,b will be known because this will be called in the generated Julia function for the derivative.
@@ -257,9 +262,9 @@ function simplify_check_cache(::typeof(+), na, nb, cache)::Node
 
     #TODO sort variables so if y < x then x*y => y*x. The will automatically get commutativity.
 
-    if is_zero(a)
+    if is_identically_zero(a)
         return b
-    elseif is_zero(b)
+    elseif is_identically_zero(b)
         return a
     elseif a === -b || -a === b
         return zero(Node)
@@ -281,9 +286,9 @@ function simplify_check_cache(::typeof(-), na, nb, cache)::Node
     b = Node(nb)
     if a === b
         return zero(Node)
-    elseif is_zero(b)
+    elseif is_identically_zero(b)
         return a
-    elseif is_zero(a)
+    elseif is_identically_zero(a)
         return -b
     elseif is_negate(b)
         return a + children(b)[1]
@@ -409,10 +414,18 @@ end
 
 derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
+is_ifelse(a::Node) = value(a) == ifelse
+
+conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals $(Tuple(not_currently_differentiable))")
+
+is_conditional(a::Node) = is_ifelse(a) || value(a) in not_currently_differentiable
+
 function derivative(a::Node, index::Val{1})
     # if is_variable(a)
     #     if arity(a) == 0
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 1
         return derivative(value(a), (children(a)[1],), index)
@@ -424,7 +437,9 @@ function derivative(a::Node, index::Val{1})
 end
 
 function derivative(a::Node, index::Val{2})
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 2
         return derivative(value(a), (children(a)[1], children(a)[2]), index)
@@ -434,7 +449,9 @@ function derivative(a::Node, index::Val{2})
 end
 
 function derivative(a::Node, index::Val{i}) where {i}
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     else
         return derivative(value(a), (children(a)...,), index)
