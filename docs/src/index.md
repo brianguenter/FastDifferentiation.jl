@@ -38,7 +38,11 @@ Howver, you cannot yet compute derivatives of expressions that contain condition
 julia> jacobian([f],[x,y])
 ERROR: Your expression contained ifelse. FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals (max, min, copysign, &, |, xor, <, >, <=, >=, !=, ==, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !)
 ```
+This may be a breaking change for some users. In previous versions this threw an the expression `x==y` returned a `Bool`. Some data structures, such as `Dict` use `==` by default to determine if two entries are the same. This will no longer work since `x==y` will now return an expression graph. Use an `IDict` instead since this uses `===`.
+
 A future PR will add support for differentiating through conditionals.
+
+
 
 You should consider using FastDifferentiation when you need: 
 * a fast executable for evaluating the derivative of a function and the overhead of the preprocessing/compilation time is swamped by evaluation time.
