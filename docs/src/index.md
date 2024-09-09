@@ -38,7 +38,7 @@ Howver, you cannot yet compute derivatives of expressions that contain condition
 julia> jacobian([f],[x,y])
 ERROR: Your expression contained ifelse. FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals (max, min, copysign, &, |, xor, <, >, <=, >=, !=, ==, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !)
 ```
-This may be a breaking change for some users. In previous versions `x==y` returned a `Bool` whereas in 0.4.0 and up it returns an **FD** expression. Some data structures, such as `Dict` use `==` by default to determine if two entries are the same. This will no longer work since `x==y` will not return a `Bool`. Use an `IDict` instead since this uses `===`.
+This may be a breaking change for some users. In previous versions this threw an the expression `x==y` returned a `Bool`. Some data structures, such as `Dict` use `==` by default to determine if two entries are the same. This will no longer work since `x==y` will now return an expression graph. Use an `IDict` instead since this uses `===`.
 
 A future PR will add support for differentiating through conditionals.
 
@@ -60,6 +60,8 @@ Jᵀv and Jv compute the Jacobian transpose times a vector and the Jacobian time
 Hv computes the Hessian times a vector without explicitly forming the Hessian matrix. This can be useful when the Hessian matrix is large and sparse.
 
 If you use FD in your work please share the functions you differentiate with me. I'll add them to the benchmarks. The more functions available to test the easier it is for others to determine if FD will help with their problem.
+
+This is **beta** software being modified on a daily basis. Expect bugs and frequent, possibly breaking changes, over the next month or so. Documentation is frequently updated so check the latest docs before filing an issue. Your problem may have been fixed and documented.
 
 ## Notes about special derivatives
 The derivative of `|u|` is `u/|u|` which is NaN when `u==0`. This is not a bug. The derivative of the absolute value function is undefined at 0 and the way **FD** signals this is by returning NaN.
