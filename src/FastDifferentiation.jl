@@ -11,7 +11,6 @@ using UUIDs
 using SparseArrays
 using DataStructures
 
-
 module AutomaticDifferentiation
 struct NoDeriv
 end
@@ -40,6 +39,7 @@ include("Methods.jl") #functions and macros to generate Node specialized methods
 include("Utilities.jl")
 include("BitVectorFunctions.jl")
 include("ExpressionGraph.jl") #definition of Node type from which FD expression graphs are created
+include("DifferentiationRules.jl")
 include("PathEdge.jl")  #functions to create and manipulate edges in derivative graphs
 include("Conditionals.jl")
 include("DerivativeGraph.jl") #functions to compute derivative graph from an expression graph of Node

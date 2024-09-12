@@ -337,8 +337,6 @@ end
 
 Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
 
-rules = Any[]
-
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{Node}) = Node
 Base.promote_rule(::Type{Bool}, ::Type{Node}) = Node
@@ -355,23 +353,6 @@ Base.conj(a::Node) = a #need to define this because dot and probably other linea
 Base.adjoint(a::Node) = a
 Base.transpose(a::Node) = a
 
-# Pre-defined derivatives
-import DiffRules
-for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :SpecialFunctions, :NaNMath))
-    fun in [:*, :+, :abs, :mod, :rem, :max, :min] && continue # special
-    for i ∈ 1:arity
-
-        expr = if arity == 1
-            DiffRules.diffrule(modu, fun, :(args[1]))
-        else
-            DiffRules.diffrule(modu, fun, ntuple(k -> :(args[$k]), arity)...)[i]
-        end
-
-        push!(rules, expr)
-        @eval derivative(::typeof($modu.$fun), args::NTuple{$arity,Any}, ::Val{$i}) = $expr
-    end
-end
-
 function Base.inv(a::Node)
     if typeof(value(a)) === /
         return children(a)[2] / children(a)[1]
@@ -380,23 +361,10 @@ function Base.inv(a::Node)
     end
 end
 
-
 #need special case for sincos because it returns a 2 tuple. Also Diffrules.jl does not define a differentiation rule for sincos.
 Base.sincos(x::Node) = (sin(x), cos(x)) #this will be less efficient than sincos. TODO figure out a better way.
 
-derivative(::typeof(abs), arg::Tuple{T}, ::Val{1}) where {T} = arg[1] / abs(arg[1])
 
-function derivative(::typeof(*), args::NTuple{N,Any}, ::Val{I}) where {N,I}
-    if N == 2
-        return I == 1 ? args[2] : args[1]
-    else
-        return Node(*, deleteat!(collect(args), I)...) #TODO: simplify_check_cache will only be called for 2 arguments or less. Need to extend to nary *, n> 2, if this is necessary.
-    end
-end
-
-derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
-
-function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]), EXPRESSION_CACHE)
 
 """When constructing `DerivativeGraph` with repeated values in roots, e.g.,
 ```julia
@@ -412,51 +380,15 @@ function create_NoOp(child)
     return Node(NoOp(), child)
 end
 
-derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
+
 
 is_ifelse(a::Node) = value(a) == ifelse
 
-conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals $(Tuple(not_currently_differentiable))")
+conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through this conditional or any of these $(Tuple(not_currently_differentiable))")
 
 is_conditional(a::Node) = is_ifelse(a) || value(a) in not_currently_differentiable
 
-function derivative(a::Node, index::Val{1})
-    # if is_variable(a)
-    #     if arity(a) == 0
-    if is_conditional(a)
-        throw(conditional_error(a))
-    elseif is_variable_function(a)
-        return function_variable_derivative(a, index)
-    elseif arity(a) == 1
-        return derivative(value(a), (children(a)[1],), index)
-    elseif arity(a) == 2
-        return derivative(value(a), (children(a)[1], children(a)[2]), index)
-    else
-        throw(ErrorException("should never get here"))
-    end
-end
 
-function derivative(a::Node, index::Val{2})
-    if is_conditional(a)
-        throw(conditional_error(a))
-    elseif is_variable_function(a)
-        return function_variable_derivative(a, index)
-    elseif arity(a) == 2
-        return derivative(value(a), (children(a)[1], children(a)[2]), index)
-    else
-        throw(ErrorException("should never get here"))
-    end
-end
-
-function derivative(a::Node, index::Val{i}) where {i}
-    if is_conditional(a)
-        throw(conditional_error(a))
-    elseif is_variable_function(a)
-        return function_variable_derivative(a, index)
-    else
-        return derivative(value(a), (children(a)...,), index)
-    end
-end
 
 """
     variables(node::Node)
