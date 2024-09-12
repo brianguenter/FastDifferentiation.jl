@@ -53,7 +53,13 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
 
             if is_tree(node)
                 args = _dag_to_function.(children(node))
-                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
+
+                if value(node) === if_else
+                    println(args)
+                    statement = :($(node_to_var[node]) = $(args[1]) ? $(args[2]) : $(args[3]))
+                else
+                    statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
+                end
                 push!(body.args, statement)
             end
         end

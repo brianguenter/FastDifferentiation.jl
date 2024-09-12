@@ -5,7 +5,7 @@ import DiffRules
 #airybix and airyprimex don't work in FastDifferentiation. airybix(x) where x is a Node causes a stack overflow. So no diffrule defined, although airybix uses if...else
 #LogExpFunctions.xlogy uses ?: so doesn't work with FastDifferentiation. Most of the functions in this package don't work with FastDifferentiation.
 
-DiffRules.@define_diffrule Base.:^(x, y) = :($y * ($x^($y - 1))), :(ifelse($x isa Real && $x <= 0, Base.oftype(float($x), NaN), ($x^$y) * log($x)))
+DiffRules.@define_diffrule Base.:^(x, y) = :($y * ($x^($y - 1))), :(if_else($x isa Real && $x <= 0, Base.oftype(float($x), NaN), ($x^$y) * log($x)))
 
 
 for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :SpecialFunctions, :NaNMath))
@@ -36,13 +36,9 @@ derivative(::typeof(+), args::NTuple{N,Any}, ::Val{I}) where {I,N} = Node(1)
 derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
 
-function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]), EXPRESSION_CACHE)
+function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]))
 function derivative(a::Node, index::Val{1})
-    # if is_variable(a)
-    #     if arity(a) == 0
-    if is_conditional(a)
-        throw(conditional_error(a))
-    elseif is_variable_function(a)
+    if is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 1
         return derivative(value(a), (children(a)[1],), index)

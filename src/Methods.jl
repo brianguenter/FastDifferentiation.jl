@@ -32,7 +32,7 @@ const previously_declared_for = Set([])
 
 const basic_monadic = [-, +]
 const basic_diadic = [+, -, *, /, //, \, ^]
-const diadic_non_differentiable = [max, min, copysign, &, |, ⊻, <, >, ≤, ≥, ≠, ==]
+const diadic_non_differentiable = [max, min, copysign, &, |, !, ⊻, <, >, ≤, ≥, ≠, ==, isless]
 const monadic_non_differentiable = [signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
 
 const not_currently_differentiable = vcat(diadic_non_differentiable, monadic_non_differentiable)
@@ -60,7 +60,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
             (f::$(typeof(f)))(a::$T, b::Real) = $rhs2
             (f::$(typeof(f)))(a::Real, b::$T) = $rhs2
         end
-
+        println(expr)
         push!(exprs, expr)
     end
 
@@ -82,7 +82,8 @@ end
 # Base.isinf(x::Node) = !isnan(x) & !isfinite(x)
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
-    eval(:(Base.ifelse(a::$T, b::$T, c::$T) = simplify_check_cache(Base.ifelse, a, b, c, EXPRESSION_CACHE)))
+    #special case for ifelse because it takes three arguments
+    eval(:(Base.ifelse(a::$T, b::$T, c::$T) = simplify_check_cache(Base.ifelse, a, b, c)))
 
     number_methods(T, rhs1, rhs2, options) |> esc
 end

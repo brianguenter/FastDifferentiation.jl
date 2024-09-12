@@ -48,13 +48,13 @@ end
 #until I can think of a better way of structuring the caching operation it will be a single global expression cache. This precludes multithreading, unfortunately. Many other parts of the algorithm are difficult to multithread. Processing is also so quick that only large graphs would benefit from multithreading. Don't know how common these will be.
 const EXPRESSION_CACHE = IdDict{Any,Node}()
 
-function check_cache(a::Tuple{Vararg}, cache::IdDict{Any,Node})::Node
-    cache_val = get(cache, a, nothing)
+function check_cache(a::Tuple{Vararg})::Node
+    cache_val = get(EXPRESSION_CACHE, a, nothing)
     if cache_val === nothing
-        cache[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
+        EXPRESSION_CACHE[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
     end
 
-    return cache[a]
+    return EXPRESSION_CACHE[a]
 end
 
 """
@@ -74,11 +74,11 @@ end
 num_derivatives(a::Differential) = length(a.variables_wrt)
 
 #convenience function to extract the fields from Node object to check cache
-function check_cache(a::Node, cache)
+function check_cache(a::Node)
     if children(a) !== nothing
-        check_cache((value(a), children(a)...), cache)
+        check_cache((value(a), children(a)...))
     else
-        check_cache((a,), cache)
+        check_cache((a,))
     end
 end
 
@@ -143,13 +143,8 @@ function constant_value(a::Node)
     end
 end
 
-error_message() = throw(ErrorException("FastDifferentiation.jl does not currently support comparison operations on FastDifferentiation expressions. Your code, or libraries called by your code, had a statement with a comparison operator such as x<y where either or both of x,y were FastDifferentiation expressions. You have to remove all these comparison operators for FastDifferentiation to work."))
-Base.isless(::Node, ::Number) = error_message()
-Base.isless(::Number, ::Node) = error_message()
-Base.isless(::Node, ::Node) = error_message()
 
-
-"""True if the value of a variable is identically zero and false otherwise."""
+"""True if the value of a variable is identically zero and false otherwise. Used internally to simplify and prune derivative graphs."""
 function is_identically_zero(a::Node)
     #this: value(a) == 0 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
     if is_tree(a) || is_variable(a)
@@ -161,7 +156,7 @@ function is_identically_zero(a::Node)
     end
 end
 
-
+"""True if the value of a variable is identically one and false otherwise. Used internally to simplify and prune derivative graphs."""
 function is_one(a::Node)
     #this: value(a) == 1 would work but when add conditionals to the language if a is not a constant this will generate an expression graph instead of returning a bool value.
     if is_tree(a) || is_variable(a)
@@ -173,20 +168,33 @@ function is_one(a::Node)
     end
 end
 
+"""
+Special if_else to use for conditionals instead of builtin ifelse because the latter evaluates all its arguments. Many ifelse statements are used as guards against computations that would cause an exception so need a new version that is transformed into 
+
+`condition ? true_branch : false_branch`
+
+during code generation.
+"""
+function if_else(condition::Node, true_branch=Node(true_branch), false_branch=Node(false_branch))
+    @assert value(condition) in diadic_non_differentiable || value(condition) in monadic_non_differentiable
+    check_cache((if_else, condition, true_branch, false_branch))
+end
+export if_else
+
+#generic cache checking for functions that don't have this special cased
+simplify_check_cache(f, a) = check_cache((f, a))::Node
+simplify_check_cache(f, a, b) = check_cache((f, a, b))::Node #this version handles ifelse
+simplify_check_cache(f, a, b, c) = check_cache((f, a, b, c))::Node
 
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
-simplify_check_cache(a, b, c, cache) = check_cache((a, b, c), cache)
-simplify_check_cache(a, b, c, d, cache) = check_cache((a, b, c, d), cache) #this version handles ifelse
 
 is_nary(a::Node) = arity(a) > 2
 is_times(a::Node) = value(a) == *
 
 is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
 
-
-
-function simplify_check_cache(::typeof(^), a, b, cache)
+function simplify_check_cache(::typeof(^), a, b)
     na = Node(a)
     nb = Node(b)
     if constant_value(na) !== nothing && constant_value(nb) !== nothing
@@ -196,11 +204,11 @@ function simplify_check_cache(::typeof(^), a, b, cache)
     elseif value(nb) == 1
         return a
     else
-        return check_cache((^, na, nb), cache)
+        return check_cache((^, na, nb))
     end
 end
 
-function simplify_check_cache(::typeof(*), na, nb, cache)::Node
+function simplify_check_cache(::typeof(*), na, nb)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -229,7 +237,7 @@ function simplify_check_cache(::typeof(*), na, nb, cache)::Node
     elseif typeof(*) == typeof(value(a)) && typeof(*) == typeof(value(b)) && is_constant(children(b)[1]) && is_constant(children(a)[1])
         return Node(value(children(a)[1]) * value(children(b)[1])) * (children(b)[2] * children(a)[2])
     else
-        return check_cache((*, a, b), cache)
+        return check_cache((*, a, b))
     end
 end
 
@@ -256,7 +264,7 @@ function constant_sum_simplification(lchild::Node, rchild::Node)
     end
 end
 
-function simplify_check_cache(::typeof(+), na, nb, cache)::Node
+function simplify_check_cache(::typeof(+), na, nb)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -277,11 +285,11 @@ function simplify_check_cache(::typeof(+), na, nb, cache)::Node
     elseif (tmp = constant_sum_simplification(a, b)) !== nothing #simplify c1*a + c2*a => (c1+c2)*a where c1,c2 are constants
         return (tmp[1] + tmp[2]) * tmp[3]
     else
-        return check_cache((+, a, b), cache)
+        return check_cache((+, a, b))
     end
 end
 
-function simplify_check_cache(::typeof(-), na, nb, cache)::Node
+function simplify_check_cache(::typeof(-), na, nb)::Node
     a = Node(na)
     b = Node(nb)
     if a === b
@@ -297,11 +305,11 @@ function simplify_check_cache(::typeof(-), na, nb, cache)::Node
     elseif (tmp = constant_sum_simplification(a, b)) !== nothing #simplify c1*a - c2*a => (c1-c2)*a where c1,c2 are constants
         return (tmp[1] - tmp[2]) * tmp[3]
     else
-        return check_cache((-, a, b), cache)
+        return check_cache((-, a, b))
     end
 end
 
-function simplify_check_cache(::typeof(/), na, nb, cache)::Node
+function simplify_check_cache(::typeof(/), na, nb)::Node
     a = Node(na)
     b = Node(nb)
 
@@ -310,19 +318,19 @@ function simplify_check_cache(::typeof(/), na, nb, cache)::Node
     elseif is_constant(a) && is_constant(b)
         return Node(value(a) / value(b))
     else
-        return check_cache((/, a, b), cache)
+        return check_cache((/, a, b))
     end
 end
 
 
 
-simplify_check_cache(f::Any, na, cache) = check_cache((f, na), cache)::Node
+
 
 """
-    simplify_check_cache(::typeof(-), a, cache)
+    simplify_check_cache(::typeof(-), a)
 
 Special case only for unary -. No simplifications are currently applied to any other unary functions"""
-function simplify_check_cache(::typeof(-), a, cache)::Node
+function simplify_check_cache(::typeof(-), a)::Node
     na = Node(a) #this is safe because Node constructor is idempotent
     if arity(na) == 1 && typeof(value(na)) == typeof(-)
         return children(na)[1]
@@ -331,11 +339,11 @@ function simplify_check_cache(::typeof(-), a, cache)::Node
     elseif typeof(*) == typeof(value(na)) && constant_value(children(na)[1]) !== nothing
         return Node(-value(children(na)[1])) * children(na)[2]
     else
-        return check_cache((-, na), cache)
+        return check_cache((-, na))
     end
 end
 
-Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b, EXPRESSION_CACHE)
+Base.:^(a::FastDifferentiation.Node, b::Integer) = simplify_check_cache(^, a, b)
 
 Base.convert(::Type{Node}, a::T) where {T<:Real} = Node(a)
 Base.promote_rule(::Type{<:Real}, ::Type{Node}) = Node
@@ -382,11 +390,11 @@ end
 
 
 
-is_ifelse(a::Node) = value(a) == ifelse
+is_if_else(a::Node) = value(a) == if_else
 
 conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through this conditional or any of these $(Tuple(not_currently_differentiable))")
 
-is_conditional(a::Node) = is_ifelse(a) || value(a) in not_currently_differentiable
+is_conditional(a::Node) = is_if_else(a) || value(a) in not_currently_differentiable
 
 
 
@@ -605,4 +613,4 @@ export make_variables
 
 
 #create methods that accept Node arguments for all mathematical functions.
-@number_methods(Node, simplify_check_cache(f, a, EXPRESSION_CACHE), simplify_check_cache(f, a, b, EXPRESSION_CACHE)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.
+@number_methods(Node, simplify_check_cache(f, a), simplify_check_cache(f, a, b)) #create methods for standard functions that take Node instead of Number arguments. Check cache to see if these arguments have been seen before.

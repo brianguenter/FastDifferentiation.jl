@@ -36,8 +36,7 @@ export function_of
 function derivative(uf::UnspecifiedFunction{V,D}, args::NTuple{N,Node{SymbolicUtils.BasicSymbolic{Real},0}}, ::Val{I}) where {I,V,D,N}
     new_derivs = SVector{D + 1,Node{SymbolicUtils.BasicSymbolic{Real},0}}(uf.derivatives..., args[I])
     return check_cache(
-        (UnspecifiedFunction(uf.name, uf.variables, new_derivs), uf.variables...),
-        EXPRESSION_CACHE)
+        (UnspecifiedFunction(uf.name, uf.variables, new_derivs), uf.variables...))
 end
 
 function Base.show(io::IO, a::UnspecifiedFunction)
