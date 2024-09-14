@@ -60,7 +60,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
             (f::$(typeof(f)))(a::$T, b::Real) = $rhs2
             (f::$(typeof(f)))(a::Real, b::$T) = $rhs2
         end
-        println(expr)
+
         push!(exprs, expr)
     end
 

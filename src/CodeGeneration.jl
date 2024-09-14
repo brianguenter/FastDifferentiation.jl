@@ -37,14 +37,12 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing)
+function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
     if node_to_var === nothing
         node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
 
-    body = Expr(:block)
-
-    function _dag_to_function(node)
+    function _dag_to_function!(node, local_body)
 
         tmp = get(node_to_var, node, nothing)
 
@@ -52,22 +50,29 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
             node_to_var[node] = node_symbol(node, variable_to_index)
 
             if is_tree(node)
-                args = _dag_to_function.(children(node))
-
                 if value(node) === if_else
-                    println(args)
-                    statement = :($(node_to_var[node]) = $(args[1]) ? $(args[2]) : $(args[3]))
+                    true_body = Expr(:block)
+                    false_body = Expr(:block)
+                    if_cond_var = _dag_to_function!(children(node)[1], local_body)
+                    _dag_to_function!(children(node)[2], true_body)
+                    _dag_to_function!(children(node)[3], false_body)
+                    statement = :($(node_to_var[node]) = if $(if_cond_var)
+                        $(true_body)
+                    else
+                        $(false_body)
+                    end)
                 else
+                    args = _dag_to_function!.(children(node), Ref(local_body))
                     statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
                 end
-                push!(body.args, statement)
+                push!(local_body.args, statement)
             end
         end
 
         return node_to_var[node]
     end
 
-    return body, _dag_to_function(dag)
+    return body, _dag_to_function!(dag, body)
 end
 
 function zero_array_declaration(array::StaticArray{S,<:Any,N}) where {S,N}
