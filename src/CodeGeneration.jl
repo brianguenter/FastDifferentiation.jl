@@ -14,6 +14,37 @@ function sparsity(sym_func::AbstractArray{<:Node})
 end
 export sparsity
 
+
+function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
+
+    tmp = get(node_to_var, node, nothing)
+
+    if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
+        node_to_var[node] = node_symbol(node, variable_to_index)
+
+        if is_tree(node)
+            if value(node) === if_else #special case code generation for if...else. Need to generate nested code so only the statements in the true or false branch will be executed.
+                true_body = Expr(:block)
+                false_body = Expr(:block)
+                if_cond_var = _dag_to_function!(children(node)[1], local_body, variable_to_index, node_to_var)
+                _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
+                _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+                statement = :($(node_to_var[node]) = if $(if_cond_var)
+                    $(true_body)
+                else
+                    $(false_body)
+                end)
+            else
+                args = _dag_to_function!.(children(node), Ref(local_body), Ref(variable_to_index), Ref(node_to_var))
+                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
+            end
+            push!(local_body.args, statement)
+        end
+    end
+
+    return node_to_var[node]
+end
+
 """
     function_body!(
         dag::Node,
@@ -42,37 +73,7 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
         node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
 
-    function _dag_to_function!(node, local_body)
-
-        tmp = get(node_to_var, node, nothing)
-
-        if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
-            node_to_var[node] = node_symbol(node, variable_to_index)
-
-            if is_tree(node)
-                if value(node) === if_else #special case code generation for if...else. Need to generate nested code so only the statements in the true or false branch will be executed.
-                    true_body = Expr(:block)
-                    false_body = Expr(:block)
-                    if_cond_var = _dag_to_function!(children(node)[1], local_body)
-                    _dag_to_function!(children(node)[2], true_body)
-                    _dag_to_function!(children(node)[3], false_body)
-                    statement = :($(node_to_var[node]) = if $(if_cond_var)
-                        $(true_body)
-                    else
-                        $(false_body)
-                    end)
-                else
-                    args = _dag_to_function!.(children(node), Ref(local_body))
-                    statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
-                end
-                push!(local_body.args, statement)
-            end
-        end
-
-        return node_to_var[node]
-    end
-
-    return body, _dag_to_function!(dag, body)
+    return body, _dag_to_function!(dag, body, variable_to_index, node_to_var)
 end
 
 function zero_array_declaration(array::StaticArray{S,<:Any,N}) where {S,N}
