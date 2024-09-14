@@ -70,6 +70,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     end
 
     push!(exprs, :(push!($previously_declared_for, $T)))
+
     return Expr(:block, exprs...)
 end
 

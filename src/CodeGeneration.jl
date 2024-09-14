@@ -50,7 +50,7 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_t
             node_to_var[node] = node_symbol(node, variable_to_index)
 
             if is_tree(node)
-                if value(node) === if_else
+                if value(node) === if_else #special case code generation for if...else. Need to generate nested code so only the statements in the true or false branch will be executed.
                     true_body = Expr(:block)
                     false_body = Expr(:block)
                     if_cond_var = _dag_to_function!(children(node)[1], local_body)
