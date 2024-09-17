@@ -85,6 +85,8 @@ end
 macro number_methods(T, rhs1, rhs2, options=nothing)
     #special case for ifelse because it takes three arguments
     eval(:(Base.ifelse(a::$T, b::$T, c::$T) = simplify_check_cache(Base.ifelse, a, b, c)))
+    eval(:(Base.ifelse(a::$T, b::$Real, c::$T) = simplify_check_cache(Base.ifelse, a, Node(b), c)))
+    eval(:(Base.ifelse(a::$T, b::$T, c::$Real) = simplify_check_cache(Base.ifelse, a, b, Node(c))))
 
     number_methods(T, rhs1, rhs2, options) |> esc
 end

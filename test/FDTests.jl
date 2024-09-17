@@ -2119,8 +2119,8 @@ end
 
     #conditional
     expr = x < y
-    f = ifelse(expr, x, y)
-    @test ==(FastDifferentiation.value(f), ifelse)
+    f = if_else(expr, x, y)
+    @test ==(FastDifferentiation.value(f), if_else)
     @test ===(FastDifferentiation.children(f)[1], expr)
     @test ===(FastDifferentiation.children(f)[2], x)
     @test ===(FastDifferentiation.children(f)[3], y)
