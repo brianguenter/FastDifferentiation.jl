@@ -2128,11 +2128,39 @@ end
 
 @testitem "conditional code generation" begin
     @variables x y
-    f = ifelse(x < y, cos(x), sin(x))
+    f = if_else(x < y, cos(x), sin(x))
 
     input = [π / 2.0, 20.0]
     exe = make_function([f], [x, y])
     @test isapprox(cos(input[1]), exe(input)[1])
     input = [π / 2.0, 1.0]
     @test isapprox(sin(input[1]), exe(input)[1])
+
+    f = if_else(x < y, x, 2.0)
+
+    exe = make_function([f], [x, y])
+    @test exe([1.0, 2.0])[1] == 1.0
+    @test exe([2.0, 1.0])[1] == 2.0
+
+    f = if_else(x < y, 1.0, 2.0)
+    exe = make_function([f], [x, y])
+    @test exe([1.0, 2.0])[1] == 1.0
+    @test exe([2.0, 1.0])[1] == 2.0
+
+    f = if_else(x < y, x, y)
+    exe = make_function([f], [x, y])
+    @test exe([1.5, 3.0])[1] == 1.5
+    @test exe([2.5, 1.2])[1] == 1.2
+
+    f = if_else(x < y, 2.7, y)
+    exe = make_function([f], [x, y])
+    @test exe([1.5, 3.0])[1] == 2.7
+    @test exe([2.5, 1.2])[1] == 1.2
+
+    #make sure derivative of x^y works because this derivative has a conditional statement.
+    f = x^y
+    g = derivative([f], y)
+    h = make_function(g, [x, y])
+    @test isnan(h([0.0, 2.0])[1])
+    @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
 end

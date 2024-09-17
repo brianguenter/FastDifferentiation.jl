@@ -27,8 +27,33 @@ function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
                 true_body = Expr(:block)
                 false_body = Expr(:block)
                 if_cond_var = _dag_to_function!(children(node)[1], local_body, variable_to_index, node_to_var)
-                _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
-                _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+
+                true_node = children(node)[2]
+                false_node = children(node)[3]
+
+                if is_leaf(true_node) #handle leaf nodes properly 
+                    if is_constant(true_node)
+                        temp_val = value(true_node)
+                    else
+                        temp_val = node_to_var[true_node]
+                    end
+
+                    push!(true_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
+                else
+                    _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
+                end
+
+                if is_leaf(false_node)
+                    if is_constant(false_node)
+                        temp_val = value(false_node)
+                    else
+                        temp_val = node_to_var[false_node]
+                    end
+                    push!(false_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
+                else
+                    _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+                end
+
                 statement = :($(node_to_var[node]) = if $(if_cond_var)
                     $(true_body)
                 else
