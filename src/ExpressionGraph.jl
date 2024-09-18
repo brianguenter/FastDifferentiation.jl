@@ -391,10 +391,11 @@ end
 
 
 is_if_else(a::Node) = value(a) == if_else
+is_ifelse(a::Node) = value(a) == ifelse
 
-conditional_error(a::Node) = ErrorException("Your expression contained $(value(a)). FastDifferentiation does not yet support differentiation through this conditional or any of these $(Tuple(not_currently_differentiable))")
+conditional_error(a::Node) = ErrorException("Your expression contained a $(value(a)) expression. FastDifferentiation does not yet support differentiation through this conditional or any of these $(Tuple(not_currently_differentiable))")
 
-is_conditional(a::Node) = is_if_else(a) || value(a) in not_currently_differentiable
+is_conditional(a::Node) = is_if_else(a) || is_ifelse(a) || value(a) in not_currently_differentiable
 
 
 

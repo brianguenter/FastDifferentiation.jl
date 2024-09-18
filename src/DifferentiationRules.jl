@@ -37,8 +37,12 @@ derivative(::NoOp, arg::Tuple{T}, ::Val{1}) where {T} = 1.0
 
 
 function_variable_derivative(a::Node, index::Val{i}) where {i} = check_cache((Differential, children(a)[i]))
+
+# These functions are primarily used to do error checking on expressions
 function derivative(a::Node, index::Val{1})
-    if is_variable_function(a)
+    if is_conditional(a)
+        throw(conditional_error(a))
+    elseif is_variable_function(a)
         return function_variable_derivative(a, index)
     elseif arity(a) == 1
         return derivative(value(a), (children(a)[1],), index)

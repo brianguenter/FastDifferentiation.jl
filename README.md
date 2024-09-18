@@ -71,26 +71,44 @@ If you use FD in your work please share the functions you differentiate with me.
 **A**: If you multiply a matrix of **FD** variables times a vector of **FD** variables the matrix vector multiplication loop is effectively unrolled into scalar expressions. Matrix operations on large matrices will generate large executables and long preprocessing time. **FD** functions with up 10⁵ operations should still have reasonable preprocessing/compilation times (approximately 1 minute on a modern laptop) and good run time performance.
 
 **Q**: Does **FD** support conditionals?  
-**A**: **FD** does not yet support conditionals that involve the variables you are differentiating with respect to. You can do this:
+**A**: As of version 0.4.1 **FD** expressions may contain conditionals which involve variables. However, you cannot yet differentiate an expression containing conditionals. A future PR will allow you to differentiate conditional expressions. 
+
+You can use either the builtin `ifelse` function or a new function `if_else`. `ifelse` will evaluate both the true and false branches. By contrast `if_else` has the semantics of `if...else...end`; only one of the true or false branches will be executed. 
+
+This is useful when your conditional is used to prevent exceptions because of illegal input values:
 ```julia
-@variables x y #create FD variables
+julia> f = if_else(x<0,NaN,sqrt(x))
+(if_else  (x < 0) NaN sqrt(x))
 
-julia> f(a,b,c) = a< 1.0 ? cos(b) : sin(c)
-f (generic function with 2 methods)
+julia> g = make_function([f],[x])
 
-julia> f(0.0,x,y)
-cos(x)
 
-julia> f(1.0,x,y)
-sin(y)
+julia> g([-1])
+1-element Vector{Float64}:
+ NaN
+
+julia> g([2.0])
+1-element Vector{Float64}:
+ 1.4142135623730951
+end
 ```
-but you can't do this:
+In this case you wouldn't want to use `ifelse` because it evaluates both the true and false branches and causes a runtime exception:
 ```julia
-julia> f(a,b) = a < b ? cos(a) : sin(b)
-f (generic function with 2 methods)
+julia> f = ifelse(x<0,NaN,sqrt(x))
+(ifelse  (x < 0) NaN sqrt(x))
 
-julia> f(x,y)
-ERROR: MethodError: no method matching isless(::FastDifferentiation.Node{Symbol, 0}, ::FastDifferentiation.Node{Symbol, 0})
+julia> g = make_function([f],[x])
+...
+
+julia> g([-1])
+ERROR: DomainError with -1.0:
+sqrt was called with a negative real argument but will only return a complex result if called with a complex argument. Try sqrt(Complex(x)).
+```
+
+However, you cannot yet compute derivatives of expressions that contain conditionals:
+```julia
+julia> jacobian([f],[x,y])
+ERROR: Your expression contained ifelse. FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals (max, min, copysign, &, |, xor, <, >, <=, >=, !=, ==, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !)
 ```
 
 # Release Notes

@@ -72,7 +72,7 @@ ERROR: DomainError with -1.0:
 sqrt was called with a negative real argument but will only return a complex result if called with a complex argument. Try sqrt(Complex(x)).
 ```
 
-Howver, you cannot yet compute derivatives of expressions that contain conditionals:
+However, you cannot yet compute derivatives of expressions that contain conditionals:
 ```julia
 julia> jacobian([f],[x,y])
 ERROR: Your expression contained ifelse. FastDifferentiation does not yet support differentiation through ifelse or any of these conditionals (max, min, copysign, &, |, xor, <, >, <=, >=, !=, ==, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !)
