@@ -10,6 +10,7 @@ import Base: iterate
 using UUIDs
 using SparseArrays
 using DataStructures
+import DiffRules
 
 module AutomaticDifferentiation
 struct NoDeriv

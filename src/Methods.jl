@@ -32,10 +32,10 @@ const previously_declared_for = Set([])
 
 const basic_monadic = [-, +]
 const basic_diadic = [+, -, *, /, //, \, ^]
-const diadic_non_differentiable = [max, min, copysign, &, |, !, ⊻, <, >, ≤, ≥, ≠, ==, isless]
-const monadic_non_differentiable = [signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
+const special_diadic = [max, min, copysign, &, |, !, ⊻, <, >, ≤, ≥, ≠, ==, isless]
+const special_monadic = [mod2pi, rem2pi, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
 
-const not_currently_differentiable = vcat(diadic_non_differentiable, monadic_non_differentiable)
+const all_supported_functions = vcat(monadic, diadic, basic_monadic, basic_diadic, special_diadic, special_monadic)
 
 # TODO: keep domains tighter than this
 function number_methods(T, rhs1, rhs2, options=nothing)
@@ -45,7 +45,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     only_basics = options !== nothing ? options == :onlybasics : false
     skips = Meta.isexpr(options, [:vcat, :hcat, :vect]) ? Set(options.args) : []
 
-    for f in (skip_basics ? diadic : only_basics ? basic_diadic : vcat(basic_diadic, diadic, diadic_non_differentiable))
+    for f in (skip_basics ? diadic : only_basics ? basic_diadic : vcat(basic_diadic, diadic, special_diadic))
         nameof(f) in skips && continue
         for S in previously_declared_for
             push!(exprs, quote
@@ -64,7 +64,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
         push!(exprs, expr)
     end
 
-    for f in (skip_basics ? monadic : only_basics ? basic_monadic : vcat(basic_monadic, monadic, monadic_non_differentiable))
+    for f in (skip_basics ? monadic : only_basics ? basic_monadic : vcat(basic_monadic, monadic, special_monadic))
         nameof(f) in skips && continue
         push!(exprs, :((f::$(typeof(f)))(a::$T) = $rhs1))
     end

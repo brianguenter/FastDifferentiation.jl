@@ -176,7 +176,7 @@ Special if_else to use for conditionals instead of builtin ifelse because the la
 during code generation.
 """
 function if_else(condition::Node, true_branch=Node(true_branch), false_branch=Node(false_branch))
-    @assert value(condition) in diadic_non_differentiable || value(condition) in monadic_non_differentiable
+    @assert value(condition) in special_diadic || value(condition) in special_monadic
     check_cache((if_else, condition, true_branch, false_branch))
 end
 export if_else
@@ -388,14 +388,21 @@ function create_NoOp(child)
     return Node(NoOp(), child)
 end
 
-
-
+is_NoOp(a::Node) = isa(value(a), NoOp)
 is_if_else(a::Node) = value(a) == if_else
 is_ifelse(a::Node) = value(a) == ifelse
 
-conditional_error(a::Node) = ErrorException("Your expression contained a $(value(a)) expression. FastDifferentiation does not yet support differentiation through this conditional or any of these $(Tuple(not_currently_differentiable))")
+conditional_error(a::Node) = ErrorException("Your expression contained a $(value(a)) expression. FastDifferentiation does not yet support differentiation through this function)")
 
-is_conditional(a::Node) = is_if_else(a) || is_ifelse(a) || value(a) in not_currently_differentiable
+function is_unsupported_function(a::Node)
+    if is_NoOp(a)
+        return false
+    elseif is_if_else(a) || is_ifelse(a) || !in(value(a), all_supported_functions)
+        return true
+    else
+        return false
+    end
+end
 
 
 
