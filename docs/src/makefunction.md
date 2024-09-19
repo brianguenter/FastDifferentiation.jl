@@ -1,5 +1,5 @@
-# How to use `make_function``
-## `make_function` options
+# How to use `make_function`
+### `make_function` options
 
 The `make_function` procedure creates a runtime generated function from **FD** expressions. The signature for `make_function` is
 
