@@ -113,6 +113,7 @@ ERROR: Your expression contained ifelse. FastDifferentiation does not yet suppor
 <details>
 0.4.0 and 0.3.17 contain bugs which prevent certain functions, such as xʸ, from differentiating properly. Do not use these versions. Upgrade to 0.4.1 which fixes the bugs and also add conditionals to **FD** expressions.
 
+
 v0.3.2 - make_function now generates functions that have much faster LLVM compile time for all constant input arguments. It now generates code to do this
 
 result = [c1,c2,....]
