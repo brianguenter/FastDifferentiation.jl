@@ -2,8 +2,6 @@
 
 [![Build Status](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/brianguenter/FastDifferentiation.jl/actions/workflows/CI.yml?query=branch%3Amain) [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://brianguenter.github.io/FastDifferentiation.jl/dev)
 
-***WARNING v0.4.0 has a major bug and should not be used. A patch will be issued soon. Until then revert to 0.3.17 if you upgraded to 0.40**
-
 FastDifferentiation (**FD**) is a package for generating efficient executables to evaluate derivatives of Julia functions. It can also generate efficient true symbolic derivatives for symbolic analysis. 
 
 Unlike forward and reverse mode automatic differentiation **FD** automatically generates efficient derivatives for arbitrary function types: ℝ¹->ℝ¹, ℝ¹->ℝᵐ, ℝⁿ->ℝ¹, and ℝⁿ->ℝᵐ, m≠1,n≠1. **FD** is similar to [D*](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) in that it uses the derivative graph[^a] but **FD** is asymptotically faster so it can be applied to much larger expression graphs.
@@ -113,6 +111,8 @@ ERROR: Your expression contained ifelse. FastDifferentiation does not yet suppor
 
 # Release Notes
 <details>
+0.4.0 and 0.3.17 contain bugs which prevent certain functions, such as xʸ, from differentiating properly. Do not use these versions. Upgrade to 0.4.1 which fixes the bugs and also add conditionals to **FD** expressions.
+
 v0.3.2 - make_function now generates functions that have much faster LLVM compile time for all constant input arguments. It now generates code to do this
 
 result = [c1,c2,....]
