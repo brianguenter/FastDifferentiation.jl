@@ -8,11 +8,67 @@ then `sparsity = (nelts-nzeros)/nelts`.
 
 Frequently used in combination with a call to `make_function` to determine whether to set keyword argument `init_with_zeros` to false."""
 function sparsity(sym_func::AbstractArray{<:Node})
-    zeros = mapreduce(x -> is_zero(x) ? 1 : 0, +, sym_func)
+    zeros = mapreduce(x -> is_identically_zero(x) ? 1 : 0, +, sym_func)
     tot = prod(size(sym_func))
     return zeros == 0 ? 1.0 : (tot - zeros) / tot
 end
 export sparsity
+
+
+function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
+
+    tmp = get(node_to_var, node, nothing)
+
+    if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
+        node_to_var[node] = node_symbol(node, variable_to_index)
+
+        if is_tree(node)
+            if value(node) === if_else #special case code generation for if...else. Need to generate nested code so only the statements in the true or false branch will be executed.
+                true_body = Expr(:block)
+                false_body = Expr(:block)
+                if_cond_var = _dag_to_function!(children(node)[1], local_body, variable_to_index, node_to_var)
+
+                true_node = children(node)[2]
+                false_node = children(node)[3]
+
+                if is_leaf(true_node) #handle leaf nodes properly 
+                    if is_constant(true_node)
+                        temp_val = value(true_node)
+                    else
+                        temp_val = node_to_var[true_node]
+                    end
+
+                    push!(true_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
+                else
+                    _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
+                end
+
+                if is_leaf(false_node)
+                    if is_constant(false_node)
+                        temp_val = value(false_node)
+                    else
+                        temp_val = node_to_var[false_node]
+                    end
+                    push!(false_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
+                else
+                    _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+                end
+
+                statement = :($(node_to_var[node]) = if $(if_cond_var)
+                    $(true_body)
+                else
+                    $(false_body)
+                end)
+            else
+                args = _dag_to_function!.(children(node), Ref(local_body), Ref(variable_to_index), Ref(node_to_var))
+                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
+            end
+            push!(local_body.args, statement)
+        end
+    end
+
+    return node_to_var[node]
+end
 
 """
     function_body!(
@@ -37,31 +93,12 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing)
+function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
     if node_to_var === nothing
         node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
 
-    body = Expr(:block)
-
-    function _dag_to_function(node)
-
-        tmp = get(node_to_var, node, nothing)
-
-        if tmp === nothing #if node not in node_to_var then it hasn't been visited. Otherwise it has so don't recurse.
-            node_to_var[node] = node_symbol(node, variable_to_index)
-
-            if is_tree(node)
-                args = _dag_to_function.(children(node))
-                statement = :($(node_to_var[node]) = $(Symbol(value(node)))($(args...)))
-                push!(body.args, statement)
-            end
-        end
-
-        return node_to_var[node]
-    end
-
-    return body, _dag_to_function(dag)
+    return body, _dag_to_function!(dag, body, variable_to_index, node_to_var)
 end
 
 function zero_array_declaration(array::StaticArray{S,<:Any,N}) where {S,N}
@@ -124,8 +161,8 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
-    num_zeros = count(is_zero, (func_array))
-    num_const = count((x) -> is_constant(x) && !is_zero(x), func_array)
+    num_zeros = count(is_identically_zero, (func_array))
+    num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
 
 
     zero_threshold = 0.5
@@ -166,7 +203,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     for (i, node) in pairs(func_array)
         # skip all terms that we have computed above during construction
         if is_constant(node) && initialization_strategy === :const || # already initialized as constant above
-           is_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
+           is_identically_zero(node) && (initialization_strategy === :zero || !init_with_zeros) # was already initialized as zero above or we don't want to initialize with zeros
             continue
         end
         node_body, variable = function_body!(node, node_to_index, node_to_var)
@@ -185,11 +222,11 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # wrap in function body
     if in_place
-        return :((result, input_variables) -> @inbounds begin
+        return :((result, input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     else
-        return :((input_variables) -> @inbounds begin
+        return :((input_variables::AbstractArray) -> @inbounds begin
             $body
         end)
     end
@@ -248,9 +285,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
         push!(body.args, :(return result))
 
         if in_place
-            return :((result, input_variables) -> $body)
+            return :((result, input_variables::AbstractArray) -> $body)
         else
-            return :((input_variables) -> $body)
+            return :((input_variables::AbstractArray) -> $body)
         end
     end
 end
@@ -316,7 +353,20 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
     vars = variables(func_array) #all unique variables in func_array
     all_input_vars = vcat(input_variables...)
 
-    @assert vars ⊆ all_input_vars "Some of the variables in your function (the func_array argument) were not in the input_variables argument. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
+    #Because FD defines == operator for Node, which does not return a boolean, many builtin Julia functions will not work as expected. For example:
+    #  vars ⊆ all_input_vars errors because internally issubset tests for equality between the node values using ==, not ===. == returns a Node value but the issubset function expects a Bool.
+
+    temp = Vector{eltype(vars)}(undef, 0)
+
+    input_dict = IdDict(zip(all_input_vars, all_input_vars))
+    for one_var in vars
+        value = get(input_dict, one_var, nothing)
+        if value === nothing
+            push!(temp, one_var)
+        end
+    end
+
+    @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
     @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
 end

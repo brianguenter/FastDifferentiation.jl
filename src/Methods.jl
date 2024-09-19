@@ -22,15 +22,20 @@ const monadic = [deg2rad, rad2deg, asind, log1p, acsch,
     atand, sec, acscd, cot, exp2, expm1, atanh, gamma,
     loggamma, erf, erfc, erfcinv, erfi, erfcx, dawson, digamma,
     trigamma, invdigamma, polygamma, airyai, airyaiprime, airybi,
-    airybiprime, besselj0, besselj1, bessely0, bessely1, isfinite]
+    airybiprime, besselj0, besselj1, bessely0, bessely1]
+#ideally would have iszero in this list but this interferes with SparseArrays, which calls iszero to allocate space. Some other functions may use iszero in a way more compatible with symbolic numbers, meaning they will not crash when iszero returns an expression rather than a boolean. No easy way around this.
 
-const diadic = [max, min, hypot, atan, mod, rem, copysign,
+const diadic = [hypot, atan, mod, rem,
     besselj, bessely, besseli, besselk, hankelh1, hankelh2,
     polygamma, beta, logbeta]
 const previously_declared_for = Set([])
 
 const basic_monadic = [-, +]
 const basic_diadic = [+, -, *, /, //, \, ^]
+const special_diadic = [max, min, copysign, &, |, !, ⊻, <, >, ≤, ≥, ≠, ==, isless]
+const special_monadic = [mod2pi, rem2pi, signbit, isreal, iszero, isfinite, isnan, isinf, isinteger, !]
+
+const all_supported_functions = vcat(monadic, diadic, basic_monadic, basic_diadic, special_diadic, special_monadic)
 
 # TODO: keep domains tighter than this
 function number_methods(T, rhs1, rhs2, options=nothing)
@@ -40,7 +45,7 @@ function number_methods(T, rhs1, rhs2, options=nothing)
     only_basics = options !== nothing ? options == :onlybasics : false
     skips = Meta.isexpr(options, [:vcat, :hcat, :vect]) ? Set(options.args) : []
 
-    for f in (skip_basics ? diadic : only_basics ? basic_diadic : vcat(basic_diadic, diadic))
+    for f in (skip_basics ? diadic : only_basics ? basic_diadic : vcat(basic_diadic, diadic, special_diadic))
         nameof(f) in skips && continue
         for S in previously_declared_for
             push!(exprs, quote
@@ -54,29 +59,35 @@ function number_methods(T, rhs1, rhs2, options=nothing)
             (f::$(typeof(f)))(a::$T, b::$T) = $rhs2
             (f::$(typeof(f)))(a::$T, b::Real) = $rhs2
             (f::$(typeof(f)))(a::Real, b::$T) = $rhs2
-            # (f::$(typeof(f)))(a::$T, b::Number) = $rhs2
-            # (f::$(typeof(f)))(a::Number, b::$T) = $rhs2
         end
 
         push!(exprs, expr)
     end
 
-    for f in (skip_basics ? monadic : only_basics ? basic_monadic : vcat(basic_monadic, monadic))
+    for f in (skip_basics ? monadic : only_basics ? basic_monadic : vcat(basic_monadic, monadic, special_monadic))
         nameof(f) in skips && continue
-        if f === isfinite
-            push!(exprs, :((f::$(typeof(f)))(a::$T) = true))
-        else
-            push!(exprs, :((f::$(typeof(f)))(a::$T) = $rhs1))
-        end
+        push!(exprs, :((f::$(typeof(f)))(a::$T) = $rhs1))
     end
+
     push!(exprs, :(push!($previously_declared_for, $T)))
-    Expr(:block, exprs...)
+
+    return Expr(:block, exprs...)
 end
+
+
+# """if the node value is 0 then can evaluate this at compile time. Otherwise have to return an expression which will be evaluated when executing function created by make_function"""
+# Base.iszero(a::Node) = node_value(a) == 0 ? true : simplify_check_cache()
+# const special_cases = (signbit, isreal, isfinite, iszero, isnan, isinf, isinteger) #iszero must be defined or linear algebra routines, for example in sparse matrix will give type promotion error
+# This one is needed because julia/base/float.jl only defines `isinf` for `Real`, but `Node
+# <: Number`.  (See https://github.com/brianguenter/FastDifferentiation.jl/issues/73)
+# Base.isinf(x::Node) = !isnan(x) & !isfinite(x)
 
 macro number_methods(T, rhs1, rhs2, options=nothing)
+    #special case for ifelse because it takes three arguments
+    eval(:(Base.ifelse(a::$T, b::$T, c::$T) = simplify_check_cache(Base.ifelse, a, b, c)))
+    eval(:(Base.ifelse(a::$T, b::$Real, c::$T) = simplify_check_cache(Base.ifelse, a, Node(b), c)))
+    eval(:(Base.ifelse(a::$T, b::$T, c::$Real) = simplify_check_cache(Base.ifelse, a, b, Node(c))))
+
     number_methods(T, rhs1, rhs2, options) |> esc
 end
-
-
-
 
