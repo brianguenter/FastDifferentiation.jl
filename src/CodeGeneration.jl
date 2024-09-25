@@ -40,7 +40,12 @@ function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
 
                     push!(true_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
                 else
-                    _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
+                    visited = get(node_to_var, children(node)[2], nothing)
+                    if visited !== nothing
+                        push!(true_body.args, :($(gensym(:s)) = $visited))
+                    else
+                        _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
+                    end
                 end
 
                 if is_leaf(false_node)
@@ -51,7 +56,12 @@ function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
                     end
                     push!(false_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
                 else
-                    _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+                    visited = get(node_to_var, children(node)[3], nothing)
+                    if visited !== nothing
+                        push!(false_body.args, :($(gensym(:s)) = $visited))
+                    else
+                        _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
+                    end
                 end
 
                 statement = :($(node_to_var[node]) = if $(if_cond_var)
