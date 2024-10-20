@@ -2163,4 +2163,12 @@ end
     h = make_function(g, [x, y])
     @test isnan(h([0.0, 2.0])[1])
     @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
+
+    #ensure that functions that are defined in condition of if_else can be used as either a true or false result
+    h = make_function([if_else(sqrt(x) < 1, sqrt(x), 0.0)], [x])
+    @test isapprox(h([0.5])[1], sqrt(0.5))
+
+    h = make_function([if_else(sqrt(x) < 1, 0.0, sqrt(x))], [x])
+    @test isapprox(h([1.5])[1], sqrt(1.5))
+
 end
