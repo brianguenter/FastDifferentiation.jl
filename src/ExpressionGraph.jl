@@ -169,6 +169,28 @@ function is_one(a::Node)
 end
 
 """
+    substitute(item, resolve)
+
+Straightforward recursive evaluator for expressions in FastDifferentiation
+format. Occuring variable names are passed to function `resolve` as Symbols,
+which is free to return anything that will evaluate properly in the formula
+(typically a number, but also possibly other variables or errors).
+
+No attempt is made to substitute further into the substituents given by
+`resolve`.
+
+Notably, you should only use this in very special cases such as simplifying
+huge expressions. For usual tasks (and especially repetitive substitution)
+this is almost always slower than using the result of [`make_function`](@ref).
+"""
+substitute(x::Node, resolve) = substitute(x.node_value, x.children, resolve)
+substitute(x, resolve) = substitute(x, nothing, resolve)
+substitute(x::Symbol, ::Nothing, resolve) = resolve(x)
+substitute(x::Symbol, _, resolve) = resolve(x)
+substitute(x, ::Nothing, _) = x
+substitute(x, cs, resolve) = x(substitute.(cs, Ref(resolve))...)
+
+"""
 Special if_else to use for conditionals instead of builtin ifelse because the latter evaluates all its arguments. Many ifelse statements are used as guards against computations that would cause an exception so need a new version that is transformed into 
 
 `condition ? true_branch : false_branch`
