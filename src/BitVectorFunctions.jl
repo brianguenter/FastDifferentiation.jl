@@ -1,21 +1,20 @@
 #These functions appear to be 
-bitvector_cache::Vector{BitVector} = BitVector[]
+bitvector_cache::Dict{Int64,BitVector} = Dict{Int64,BitVector}()
 
 peak_bitvector_cache_size::Int64 = 0
+
+#Really should occasionally 
 
 function get_bitvector(numbits::T) where {T<:Integer}
     global bitvector_cache
     global peak_bitvector_cache_size
 
-    index = findfirst(x -> length(x) == numbits, bitvector_cache)
-    if index !== nothing
-        temp = bitvector_cache[index]
+    tmp = get(bitvector_cache, numbits, nothing)
+    if tmp !== nothing
+        temp = bitvector_cache[numbits]
     else
         temp = BitVector(undef, numbits)
-        push!(bitvector_cache, temp)
-        if length(bitvector_cache) > peak_bitvector_cache_size
-            peak_bitvector_cache_size = length(bitvector_cache)
-        end
+        bitvector_cache[numbits] = temp
     end
     return temp
 end

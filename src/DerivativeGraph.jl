@@ -464,7 +464,6 @@ is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node
 
 partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = value(child_edges(dgraph, parent)[child_index])
 
-
 """
     _partial_edges(
         postorder_number::IdDict{Node,Int64},
