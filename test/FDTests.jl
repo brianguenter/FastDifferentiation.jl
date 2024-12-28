@@ -2164,3 +2164,17 @@ end
     @test isnan(h([0.0, 2.0])[1])
     @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
 end
+
+@testitem "multiarg code generation" begin
+    using FastDifferentiation: FastDifferentiation as FD
+
+    x = FD.make_variables(:x, 3)
+    y = FD.make_variables(:y, 3)
+    f = x .* y
+    f_callable = FD.make_function(f, x, y)
+
+    x_val = ones(3)
+    y_val = ones(3)
+    f_val = f_callable(x_val, y_val)
+    @test f_val ≈ ones(3)
+end
