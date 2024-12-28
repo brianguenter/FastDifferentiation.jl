@@ -368,7 +368,17 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
 
     @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
-    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
+
+    _single_arg_function = @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
+    expected_input_sizes = map(size, input_variables)
+    function _maybe_multi_arg_function(input_varibles::AbstractVector...)
+        @boundscheck if !all(size(input) == expected_size for (input, expected_size) in zip(input_varibles, expected_input_sizes))
+            throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+        end
+        return _single_arg_function(reduce(vcat, input_varibles))
+    end
+
+    return _maybe_multi_arg_function
 end
 export make_function
 
