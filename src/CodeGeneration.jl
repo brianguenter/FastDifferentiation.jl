@@ -371,14 +371,27 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
 
     _single_arg_function = @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
     expected_input_sizes = map(size, input_variables)
-    function _maybe_multi_arg_function(input_varibles::AbstractVector...)
-        @boundscheck if !all(size(input) == expected_size for (input, expected_size) in zip(input_varibles, expected_input_sizes))
-            throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+    expected_result_size = size(func_array)
+    if in_place
+        compiled_function = function (result, input_variables::AbstractVector...)
+            @boundscheck if any(size(input) != expected_size for (input, expected_size) in zip(input_variables, expected_input_sizes))
+                throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+            end
+            @boundscheck if size(result) != expected_result_size
+                throw(ArgumentError("The result array must have the same size as the result of the function."))
+            end
+            return _single_arg_function(result, reduce(vcat, input_variables))
         end
-        return _single_arg_function(reduce(vcat, input_varibles))
+    else
+        compiled_function = function (input_variables::AbstractVector...)
+            @boundscheck if any(size(input) != expected_size for (input, expected_size) in zip(input_variables, expected_input_sizes))
+                throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+            end
+            return _single_arg_function(reduce(vcat, input_variables))
+        end
     end
 
-    return _maybe_multi_arg_function
+    return compiled_function
 end
 export make_function
 

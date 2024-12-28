@@ -2168,13 +2168,19 @@ end
 @testitem "multiarg code generation" begin
     using FastDifferentiation: FastDifferentiation as FD
 
+    # out-of-place case
     x = FD.make_variables(:x, 3)
     y = FD.make_variables(:y, 3)
     f = x .* y
     f_callable = FD.make_function(f, x, y)
-
     x_val = ones(3)
     y_val = ones(3)
     f_val = f_callable(x_val, y_val)
     @test f_val ≈ ones(3)
+
+    # in-place case
+    result = zeros(3)
+    f_callable! = FD.make_function(f, x, y; in_place=true)
+    f_callable!(result, x_val, y_val)
+    @test result ≈ ones(3)
 end
