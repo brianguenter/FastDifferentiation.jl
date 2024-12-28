@@ -370,22 +370,22 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
 
 
     _single_arg_function = @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
-    expected_input_sizes = map(size, input_variables)
-    expected_result_size = size(func_array)
+    expected_input_lengths = map(length, input_variables)
+    expected_result_lengths = length(func_array)
     if in_place
-        compiled_function = function (result, input_variables::AbstractVector...)
-            @boundscheck if any(size(input) != expected_size for (input, expected_size) in zip(input_variables, expected_input_sizes))
-                throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+        compiled_function = function (result, input_variables...)
+            @boundscheck if any(length(input) != expected_length for (input, expected_length) in zip(input_variables, expected_input_lengths))
+                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $expected_input_lengths. Actual lengths: $(map(length, input_variables))."))
             end
-            @boundscheck if size(result) != expected_result_size
-                throw(ArgumentError("The result array must have the same size as the result of the function."))
+            @boundscheck if length(result) != expected_result_lengths
+                throw(ArgumentError("The result array must have the same length as the result of the function. Expected lengths: $expected_result_lengths. Actual lengths: $(length(result))."))
             end
             return _single_arg_function(result, reduce(vcat, input_variables))
         end
     else
-        compiled_function = function (input_variables::AbstractVector...)
-            @boundscheck if any(size(input) != expected_size for (input, expected_size) in zip(input_variables, expected_input_sizes))
-                throw(ArgumentError("The input variables must have the same size as the input_variables argument to make_function."))
+        compiled_function = function (input_variables...)
+            @boundscheck if any(length(input) != expected_length for (input, expected_length) in zip(input_variables, expected_input_lengths))
+                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $expected_input_lengths. Actual lengths: $(map(length, input_variables))."))
             end
             return _single_arg_function(reduce(vcat, input_variables))
         end
