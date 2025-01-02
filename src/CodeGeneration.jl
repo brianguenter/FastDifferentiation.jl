@@ -93,7 +93,7 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
+function function_body!(dag::Node, variable_to_index::IdDict{Node,Union{Expr,Int64}}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
     if node_to_var === nothing
         node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
@@ -108,7 +108,7 @@ end
 
 function undef_array_declaration(::StaticArray{S,<:Any,N}) where {S,N}
     #need to initialize array to zero because this is no longer being done by simple assignment statements.
-    :(result = MArray{$(S),promote_type(result_element_type, eltype(input_variables)),$N}(undef))
+    :(result = MArray{$(S),result_element_type,$N}(undef))
 end
 
 """
@@ -157,9 +157,19 @@ end
         init_with_zeros::Bool
     )
 """
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
+
+
+    node_to_index = IdDict{Node,Union{Expr,Int64}}()
+    for (j, input_var_array) in pairs(input_variables)
+        var_name = Symbol("input_variables$j")
+        push!(body.args, :($var_name = input_variables[$j]))
+        for (i, node) in pairs(input_var_array)
+            node_to_index[node] = :($var_name[$i])
+        end
+    end
 
     num_zeros = count(is_identically_zero, (func_array))
     num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
@@ -182,9 +192,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # declare result element type, and result variable if not provided by the user
     if in_place
-        push!(body.args, :(result_element_type = eltype(input_variables)))
+        push!(body.args, :(result_element_type = promote_type((eltype.(input_variables))...)))
     else
-        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(input_variables))...)))
         push!(body.args, undef_array_declaration(func_array))
     end
 
@@ -195,10 +205,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         push!(body.args, :(result .= $(to_number(func_array))))
     end
 
-    node_to_index = IdDict{Node,Int64}()
-    for (i, node) in pairs(input_variables)
-        node_to_index[node] = i
-    end
+
 
     for (i, node) in pairs(func_array)
         # skip all terms that we have computed above during construction
@@ -220,15 +227,45 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         push!(body.args, return_expression(func_array))
     end
 
+    expected_input_lengths = map(length, input_variables)
+    #boundscheck code
+    input_check = :(
+        @boundscheck begin
+
+        lengths = $expected_input_lengths
+        if any(length(input) != expected_length for (input, expected_length) in zip(input_variables, lengths))
+            throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(map(length, input_variables))."))
+        end
+    end)
+
     # wrap in function body
     if in_place
-        return :((result, input_variables::AbstractArray) -> @inbounds begin
-            $body
-        end)
+        expected_result_length = length(func_array)
+
+        return :((result, input_variables::Vararg{AbstractArray,$(length(input_variables))}) ->
+            begin
+                @boundscheck begin
+                    expected_res_length = $expected_result_length
+                    if length(result) != expected_res_length
+                        throw(ArgumentError("The in place result vector does not have the expected length. Expected length: $expected_res_length. Actual length: $(length(result))."))
+                    end
+                end
+
+                $input_check
+
+                @inbounds begin
+                    $body
+                end
+            end)
     else
-        return :((input_variables::AbstractArray) -> @inbounds begin
-            $body
-        end)
+        return :((input_variables::Vararg{AbstractArray,$(length(input_variables))}) ->
+            begin
+                #here
+                $input_check
+                @inbounds begin
+                    $body
+                end
+            end)
     end
 end
 export make_Expr
@@ -241,7 +278,7 @@ export make_Expr
     )
 
 `init_with_zeros` argument is not used for sparse matrices."""
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node,Ti}
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
@@ -265,9 +302,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
             return :((input_variables) -> $body)
         end
     else
-        node_to_index = IdDict{Node,Int64}()
+        node_to_index = IdDict{Node,Union{Expr,Int64}}()
         for (i, node) in pairs(input_variables)
-            node_to_index[node] = i
+            node_to_index[node] = :(input_variables[$i])
         end
 
         for j = 1:n
@@ -368,7 +405,8 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
 
     @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
-    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
+    temp = make_Expr(func_array, input_variables..., in_place=in_place, init_with_zeros=init_with_zeros)
+    @RuntimeGeneratedFunction(temp)
 end
 export make_function
 
