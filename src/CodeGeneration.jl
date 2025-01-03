@@ -161,11 +161,12 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
+    input_variable_names = Symbol[]
 
     node_to_index = IdDict{Node,Union{Expr,Int64}}()
     for (j, input_var_array) in pairs(input_variables)
         var_name = Symbol("input_variables$j")
-        push!(body.args, :($var_name = input_variables[$j]))
+        push!(input_variable_names, var_name)
         for (i, node) in pairs(input_var_array)
             node_to_index[node] = :($var_name[$i])
         end
@@ -192,9 +193,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # declare result element type, and result variable if not provided by the user
     if in_place
-        push!(body.args, :(result_element_type = promote_type((eltype.(input_variables))...)))
+        push!(body.args, :(result_element_type = promote_type(eltype.(($(input_variable_names...),))...)))
     else
-        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(input_variables))...)))
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(($(input_variable_names...),)))...)))
         push!(body.args, undef_array_declaration(func_array))
     end
 
@@ -229,12 +230,16 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     expected_input_lengths = map(length, input_variables)
     #boundscheck code
+
     input_check = :(
         @boundscheck begin
 
         lengths = $expected_input_lengths
-        if any(length(input) != expected_length for (input, expected_length) in zip(input_variables, lengths))
-            throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(map(length, input_variables))."))
+        for (input, expected_length) in zip(($((input_variable_names)...),), lengths)
+            if length(input) != expected_length
+                actual_lengths = map(length, ($(input_variable_names...),))
+                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(actual_lengths)."))
+            end
         end
     end)
 
@@ -242,7 +247,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     if in_place
         expected_result_length = length(func_array)
 
-        return :((result, input_variables::Vararg{AbstractArray,$(length(input_variables))}) ->
+        return :((result, $(input_variable_names...)) ->
             begin
                 @boundscheck begin
                     expected_res_length = $expected_result_length
@@ -258,7 +263,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 end
             end)
     else
-        return :((input_variables::Vararg{AbstractArray,$(length(input_variables))}) ->
+        return :(($(input_variable_names...),) ->
             begin
                 #here
                 $input_check

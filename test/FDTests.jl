@@ -1776,29 +1776,29 @@ end
     p = make_variables(:p, 21)
 
     println("NO array zero statement")
-    show(make_Expr(p, p, true, true))
-    show(make_Expr(p, p, true, false))
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
     p[21] = 0
 
     println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, true, true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
     println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, true, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
     println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
     p[20] = 0
     println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, true, true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
     println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, true, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
     println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 end
 
 
