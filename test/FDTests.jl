@@ -1733,7 +1733,7 @@ end
     xprime = FD.Node.(x) #this will change the type of the vector
     fn = FD.make_function([xprime'mu], xprime, mu)
 
-    @test isapprox(fn([1, 2, 3, 4])[1], 11)
+    @test isapprox(fn([1, 2], [3, 4])[1], 11)
 end
 
 @testitem "reverse_AD" begin

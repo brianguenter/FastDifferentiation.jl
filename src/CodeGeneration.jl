@@ -148,6 +148,30 @@ function to_number(func_array::SparseMatrixCSC{T}) where {T<:Node}
     return tmp
 end
 
+function variable_names(input_variables::NTuple{N,AbstractVector}) where {N}
+    input_variable_names = Symbol[]
+    node_to_index = IdDict{Node,Union{Expr,Int64}}()
+
+    for (j, input_var_array) in pairs(input_variables)
+        var_name = Symbol("input_variables$j")
+        push!(input_variable_names, var_name)
+        for (i, node) in pairs(input_var_array)
+            node_to_index[node] = :($var_name[$i])
+        end
+    end
+
+    return input_variable_names, node_to_index
+end
+
+function return_array_type!(body::Expr, func_array, input_variable_names::AbstractVector, in_place::Bool)
+    # declare result element type, and result variable if not provided by the user
+    if in_place
+        return :(result_element_type = promote_type(eltype.(($(input_variable_names...),))...))
+    else
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(($(input_variable_names...),)))...)))
+        push!(body.args, undef_array_declaration(func_array))
+    end
+end
 
 """
     make_Expr(
@@ -161,20 +185,10 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
-    input_variable_names = Symbol[]
-
-    node_to_index = IdDict{Node,Union{Expr,Int64}}()
-    for (j, input_var_array) in pairs(input_variables)
-        var_name = Symbol("input_variables$j")
-        push!(input_variable_names, var_name)
-        for (i, node) in pairs(input_var_array)
-            node_to_index[node] = :($var_name[$i])
-        end
-    end
+    input_variable_names, node_to_index = variable_names(input_variables)
 
     num_zeros = count(is_identically_zero, (func_array))
     num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
-
 
     zero_threshold = 0.5
     const_threshold = 0.5
@@ -205,8 +219,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     elseif initialization_strategy === :const
         push!(body.args, :(result .= $(to_number(func_array))))
     end
-
-
 
     for (i, node) in pairs(func_array)
         # skip all terms that we have computed above during construction
@@ -242,6 +254,7 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
             end
         end
     end)
+
 
     # wrap in function body
     if in_place
@@ -290,28 +303,30 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector...;
     body = Expr(:block)
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
 
+    #need to understand how node_to_index is being used for sparse case
+
+
+    input_variable_names, node_to_index = variable_names(input_variables)
+
     if !in_place #have to store the sparse vector indices in the generated code to know how to create sparsity pattern
-        push!(body.args, :(element_type = promote_type(Float64, eltype(input_variables))))
+        push!(body.args, :(element_type = promote_type(Float64, eltype.($(input_variable_names...))...)))
         push!(body.args, :(result = SparseMatrixCSC($(A.m), $(A.n), $(A.colptr), $(A.rowval), zeros(element_type, $(length(A.nzval))))))
     end
 
     push!(body.args, :(vals = nonzeros(result)))
 
+
+
     num_consts = count(x -> is_constant(x), vals)
     if num_consts == nnz(A) #all elements are constant
         push!(body.args, :(vals .= $(to_number(A))))
         if in_place
-            return :((result, input_variables) -> $body)
+            return :((result, $(input_variable_names...)) -> $body)
         else
             push!(body.args, :(return result))
-            return :((input_variables) -> $body)
+            return :(($(input_variable_names...)) -> $body)
         end
     else
-        node_to_index = IdDict{Node,Union{Expr,Int64}}()
-        for (i, node) in pairs(input_variables)
-            node_to_index[node] = :(input_variables[$i])
-        end
-
         for j = 1:n
             for i in nzrange(A, j)
                 node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
@@ -327,9 +342,9 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector...;
         push!(body.args, :(return result))
 
         if in_place
-            return :((result, input_variables::AbstractArray) -> $body)
+            return :((result, $(input_variable_names...)) -> $body)
         else
-            return :((input_variables::AbstractArray) -> $body)
+            return :(($(input_variable_names...)) -> $body)
         end
     end
 end
