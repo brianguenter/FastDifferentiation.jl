@@ -173,6 +173,43 @@ function return_array_type!(body::Expr, func_array, input_variable_names::Abstra
     end
 end
 
+function input_output_size_check(func_array, expected_input_lengths, input_variable_names, in_place)
+    input_check = :(
+        @boundscheck begin
+
+        lengths = $expected_input_lengths
+        for (input, expected_length) in zip(($((input_variable_names)...),), lengths)
+            if length(input) != expected_length
+                actual_lengths = map(length, ($(input_variable_names...),))
+                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(actual_lengths)."))
+            end
+        end
+    end)
+
+
+    # wrap in function body
+    if in_place
+        expected_result_size = size(func_array)
+
+        return :(
+            begin
+                @boundscheck begin
+                    expected_res_size = $expected_result_size
+                    if size(result) != expected_res_size
+                        throw(ArgumentError("The in place result array does not have the expected size. Expected size: $expected_res_size. Actual size: $(size(result))."))
+                    end
+                end
+
+                $input_check
+            end)
+    else
+        return :(
+            begin
+                #here
+                $input_check
+            end)
+    end
+end
 """
     make_Expr(
         func_array::AbstractArray{<:Node},
@@ -232,59 +269,32 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
         push!(body.args, :(result[$i] = $variable))
     end
-
+    expected_input_lengths = map(length, input_variables)
+    in_out_checks = input_output_size_check(func_array, expected_input_lengths, input_variable_names, in_place)
     # return result or nothing if in_place
     if in_place
         push!(body.args, :(return nothing))
+        return :((result, $(input_variable_names...),) ->
+        # $in_out_checks
+            @inbounds begin
+                $body
+            end
+        )
     else
         push!(body.args, return_expression(func_array))
-    end
-
-    expected_input_lengths = map(length, input_variables)
-    #boundscheck code
-
-    input_check = :(
-        @boundscheck begin
-
-        lengths = $expected_input_lengths
-        for (input, expected_length) in zip(($((input_variable_names)...),), lengths)
-            if length(input) != expected_length
-                actual_lengths = map(length, ($(input_variable_names...),))
-                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(actual_lengths)."))
-            end
-        end
-    end)
-
-
-    # wrap in function body
-    if in_place
-        expected_result_length = length(func_array)
-
-        return :((result, $(input_variable_names...)) ->
-            begin
-                @boundscheck begin
-                    expected_res_length = $expected_result_length
-                    if length(result) != expected_res_length
-                        throw(ArgumentError("The in place result vector does not have the expected length. Expected length: $expected_res_length. Actual length: $(length(result))."))
-                    end
-                end
-
-                $input_check
-
-                @inbounds begin
-                    $body
-                end
-            end)
-    else
         return :(($(input_variable_names...),) ->
             begin
-                #here
-                $input_check
+                $in_out_checks
                 @inbounds begin
                     $body
                 end
             end)
     end
+
+
+    #boundscheck code
+
+
 end
 export make_Expr
 
