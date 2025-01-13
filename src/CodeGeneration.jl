@@ -275,9 +275,11 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
     if in_place
         push!(body.args, :(return nothing))
         return :((result, $(input_variable_names...),) ->
-        # $in_out_checks
-            @inbounds begin
-                $body
+            begin
+                $in_out_checks
+                @inbounds begin
+                    $body
+                end
             end
         )
     else
@@ -290,11 +292,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
                 end
             end)
     end
-
-
-    #boundscheck code
-
-
 end
 export make_Expr
 
@@ -351,10 +348,26 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector...;
 
         push!(body.args, :(return result))
 
+        expected_input_lengths = map(length, input_variables)
+        in_out_checks = input_output_size_check(A, expected_input_lengths, input_variable_names, in_place)
+
         if in_place
-            return :((result, $(input_variable_names...)) -> $body)
+            return :((result, $(input_variable_names...),) ->
+                begin
+                    $in_out_checks
+                    @inbounds begin
+                        $body
+                    end
+                end
+            )
         else
-            return :(($(input_variable_names...)) -> $body)
+            return :(($(input_variable_names...),) ->
+                begin
+                    $in_out_checks
+                    @inbounds begin
+                        $body
+                    end
+                end)
         end
     end
 end

@@ -2206,3 +2206,42 @@ end
     f_val = f_callable(x_val, y_val)
     @test f_val ≈ correct_result
 end
+
+@testitem "multiarg array size checks" begin
+    using LinearAlgebra
+
+    x = make_variables(:x, 3)
+    y = make_variables(:y, 3)
+    f = x .* y
+    f_callable = make_function(f, x, y)
+    x_val = ones(3)
+    y_val = ones(4)
+
+    @test_throws ArgumentError f_callable(x_val, y_val)
+
+    x_val = ones(4)
+    y_val = ones(3)
+    @test_throws ArgumentError f_callable(x_val, y_val)
+
+    result = zeros(4)
+    f_callable! = make_function(f, x, y; in_place=true)
+
+    @test_throws ArgumentError f_callable!(result, x_val, y_val)
+
+    f = [x ⋅ x, y ⋅ y]
+    f_sparse_jacobian = sparse_jacobian(f, [x; y])
+    result = similar(f_sparse_jacobian, Float64)
+    x_val = fill(2.0, 3)
+    y_val = fill(3.0, 4)
+
+    f_callable_sparse! = make_function(f_sparse_jacobian, x, y; in_place=true)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
+
+    x_val = fill(2.0, 4)
+    y_val = fill(3.0, 3)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
+
+    x_val = fill(2.0, 3)
+    result = Matrix{Float64}(undef, 3, 6)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
+end
