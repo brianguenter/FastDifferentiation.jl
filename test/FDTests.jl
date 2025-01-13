@@ -2164,3 +2164,45 @@ end
     @test isnan(h([0.0, 2.0])[1])
     @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
 end
+
+
+@testitem "multiarg code generation" begin
+    using SparseArrays: sparse
+    using LinearAlgebra
+
+    # out-of-place case
+    x = make_variables(:x, 3)
+    y = make_variables(:y, 3)
+    f = x .* y
+    f_callable = make_function(f, x, y)
+    x_val = ones(3)
+    y_val = ones(3)
+    f_val = f_callable(x_val, y_val)
+    @test f_val ≈ ones(3)
+
+
+
+    # in-place case
+    result = zeros(3)
+    f_callable! = make_function(f, x, y; in_place=true)
+    f_callable!(result, x_val, y_val)
+    @test result ≈ ones(3)
+
+    #now do sparse cases. This is more difficult because SparseArrays does a test for x[i,j] == 0 to determine sparsity pattern. This should return a boolean but with conditionals added to FastDifferentiation it instead returns a Node expression x[i,i]==0. So sparse(f) will error. Can still make sparse Jacobians though.
+
+    f = [x ⋅ x, y ⋅ y]
+    f_sparse_jacobian = sparse_jacobian(f, [x; y])
+    result = similar(f_sparse_jacobian, Float64)
+    x_val = fill(2.0, 3)
+    y_val = fill(3.0, 3)
+    correct_result = [4.0 4.0 4.0 0.0 0.0 0.0; 0.0 0.0 0.0 6.0 6.0 6.0]
+
+    f_callable_sparse! = make_function(f_sparse_jacobian, x, y; in_place=true)
+    f_val = f_callable_sparse!(result, x_val, y_val)
+    @test f_val ≈ correct_result
+
+    f_dense_jacobian = jacobian(f, [x; y])
+    f_callable = make_function(f_dense_jacobian, x, y)
+    f_val = f_callable(x_val, y_val)
+    @test f_val ≈ correct_result
+end
