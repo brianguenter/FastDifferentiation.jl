@@ -1733,7 +1733,7 @@ end
     xprime = FD.Node.(x) #this will change the type of the vector
     fn = FD.make_function([xprime'mu], xprime, mu)
 
-    @test isapprox(fn([1, 2, 3, 4])[1], 11)
+    @test isapprox(fn([1, 2], [3, 4])[1], 11)
 end
 
 @testitem "reverse_AD" begin
@@ -1776,29 +1776,29 @@ end
     p = make_variables(:p, 21)
 
     println("NO array zero statement")
-    show(make_Expr(p, p, true, true))
-    show(make_Expr(p, p, true, false))
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
     p[21] = 0
 
     println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, true, true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
     println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, true, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
     println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
     p[20] = 0
     println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, true, true))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
     println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, true, false))
+    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
     println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, false, true))
-    show(make_Expr(p, p, false, false))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 end
 
 
@@ -2163,4 +2163,85 @@ end
     h = make_function(g, [x, y])
     @test isnan(h([0.0, 2.0])[1])
     @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
+end
+
+
+@testitem "multiarg code generation" begin
+    using SparseArrays: sparse
+    using LinearAlgebra
+
+    # out-of-place case
+    x = make_variables(:x, 3)
+    y = make_variables(:y, 3)
+    f = x .* y
+    f_callable = make_function(f, x, y)
+    x_val = ones(3)
+    y_val = ones(3)
+    f_val = f_callable(x_val, y_val)
+    @test f_val ≈ ones(3)
+
+
+
+    # in-place case
+    result = zeros(3)
+    f_callable! = make_function(f, x, y; in_place=true)
+    f_callable!(result, x_val, y_val)
+    @test result ≈ ones(3)
+
+    #now do sparse cases. This is more difficult because SparseArrays does a test for x[i,j] == 0 to determine sparsity pattern. This should return a boolean but with conditionals added to FastDifferentiation it instead returns a Node expression x[i,i]==0. So sparse(f) will error. Can still make sparse Jacobians though.
+
+    f = [x ⋅ x, y ⋅ y]
+    f_sparse_jacobian = sparse_jacobian(f, [x; y])
+    result = similar(f_sparse_jacobian, Float64)
+    x_val = fill(2.0, 3)
+    y_val = fill(3.0, 3)
+    correct_result = [4.0 4.0 4.0 0.0 0.0 0.0; 0.0 0.0 0.0 6.0 6.0 6.0]
+
+    f_callable_sparse! = make_function(f_sparse_jacobian, x, y; in_place=true)
+    f_val = f_callable_sparse!(result, x_val, y_val)
+    @test f_val ≈ correct_result
+
+    f_dense_jacobian = jacobian(f, [x; y])
+    f_callable = make_function(f_dense_jacobian, x, y)
+    f_val = f_callable(x_val, y_val)
+    @test f_val ≈ correct_result
+end
+
+@testitem "multiarg array size checks" begin
+    using LinearAlgebra
+
+    x = make_variables(:x, 3)
+    y = make_variables(:y, 3)
+    f = x .* y
+    f_callable = make_function(f, x, y)
+    x_val = ones(3)
+    y_val = ones(4)
+
+    @test_throws ArgumentError f_callable(x_val, y_val)
+
+    x_val = ones(4)
+    y_val = ones(3)
+    @test_throws ArgumentError f_callable(x_val, y_val)
+
+    result = zeros(4)
+    f_callable! = make_function(f, x, y; in_place=true)
+
+    @test_throws ArgumentError f_callable!(result, x_val, y_val)
+
+    f = [x ⋅ x, y ⋅ y]
+    f_sparse_jacobian = sparse_jacobian(f, [x; y])
+    result = similar(f_sparse_jacobian, Float64)
+    x_val = fill(2.0, 3)
+    y_val = fill(3.0, 4)
+
+    f_callable_sparse! = make_function(f_sparse_jacobian, x, y; in_place=true)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
+
+    x_val = fill(2.0, 4)
+    y_val = fill(3.0, 3)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
+
+    x_val = fill(2.0, 3)
+    result = Matrix{Float64}(undef, 3, 6)
+    @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
 end

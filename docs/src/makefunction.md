@@ -39,6 +39,17 @@ julia> f_exe!([2.0,3.0])
  9.0
 ```
 
+Example: generated function accepts more than one vector of input arguments. This is useful if you want to segregate your input variables into groups.
+```julia
+    x = make_variables(:x, 3)
+    y = make_variables(:y, 3)
+    f = x .* y
+    f_callable = make_function(f, x, y)
+    x_val = ones(3)
+    y_val = ones(3)
+    f_val = f_callable(x_val, y_val) #executable takes two 3-vectors as input arguments
+```
+
 Example: assume your result is a large dense array (> 100 elements) and that you are using an in place array with no initialization. For dense arrays this should generate the fastest code:
 ```
 julia> @variables x y z

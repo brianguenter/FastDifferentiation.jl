@@ -484,11 +484,11 @@ function to_string(a::Node)
     end
 end
 
-function node_symbol(a::Node, variable_to_index::IdDict{Node,Int64})
+function node_symbol(a::Node, variable_to_index::IdDict{Node,Union{Expr,Int64}})
     if is_tree(a)
         result = gensym() #create a symbol to represent the node
     elseif is_variable(a)
-        result = :(input_variables[$(variable_to_index[a])])
+        result = :($(variable_to_index[a]))
     else
         result = value(a) #not a tree not a variable so is some kind of constant.
     end

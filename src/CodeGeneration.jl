@@ -93,7 +93,7 @@ end
 ```
 and the second return value will be the constant value.
 """
-function function_body!(dag::Node, variable_to_index::IdDict{Node,Int64}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
+function function_body!(dag::Node, variable_to_index::IdDict{Node,Union{Expr,Int64}}, node_to_var::Union{Nothing,IdDict{Node,Union{Symbol,Real,Expr}}}=nothing, body::Expr=Expr(:block))
     if node_to_var === nothing
         node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     end
@@ -108,7 +108,7 @@ end
 
 function undef_array_declaration(::StaticArray{S,<:Any,N}) where {S,N}
     #need to initialize array to zero because this is no longer being done by simple assignment statements.
-    :(result = MArray{$(S),promote_type(result_element_type, eltype(input_variables)),$N}(undef))
+    :(result = MArray{$(S),result_element_type,$N}(undef))
 end
 
 """
@@ -148,7 +148,68 @@ function to_number(func_array::SparseMatrixCSC{T}) where {T<:Node}
     return tmp
 end
 
+function variable_names(input_variables::NTuple{N,AbstractVector}) where {N}
+    input_variable_names = Symbol[]
+    node_to_index = IdDict{Node,Union{Expr,Int64}}()
 
+    for (j, input_var_array) in pairs(input_variables)
+        var_name = Symbol("input_variables$j")
+        push!(input_variable_names, var_name)
+        for (i, node) in pairs(input_var_array)
+            node_to_index[node] = :($var_name[$i])
+        end
+    end
+
+    return input_variable_names, node_to_index
+end
+
+function return_array_type!(body::Expr, func_array, input_variable_names::AbstractVector, in_place::Bool)
+    # declare result element type, and result variable if not provided by the user
+    if in_place
+        return :(result_element_type = promote_type(eltype.(($(input_variable_names...),))...))
+    else
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(($(input_variable_names...),)))...)))
+        push!(body.args, undef_array_declaration(func_array))
+    end
+end
+
+function input_output_size_check(func_array, expected_input_lengths, input_variable_names, in_place)
+    input_check = :(
+        @boundscheck begin
+
+        lengths = $expected_input_lengths
+        for (input, expected_length) in zip(($((input_variable_names)...),), lengths)
+            if length(input) != expected_length
+                actual_lengths = map(length, ($(input_variable_names...),))
+                throw(ArgumentError("The input variables must have the same length as the input_variables argument to make_function. Expected lengths: $lengths. Actual lengths: $(actual_lengths)."))
+            end
+        end
+    end)
+
+
+    # wrap in function body
+    if in_place
+        expected_result_size = size(func_array)
+
+        return :(
+            begin
+                @boundscheck begin
+                    expected_res_size = $expected_result_size
+                    if size(result) != expected_res_size
+                        throw(ArgumentError("The in place result array does not have the expected size. Expected size: $expected_res_size. Actual size: $(size(result))."))
+                    end
+                end
+
+                $input_check
+            end)
+    else
+        return :(
+            begin
+                #here
+                $input_check
+            end)
+    end
+end
 """
     make_Expr(
         func_array::AbstractArray{<:Node},
@@ -157,13 +218,14 @@ end
         init_with_zeros::Bool
     )
 """
-function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node}
+function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
     body = Expr(:block)
 
+    input_variable_names, node_to_index = variable_names(input_variables)
+
     num_zeros = count(is_identically_zero, (func_array))
     num_const = count((x) -> is_constant(x) && !is_identically_zero(x), func_array)
-
 
     zero_threshold = 0.5
     const_threshold = 0.5
@@ -182,9 +244,9 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
 
     # declare result element type, and result variable if not provided by the user
     if in_place
-        push!(body.args, :(result_element_type = eltype(input_variables)))
+        push!(body.args, :(result_element_type = promote_type(eltype.(($(input_variable_names...),))...)))
     else
-        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), eltype(input_variables))))
+        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(($(input_variable_names...),)))...)))
         push!(body.args, undef_array_declaration(func_array))
     end
 
@@ -193,11 +255,6 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         push!(body.args, :(result .= zero(result_element_type)))
     elseif initialization_strategy === :const
         push!(body.args, :(result .= $(to_number(func_array))))
-    end
-
-    node_to_index = IdDict{Node,Int64}()
-    for (i, node) in pairs(input_variables)
-        node_to_index[node] = i
     end
 
     for (i, node) in pairs(func_array)
@@ -212,23 +269,28 @@ function make_Expr(func_array::AbstractArray{T}, input_variables::AbstractVector
         end
         push!(body.args, :(result[$i] = $variable))
     end
-
+    expected_input_lengths = map(length, input_variables)
+    in_out_checks = input_output_size_check(func_array, expected_input_lengths, input_variable_names, in_place)
     # return result or nothing if in_place
     if in_place
         push!(body.args, :(return nothing))
+        return :((result, $(input_variable_names...),) ->
+            begin
+                $in_out_checks
+                @inbounds begin
+                    $body
+                end
+            end
+        )
     else
         push!(body.args, return_expression(func_array))
-    end
-
-    # wrap in function body
-    if in_place
-        return :((result, input_variables::AbstractArray) -> @inbounds begin
-            $body
-        end)
-    else
-        return :((input_variables::AbstractArray) -> @inbounds begin
-            $body
-        end)
+        return :(($(input_variable_names...),) ->
+            begin
+                $in_out_checks
+                @inbounds begin
+                    $body
+                end
+            end)
     end
 end
 export make_Expr
@@ -241,35 +303,37 @@ export make_Expr
     )
 
 `init_with_zeros` argument is not used for sparse matrices."""
-function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S}, in_place::Bool, init_with_zeros::Bool) where {T<:Node,S<:Node,Ti}
+function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node,Ti}
     rows = rowvals(A)
     vals = nonzeros(A)
     _, n = size(A)
     body = Expr(:block)
     node_to_var = IdDict{Node,Union{Symbol,Real,Expr}}()
 
+    #need to understand how node_to_index is being used for sparse case
+
+
+    input_variable_names, node_to_index = variable_names(input_variables)
+
     if !in_place #have to store the sparse vector indices in the generated code to know how to create sparsity pattern
-        push!(body.args, :(element_type = promote_type(Float64, eltype(input_variables))))
+        push!(body.args, :(element_type = promote_type(Float64, eltype.($(input_variable_names...))...)))
         push!(body.args, :(result = SparseMatrixCSC($(A.m), $(A.n), $(A.colptr), $(A.rowval), zeros(element_type, $(length(A.nzval))))))
     end
 
     push!(body.args, :(vals = nonzeros(result)))
 
+
+
     num_consts = count(x -> is_constant(x), vals)
     if num_consts == nnz(A) #all elements are constant
         push!(body.args, :(vals .= $(to_number(A))))
         if in_place
-            return :((result, input_variables) -> $body)
+            return :((result, $(input_variable_names...)) -> $body)
         else
             push!(body.args, :(return result))
-            return :((input_variables) -> $body)
+            return :(($(input_variable_names...)) -> $body)
         end
     else
-        node_to_index = IdDict{Node,Int64}()
-        for (i, node) in pairs(input_variables)
-            node_to_index[node] = i
-        end
-
         for j = 1:n
             for i in nzrange(A, j)
                 node_body, variable = function_body!(vals[i], node_to_index, node_to_var)
@@ -284,10 +348,26 @@ function make_Expr(A::SparseMatrixCSC{T,Ti}, input_variables::AbstractVector{S},
 
         push!(body.args, :(return result))
 
+        expected_input_lengths = map(length, input_variables)
+        in_out_checks = input_output_size_check(A, expected_input_lengths, input_variable_names, in_place)
+
         if in_place
-            return :((result, input_variables::AbstractArray) -> $body)
+            return :((result, $(input_variable_names...),) ->
+                begin
+                    $in_out_checks
+                    @inbounds begin
+                        $body
+                    end
+                end
+            )
         else
-            return :((input_variables::AbstractArray) -> $body)
+            return :(($(input_variable_names...),) ->
+                begin
+                    $in_out_checks
+                    @inbounds begin
+                        $body
+                    end
+                end)
         end
     end
 end
@@ -368,7 +448,8 @@ function make_function(func_array::AbstractArray{T}, input_variables::AbstractVe
 
     @assert length(temp) == 0 "The variables $temp were not in the input_variables argument to make_function. Every variable that is used in your function must have a corresponding entry in the input_variables argument."
 
-    @RuntimeGeneratedFunction(make_Expr(func_array, all_input_vars, in_place, init_with_zeros))
+    temp = make_Expr(func_array, input_variables..., in_place=in_place, init_with_zeros=init_with_zeros)
+    @RuntimeGeneratedFunction(temp)
 end
 export make_function
 
