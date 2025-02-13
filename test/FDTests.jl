@@ -1,5 +1,96 @@
 using TestItems
 
+# Every line in this comment is terminated by 2 spaces to make markdown format properly.
+
+# creates dag with this postorder:  
+# 1    x  
+# 2    cos (x)  
+# 3    sin (x)  
+# 4    k1 = (cos(x) * sin(x))  
+# 5    sin (k1)  
+# 6    k2 = exp(sin(x))  
+# 7    (k1 * k2)  
+# 8    (sin(k1) + (k1 * k2))  
+
+# with this edge table:  
+# nodenum  
+# 1    [(2, 1), (3, 1)]  
+# 2    [(2, 1), (4, 2)]  
+# 3    [(3, 1), (4, 3), (6, 3)]  
+# 4    [(4, 2), (4, 3), (5, 4), (7, 4)]  
+# 5    [(5, 4), (8, 5)]  
+# 6    [(6, 3), (7, 6)]  
+# 7    [(7, 4), (7, 6), (8, 7)]  
+# 8    [(8, 5), (8, 7)]  
+
+# with this idoms/pidoms table:  
+# nodenum   idoms    pidoms  
+# 1         8        1  
+# 2         4        1  
+# 3         8        1  
+# 4         8        1  
+# 5         8        4  
+# 6         7        3  
+# 7         8        1  
+# 8         8        1  
+
+# with these factorable subgraphs  
+# (8,4), (8,3), (8,1), (1,4), (1,7), (1,8)
+@testsnippet ComplexDominatorDAG begin
+    using FastDifferentiation
+    using StaticArrays
+
+    function complex_dominator_dag()
+        FastDifferentiation.@variables x
+
+        sinx = FD.Node(sin, MVector(x))
+        cosx = FD.Node(cos, MVector(x))
+        A = FD.Node(*, MVector(cosx, sinx))
+        sinA = FD.Node(sin, MVector(A))
+        expsin = FD.Node(*, MVector(A, FD.Node(exp, MVector(sinx))))
+        plus = FD.Node(+, MVector(sinA, expsin))
+        return plus
+    end
+end
+
+@testsnippet SimpleDominatorGraph begin
+    import FastDifferentiation as FD
+
+    function simple_dominator_graph()
+        FD.@variables x
+
+        ncos = FD.Node(cos, x)
+        nplus = FD.Node(+, ncos, x)
+        ntimes = FD.Node(*, ncos, nplus)
+        four_2_subgraph = FD.Node(+, nplus, ncos)
+        one_3_subgraph = FD.Node(+, FD.Node(*, FD.Node(-1), FD.Node(sin, x)), FD.Node(1))
+        return x, FD.DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
+    end
+end
+
+@testsnippet ComputeDominanceTables begin
+    import FastDifferentiation as FD
+    #If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`
+    function compute_dominance_tables(graph::FD.DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
+        if compute_dominators
+            start_vertices = FD.root_index_to_postorder_number(graph)
+        else
+            start_vertices = FD.variable_index_to_postorder_number(graph)
+        end
+
+        doms = Dict{T,T}[]   #create one idom table for each root
+
+        for (start_index, node_postorder_number) in pairs(start_vertices)
+            push!(doms, FastDifferentiation.compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
+        end
+        return doms
+    end
+end
+
+#END of snippets
+
+
+
 @testitem "FD.isa_connected_path 1" begin # case when path is one edge long
     using DataStructures
     import FastDifferentiation as FD
@@ -247,12 +338,12 @@ end
     @test (FD.value_equal(_6_1, subs[6]) && FD.value_equal(_1_6, subs[5])) || (FD.value_equal(_1_6, subs[6]) && FD.value_equal(6_1, subs[5]))
 end
 
-@testitem "FD.compute_factorable_subgraphs" begin
-    include("ShareTestCode.jl")
+
+@testitem "FD.compute_factorable_subgraphs" setup = [ComplexDominatorDAG] begin
     using DataStructures
 
     import FastDifferentiation as FD
-    dgraph = FD.DerivativeGraph(FDTests.complex_dominator_dag())
+    dgraph = FD.DerivativeGraph(complex_dominator_dag())
 
     sub_heap = FD.compute_factorable_subgraphs(dgraph)
     subs = extract_all!(sub_heap)
@@ -622,8 +713,7 @@ end
     end
 end
 
-@testitem "dominators" begin
-    include("ShareTestCode.jl")
+@testitem "dominators" setup = [ComputeDominanceTables] begin
     import FastDifferentiation as FD
 
     FD.@variables x y
@@ -639,7 +729,7 @@ end
     graph = FD.DerivativeGraph(rts)
 
 
-    idoms = FDTests.compute_dominance_tables(graph, true)
+    idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 3, 4 => 5, 3 => 4, 5 => 5),
@@ -663,7 +753,7 @@ end
     rts = [n7, nexp]
     graph = FD.DerivativeGraph(rts)
 
-    idoms = FDTests.compute_dominance_tables(graph, true)
+    idoms = compute_dominance_tables(graph, true)
 
     correct_dominators = [
         (1 => 2, 2 => 5, 5 => 7, 6 => 7, 7 => 8),
@@ -676,7 +766,7 @@ end
         end
     end
 
-    pidoms = FDTests.compute_dominance_tables(graph, false)
+    pidoms = compute_dominance_tables(graph, false)
 
     correct_post_dominators = [
         (1 => 1, 2 => 1, 5 => 2, 6 => 5, 7 => 5, 8 => 7),
@@ -691,7 +781,7 @@ end
 end
 
 
-@testitem "dom_subgraph && pdom_subgraph" begin
+@testitem "dom_subgraph && pdom_subgraph" setup = [ComputeDominanceTables] begin
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
@@ -705,8 +795,8 @@ end
     ntimes2 = FD.Node(*, ncos, ntimes1)
     rts = [ntimes2, ntimes1]
     graph = FD.DerivativeGraph(rts)
-    idoms = FDTests.compute_dominance_tables(graph, true)
-    pidoms = FDTests.compute_dominance_tables(graph, false)
+    idoms = compute_dominance_tables(graph, true)
+    pidoms = compute_dominance_tables(graph, false)
 
     r1_doms = ((4, 1), (4, 2))
     v1_pdoms = ((1, 3), (1, 4))
@@ -768,12 +858,12 @@ end
 
 end
 
-@testitem "factor_order" begin
+@testitem "factor_order" setup = [SimpleDominatorGraph] begin
     include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
-    _, graph, four_2_subgraph, one_3_subgraph = FDTests.simple_dominator_graph()
+    _, graph, four_2_subgraph, one_3_subgraph = simple_dominator_graph()
 
 
 
@@ -819,12 +909,12 @@ end
     @test index_1_3 < index_1_4
 end
 
-@testitem "subgraph_edges" begin
+@testitem "subgraph_edges" setup = [ComplexDominatorDAG] begin
     include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
-    dgraph = FD.DerivativeGraph([FDTests.complex_dominator_dag()])
+    dgraph = FD.DerivativeGraph([complex_dominator_dag()])
 
     _1_4_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
 
@@ -880,11 +970,23 @@ end
     @test count(x -> FD.vertices(x) == (2, 1), edges_1_4) == 1
 end
 
-@testitem "deconstruct_subgraph" begin
-    include("ShareTestCode.jl")
+@testitem "deconstruct_subgraph" setup = [SimpleDominatorGraph] begin
     import FastDifferentiation as FD
+    using DataStructures
 
-    graph, subs = FDTests.simple_factorable_subgraphs()
+    """returns 4 factorable subgraphs in this order: (4,2),(1,3),(1,4),(4,1)"""
+    function simple_factorable_subgraphs()
+        _, graph, _, _ = simple_dominator_graph()
+        temp = extract_all!(FD.compute_factorable_subgraphs(graph))
+        return graph, [
+            temp[findfirst(x -> FastDifferentiation.vertices(x) == (4, 2), temp)],
+            temp[findfirst(x -> FastDifferentiation.vertices(x) == (1, 3), temp)],
+            temp[findfirst(x -> FastDifferentiation.vertices(x) == (1, 4), temp)],
+            temp[findfirst(x -> FastDifferentiation.vertices(x) == (4, 1), temp)]
+        ]
+    end
+
+    graph, subs = simple_factorable_subgraphs()
 
     all_edges = collect(FD.unique_edges(graph))
 
@@ -1126,12 +1228,12 @@ end
 
 
 
-@testitem "evaluate_subgraph" begin
+@testitem "evaluate_subgraph" setup = [SimpleDominatorGraph] begin
     include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
 
-    _, graph, _, _ = FDTests.simple_dominator_graph()
+    _, graph, _, _ = simple_dominator_graph()
 
     sub = FD.postdominator_subgraph(graph, 1, 3, BitVector([1]), BitVector([1]), BitVector([1]))
 end
@@ -1232,12 +1334,13 @@ end
 end
 
 
-@testitem "factor ℝ¹->ℝ¹ " begin
+@testitem "factor ℝ¹->ℝ¹ " setup = [ComplexDominatorDAG, SimpleDominatorGraph] begin
     include("ShareTestCode.jl")
     import FiniteDifferences
     import FastDifferentiation as FD
 
-    x, graph, _, _ = FDTests.simple_dominator_graph()
+    complex_dominator_graph() = FD.DerivativeGraph(complex_dominator_dag())
+    x, graph, _, _ = simple_dominator_graph()
 
     FD.factor!(graph)
 
@@ -1245,20 +1348,20 @@ end
 
     tmp0 = FD.make_function([FD.value(fedge)], [x])
     dfsimp(x) = tmp0([x])[1]
-    x, graph, _, _ = FDTests.simple_dominator_graph() #x is a new variable so have to make a new FD.Node(x)
+    x, graph, _, _ = simple_dominator_graph() #x is a new variable so have to make a new FD.Node(x)
 
     tmp00 = FD.make_function([FD.node(graph, 4)], [x])
     origfsimp(x) = tmp00([x])[1]
     println(origfsimp(3.0))
     @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
-    graph = FDTests.complex_dominator_graph()
+    graph = complex_dominator_graph()
     FD.factor!(graph)
     fedge = FD.edges(graph, 1, 8)[1]
     tmp1 = FD.make_function([FD.value(fedge)], FD.variables(graph))
     df(x) = tmp1(x)[1]
 
-    graph = FDTests.complex_dominator_graph()
+    graph = complex_dominator_graph()
 
     tmp2 = FD.make_function([FD.node(graph, 8)], FD.variables(graph))
     origf(x) = tmp2(x)[1]
