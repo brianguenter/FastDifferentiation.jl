@@ -1484,11 +1484,44 @@ end
 
 @testitem "Chebyshev jacobian evaluation test" begin
     import FiniteDifferences
-    include("ShareTestCode.jl")
     import FastDifferentiation as FD
+    using Memoize
+
+
+    @memoize function Chebyshev(n, x)
+        if n == 0
+            return 1
+        elseif n == 1
+            return x
+        else
+            return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
+        end
+    end
+
+    @memoize function Chebyshev(n, x::FD.Node)
+        @assert FD.is_variable(x)
+
+        if n == 0
+            return 1
+        elseif n == 1
+            return x
+        else
+            return 2 * (x) * Chebyshev(n - 1, x) - Chebyshev(n - 2, x)
+        end
+    end
+
+    Chebyshev_exe(n, x::FD.Node) = make_function(FD.DerivativeGraph([Chebyshev(n, x)]))
+
+
+    function chebyshev(model_size)
+        @variables x
+
+        # return RnToRmGraph([expr_to_dag(Chebyshev(order, x))])
+        return FD.DerivativeGraph([Chebyshev(model_size, x)])
+    end
 
     chebyshev_order = 20
-    FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
+    FD_graph = chebyshev(chebyshev_order)
     new_roots = map(x -> FD.children(x)[1], FD.roots(FD_graph)) #roots are wrapped in NoOp's so have to get the children of the NoOps
     mn_func = FD.make_function(new_roots, FD.variables(FD_graph))
     FD_func(variables...) = vec(mn_func(variables...))
@@ -1506,7 +1539,7 @@ end
     end
 
     tmp = Matrix{Float64}(undef, 1, 1)
-    FD_graph = FDTests.chebyshev(FDTests.FastSymbolic(), chebyshev_order)
+    FD_graph = chebyshev(chebyshev_order)
     sym_func = FD.make_function(FD.jacobian(FD.roots(FD_graph), FD.variables(FD_graph)), FD.variables(FD_graph), in_place=false)
 
     #the in place form of jacobian function
