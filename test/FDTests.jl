@@ -782,7 +782,6 @@ end
 
 
 @testitem "dom_subgraph && pdom_subgraph" setup = [ComputeDominanceTables] begin
-    include("ShareTestCode.jl")
     import FastDifferentiation as FD
 
     using FastDifferentiation: dom_subgraph, pdom_subgraph
@@ -859,7 +858,6 @@ end
 end
 
 @testitem "factor_order" setup = [SimpleDominatorGraph] begin
-    include("ShareTestCode.jl")
     using DataStructures
     import FastDifferentiation as FD
 
@@ -910,7 +908,7 @@ end
 end
 
 @testitem "subgraph_edges" setup = [ComplexDominatorDAG] begin
-    include("ShareTestCode.jl")
+
     using DataStructures
     import FastDifferentiation as FD
 
@@ -943,7 +941,7 @@ end
 
 @testitem "subgraph_edges with branching" begin
     import FastDifferentiation as FD
-    include("ShareTestCode.jl")
+
 
 
     FD.@variables x
@@ -1229,7 +1227,7 @@ end
 
 
 @testitem "evaluate_subgraph" setup = [SimpleDominatorGraph] begin
-    include("ShareTestCode.jl")
+
     import FastDifferentiation as FD
 
 
@@ -1335,7 +1333,7 @@ end
 
 
 @testitem "factor ℝ¹->ℝ¹ " setup = [ComplexDominatorDAG, SimpleDominatorGraph] begin
-    include("ShareTestCode.jl")
+
     import FiniteDifferences
     import FastDifferentiation as FD
 
