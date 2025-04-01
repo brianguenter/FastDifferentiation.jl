@@ -103,7 +103,7 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
         nodes_to_draw[temp2] = temp2
     end
 
-    for node in nodes_to_draw
+    for node in values(nodes_to_draw)
         if !(!is_root(gr_copy, node) && length(parent_edges(gr_copy, node)) == 0 && length(child_edges(gr_copy, node)) == 0)
             num = postorder_number(gr_copy, node)
             if is_variable(gr_copy, num)
