@@ -72,7 +72,8 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
     # gr *= "size = 12 12\n"
     gr_copy = deepcopy(graph)
 
-    nodes_to_draw = Set{Node}()
+    nodes_to_draw = IdDict{Node,Node}()
+
     for e in edges_to_draw
         roots = join(findall(x -> x == 1, reachable_roots(e)), ",")
         variables = join(findall(x -> x == 1, reachable_variables(e)), ",")
@@ -95,8 +96,11 @@ function make_dot_file(graph, edges_to_draw::AbstractVector{P}, label::String, r
 
         gr *= "$(top_vertex(e)) -> $(bott_vertex(e)) $edge_label\n"
 
-        push!(nodes_to_draw, node(gr_copy, top_vertex(e)))
-        push!(nodes_to_draw, node(gr_copy, bott_vertex(e)))
+
+        temp1 = node(gr_copy, top_vertex(e))
+        nodes_to_draw[temp1] = temp1
+        temp2 = node(gr_copy, bott_vertex(e))
+        nodes_to_draw[temp2] = temp2
     end
 
     for node in nodes_to_draw
