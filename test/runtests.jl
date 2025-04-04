@@ -1,8 +1,105 @@
-using FastDifferentiation
-using TestItemRunner
+using Test
 using TestItems
+using TestItemRunner
+using Aqua
+using JET
+using FastDifferentiation
 
-@run_package_tests
+@info "Running Aqua tests"
+try
+    Aqua.test_all(FastDifferentiation)
+catch
+end
+
+@info "Running JET tests"
+report_package(FastDifferentiation)
+
+# Every line in this comment is terminated by 2 spaces to make markdown format properly.
+
+# creates dag with this postorder:  
+# 1    x  
+# 2    cos (x)  
+# 3    sin (x)  
+# 4    k1 = (cos(x) * sin(x))  
+# 5    sin (k1)  
+# 6    k2 = exp(sin(x))  
+# 7    (k1 * k2)  
+# 8    (sin(k1) + (k1 * k2))  
+
+# with this edge table:  
+# nodenum  
+# 1    [(2, 1), (3, 1)]  
+# 2    [(2, 1), (4, 2)]  
+# 3    [(3, 1), (4, 3), (6, 3)]  
+# 4    [(4, 2), (4, 3), (5, 4), (7, 4)]  
+# 5    [(5, 4), (8, 5)]  
+# 6    [(6, 3), (7, 6)]  
+# 7    [(7, 4), (7, 6), (8, 7)]  
+# 8    [(8, 5), (8, 7)]  
+
+# with this idoms/pidoms table:  
+# nodenum   idoms    pidoms  
+# 1         8        1  
+# 2         4        1  
+# 3         8        1  
+# 4         8        1  
+# 5         8        4  
+# 6         7        3  
+# 7         8        1  
+# 8         8        1  
+
+# with these factorable subgraphs  
+# (8,4), (8,3), (8,1), (1,4), (1,7), (1,8)
+@testsnippet ComplexDominatorDAG begin
+    using FastDifferentiation
+    using StaticArrays
+
+    function complex_dominator_dag()
+        FastDifferentiation.@variables x
+
+        sinx = FD.Node(sin, MVector(x))
+        cosx = FD.Node(cos, MVector(x))
+        A = FD.Node(*, MVector(cosx, sinx))
+        sinA = FD.Node(sin, MVector(A))
+        expsin = FD.Node(*, MVector(A, FD.Node(exp, MVector(sinx))))
+        plus = FD.Node(+, MVector(sinA, expsin))
+        return plus
+    end
+end
+
+@testsnippet SimpleDominatorGraph begin
+    import FastDifferentiation as FD
+
+    function simple_dominator_graph()
+        FD.@variables x
+
+        ncos = FD.Node(cos, x)
+        nplus = FD.Node(+, ncos, x)
+        ntimes = FD.Node(*, ncos, nplus)
+        four_2_subgraph = FD.Node(+, nplus, ncos)
+        one_3_subgraph = FD.Node(+, FD.Node(*, FD.Node(-1), FD.Node(sin, x)), FD.Node(1))
+        return x, FD.DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
+    end
+end
+
+@testsnippet ComputeDominanceTables begin
+    import FastDifferentiation as FD
+    #If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`
+    function compute_dominance_tables(graph::FD.DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
+        if compute_dominators
+            start_vertices = FD.root_index_to_postorder_number(graph)
+        else
+            start_vertices = FD.variable_index_to_postorder_number(graph)
+        end
+
+        doms = Dict{T,T}[]   #create one idom table for each root
+
+        for (start_index, node_postorder_number) in pairs(start_vertices)
+            push!(doms, FastDifferentiation.compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
+        end
+        return doms
+    end
+end
 
 
 @testsnippet SphericalHarmonics begin
@@ -102,99 +199,12 @@ using TestItems
 
 
 end
-
-# Every line in this comment is terminated by 2 spaces to make markdown format properly.
-
-# creates dag with this postorder:  
-# 1    x  
-# 2    cos (x)  
-# 3    sin (x)  
-# 4    k1 = (cos(x) * sin(x))  
-# 5    sin (k1)  
-# 6    k2 = exp(sin(x))  
-# 7    (k1 * k2)  
-# 8    (sin(k1) + (k1 * k2))  
-
-# with this edge table:  
-# nodenum  
-# 1    [(2, 1), (3, 1)]  
-# 2    [(2, 1), (4, 2)]  
-# 3    [(3, 1), (4, 3), (6, 3)]  
-# 4    [(4, 2), (4, 3), (5, 4), (7, 4)]  
-# 5    [(5, 4), (8, 5)]  
-# 6    [(6, 3), (7, 6)]  
-# 7    [(7, 4), (7, 6), (8, 7)]  
-# 8    [(8, 5), (8, 7)]  
-
-# with this idoms/pidoms table:  
-# nodenum   idoms    pidoms  
-# 1         8        1  
-# 2         4        1  
-# 3         8        1  
-# 4         8        1  
-# 5         8        4  
-# 6         7        3  
-# 7         8        1  
-# 8         8        1  
-
-# with these factorable subgraphs  
-# (8,4), (8,3), (8,1), (1,4), (1,7), (1,8)
-@testsnippet ComplexDominatorDAG begin
-    using FastDifferentiation
-    using StaticArrays
-
-    function complex_dominator_dag()
-        FastDifferentiation.@variables x
-
-        sinx = FD.Node(sin, MVector(x))
-        cosx = FD.Node(cos, MVector(x))
-        A = FD.Node(*, MVector(cosx, sinx))
-        sinA = FD.Node(sin, MVector(A))
-        expsin = FD.Node(*, MVector(A, FD.Node(exp, MVector(sinx))))
-        plus = FD.Node(+, MVector(sinA, expsin))
-        return plus
-    end
-end
-
-@testsnippet SimpleDominatorGraph begin
-    import FastDifferentiation as FD
-
-    function simple_dominator_graph()
-        FD.@variables x
-
-        ncos = FD.Node(cos, x)
-        nplus = FD.Node(+, ncos, x)
-        ntimes = FD.Node(*, ncos, nplus)
-        four_2_subgraph = FD.Node(+, nplus, ncos)
-        one_3_subgraph = FD.Node(+, FD.Node(*, FD.Node(-1), FD.Node(sin, x)), FD.Node(1))
-        return x, FD.DerivativeGraph(ntimes), four_2_subgraph, one_3_subgraph
-    end
-end
-
-@testsnippet ComputeDominanceTables begin
-    import FastDifferentiation as FD
-    #If `compute_dominators` is `true` then computes `idoms` tables for graph, otherwise computes `pidoms` table`
-    function compute_dominance_tables(graph::FD.DerivativeGraph{T}, compute_dominators::Bool) where {T<:Integer}
-        if compute_dominators
-            start_vertices = FD.root_index_to_postorder_number(graph)
-        else
-            start_vertices = FD.variable_index_to_postorder_number(graph)
-        end
-
-        doms = Dict{T,T}[]   #create one idom table for each root
-
-        for (start_index, node_postorder_number) in pairs(start_vertices)
-            push!(doms, FastDifferentiation.compute_dom_table(graph, compute_dominators, start_index, node_postorder_number))
-        end
-        return doms
-    end
-end
-
 #*****************************************************************
 #END of snippets
 #*****************************************************************
 
 
+@run_package_tests
 
 @testitem "FD.isa_connected_path 1" begin # case when path is one edge long
     using DataStructures
@@ -1118,7 +1128,7 @@ end
     _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
 
     ed, nod = FD.deconstruct_subgraph(subs[3])
-    println(ed)
+
     sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
     @test issetequal(sub_4_1, ed)
     @test issetequal([1, 2, 3, 4], nod)
@@ -1455,7 +1465,7 @@ end
 
     tmp00 = FD.make_function([FD.node(graph, 4)], [x])
     origfsimp(x) = tmp00([x])[1]
-    println(origfsimp(3.0))
+
     @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
@@ -1994,6 +2004,7 @@ end
 
 end
 
+#TODO needs to be rewritten so it actually tests something instead of printing stuff out.
 @testitem "in place init_with_zeros" begin
     import FastDifferentiation as FD
 
@@ -2006,37 +2017,38 @@ end
     @test isapprox(mat, [1 0; 0 1])
     fn2 = FD.make_function(A, [x, y], in_place=true, init_with_zeros=false)
     mat = [10 10; 10 10]
-    println(mat)
+
     fn2(mat, [1, 1])
     @test isapprox(mat, [1 10; 10 1])
 
-    #NOT a test because of difficulty and fragility of parsing generated code. You have to verify these by looking at the output.
-    p = make_variables(:p, 21)
+    #     #NOT a test because of difficulty and fragility of parsing generated code. You have to verify these by looking at the output.
+    #     p = make_variables(:p, 21)
 
-    println("NO array zero statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
-    p[21] = 0
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
-    println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    #     p[21] = 0
 
-    p[20] = 0
-    println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    #     println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    #     println("this should not have an array zero statement nor should have a p[21] = 0 statement")
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    #     println("should not have an array zero statement but should have a p[21] = 0 statement")
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+
+    #     p[20] = 0
+    #     println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    #     println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
+    #     show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    #     println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    #     show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    # end
 end
 
 
@@ -2096,21 +2108,21 @@ end
 
         # out of place
         f_callable = FD.make_function(f_node, x_node)
-        @show f_callable
+
         result = f_callable(input)
         @test isapprox(result, correct_result)
         @test typeof(result) <: typeof(correct_result)
 
         # in_place, init_with_zeros
         f_callable_init! = FD.make_function(f_node, x_node; in_place=true, init_with_zeros=true)
-        @show f_callable_init!
+
         result = similar(correct_result)
         f_callable_init!(result, input) == correct_result
         @test isapprox(result, correct_result)
 
         # in_place, !init_with_zeros
         f_callable_no_init! = FD.make_function(f_node, x_node; in_place=true, init_with_zeros=false)
-        @show f_callable_no_init!
+
         result = similar(correct_result)
         result_copy = copy(result)
         f_callable_no_init!(result, input)
@@ -2123,42 +2135,37 @@ end
 
     # systematically enumerate the four different branches of `make_Expr`:
     # all constant, mostly zeros
-    @info "all constant, mostly zeros"
+
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
     end
 
     # all constant, some zeros
-    @info "all constant, some zeros"
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
     end
 
     # mostly constants
-    @info "mostly constants"
     test_code_generation(3.0) do x
         [2.1 * x[1], 1, 2]
     end
 
     # non-constant at non-first position
-    @info "non-constant at non-first position"
     test_code_generation(3.0) do x
         [1, 2.1 * x[1], 2]
     end
 
     # mostly zeros
-    @info "mostly zeros"
     test_code_generation(3.0) do x
         [x[1]^2, 0, 0]
     end
 
     # all non-constant
-    @info "all non-constant"
     test_code_generation(3.0) do x
         [2.1 * x[1], x[1]^2, sqrt(x[1])]
     end
 
-    @info "evaluate with exotic eltype"
+    #exotic types
     test_code_generation(Complex(1.0)) do x
         [1, 2.1 * x[1], 2]
     end
