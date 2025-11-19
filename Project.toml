@@ -21,7 +21,7 @@ ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
 FastDifferentiationVisualizationExt = "ElectronDisplay"
 
 [compat]
-DataStructures = "0.18"
+DataStructures = "0.18, 0.19"
 DiffRules = "1"
 ElectronDisplay = "1"
 Memoize = "0.4"
