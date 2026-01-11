@@ -11,6 +11,27 @@ The most common way to use **FD** is this:
 * compute a symbolic derivative of the function
 * pass the symbolic derivative to `make_function` to generate a function to efficiently evaluate the derivative
 
+Example workflow:
+
+```julia
+julia> using FastDifferentiation
+
+julia> @variables x #define variable
+
+julia> f = x^2 #create function
+(x ^ 2)
+
+julia> df = derivative([f],x) #compute symbolic derivative
+1-element Vector{FastDifferentiation.Node}:
+ (2 * x)
+
+julia> exef = make_function(df,[x]) #make executable function of derivative
+#long runtime generated function body result removed for clarity
+
+julia> exef([2.0]) #evaluate df/dx at 2.0
+1-element Vector{Float64}:
+ 4.0
+```
 
 ##### Creating Variables
 
