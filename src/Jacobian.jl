@@ -344,6 +344,207 @@ end
 export sparse_hessian
 
 
+struct DerivativeContext
+    variables::Vector{Node}
+    cache::IdDict{Node,Dict{Tuple{Vararg{Int}},Node}}
+    symmetric::Bool
+end
+
+DerivativeContext(variables::AbstractVector{<:Node}; symmetric::Bool=true) =
+    DerivativeContext(collect(variables), IdDict{Node,Dict{Tuple{Vararg{Int}},Node}}(), symmetric)
+
+@inline function _canonical_multiindex(ctx::DerivativeContext, idx::Tuple{Vararg{Int}})
+    if !ctx.symmetric || length(idx) <= 1
+        return idx
+    end
+    if length(idx) == 2
+        a, b = idx
+        return a <= b ? idx : (b, a)
+    end
+    tmp = collect(idx)
+    sort!(tmp)
+    return Tuple(tmp)
+end
+
+@inline function _cache_dict!(ctx::DerivativeContext, node::Node)
+    return get!(ctx.cache, node) do
+        Dict{Tuple{Vararg{Int}},Node}()
+    end
+end
+
+@inline function _cache_get(ctx::DerivativeContext, node::Node, idx::Tuple{Vararg{Int}})
+    dict = get(ctx.cache, node, nothing)
+    dict === nothing && return nothing
+    return get(dict, _canonical_multiindex(ctx, idx), nothing)
+end
+
+@inline function _cache_set!(ctx::DerivativeContext, node::Node, idx::Tuple{Vararg{Int}}, value::Node)
+    dict = _cache_dict!(ctx, node)
+    dict[_canonical_multiindex(ctx, idx)] = value
+    return value
+end
+
+@inline function _maybe_add_order_node!(nodes::Vector{Node}, index_map::IdDict{Node,Int}, node::Node)
+    if is_constant(node)
+        return
+    end
+    if !haskey(index_map, node)
+        push!(nodes, node)
+        index_map[node] = length(nodes)
+    end
+end
+
+function _finalize_indices!(indices::Vector{Tuple{Vararg{Int}}})
+    sort!(indices)
+    unique!(indices)
+    return indices
+end
+
+function _batched_jacobian(roots::Vector{Node}, variables::Vector{Node})
+    nroots = length(roots)
+    nvars = length(variables)
+    if nroots == 0 || nvars == 0
+        return Matrix{Node}(undef, nroots, nvars)
+    end
+    graph = DerivativeGraph(roots)
+    return _symbolic_jacobian!(graph, variables)
+end
+
+"""
+    higher_order_derivatives(
+        terms::AbstractArray{<:Node},
+        variables::AbstractVector{<:Node},
+        order::Integer;
+        symmetric::Bool=true
+    )
+
+Compute all order-`order` partial derivatives of `terms` with respect to `variables`.
+Returns an array with shape `(size(terms)..., length(variables), ..., length(variables))`,
+with `order` trailing variable dimensions. When `terms` is a scalar `Node`, a convenience
+method returns an array with only the variable dimensions (e.g., a Hessian for `order=2`).
+
+If `symmetric=true`, mixed partials are canonicalized so `∂^2 f / ∂x∂y` and
+`∂^2 f / ∂y∂x` map to the same cached node.
+"""
+function higher_order_derivatives(
+    terms::AbstractArray{<:Node},
+    variables::AbstractVector{<:Node},
+    order::Integer;
+    symmetric::Bool=true
+)
+    if order < 1
+        throw(ErrorException("higher_order_derivatives requires order >= 1."))
+    end
+
+    roots = vec(terms)
+    root_shape = size(terms)
+    vars = collect(variables)
+    nroots = length(roots)
+    nvars = length(vars)
+
+    if nvars == 0
+        out_shape = (root_shape..., ntuple(_ -> 0, order)...)
+        return Array{Node}(undef, out_shape)
+    end
+
+    ctx = DerivativeContext(vars; symmetric=symmetric)
+
+    current_indices = [Tuple{Vararg{Int}}[] for _ in 1:nroots]
+    order_nodes = Node[]
+    order_index = IdDict{Node,Int}()
+
+    jac = _batched_jacobian(roots, vars)
+    for r in 1:nroots
+        for v in 1:nvars
+            dnode = jac[r, v]
+            idx = _canonical_multiindex(ctx, (v,))
+            _cache_set!(ctx, roots[r], idx, dnode)
+            push!(current_indices[r], idx)
+            _maybe_add_order_node!(order_nodes, order_index, dnode)
+        end
+    end
+    for r in 1:nroots
+        _finalize_indices!(current_indices[r])
+    end
+
+    for ord in 2:order
+        if !isempty(order_nodes)
+            order_jac = _batched_jacobian(order_nodes, vars)
+            for node_idx in eachindex(order_nodes)
+                node = order_nodes[node_idx]
+                for v in 1:nvars
+                    dnode = order_jac[node_idx, v]
+                    _cache_set!(ctx, node, (v,), dnode)
+                end
+            end
+        end
+
+        next_indices = [Tuple{Vararg{Int}}[] for _ in 1:nroots]
+        next_nodes = Node[]
+        next_index = IdDict{Node,Int}()
+
+        for r in 1:nroots
+            root = roots[r]
+            for idx in current_indices[r]
+                base_node = _cache_get(ctx, root, idx)
+                if base_node === nothing
+                    continue
+                end
+                for v in 1:nvars
+                    new_idx = _canonical_multiindex(ctx, (idx..., v))
+                    dnode = _cache_get(ctx, base_node, (v,))
+                    if dnode === nothing
+                        dnode = zero(Node)
+                        _cache_set!(ctx, base_node, (v,), dnode)
+                    end
+                    _cache_set!(ctx, root, new_idx, dnode)
+                    push!(next_indices[r], new_idx)
+                    _maybe_add_order_node!(next_nodes, next_index, dnode)
+                end
+            end
+        end
+
+        for r in 1:nroots
+            _finalize_indices!(next_indices[r])
+        end
+        current_indices = next_indices
+        order_nodes = next_nodes
+        order_index = next_index
+    end
+
+    out_shape = (root_shape..., ntuple(_ -> nvars, order)...)
+    result = Array{Node}(undef, out_shape)
+    root_positions = CartesianIndices(root_shape)
+    root_linear = LinearIndices(root_shape)
+    var_ranges = ntuple(_ -> 1:nvars, order)
+
+    for rpos in root_positions
+        root = roots[root_linear[rpos]]
+        for idx in Iterators.product(var_ranges...)
+            idx_tuple = Tuple(idx)
+            val = _cache_get(ctx, root, idx_tuple)
+            if val === nothing
+                val = zero(Node)
+            end
+            result[rpos, idx_tuple...] = val
+        end
+    end
+
+    return result
+end
+
+function higher_order_derivatives(
+    term::Node,
+    variables::AbstractVector{<:Node},
+    order::Integer;
+    symmetric::Bool=true
+)
+    result = higher_order_derivatives([term], variables, order; symmetric=symmetric)
+    return dropdims(result; dims=1)
+end
+export higher_order_derivatives
+
+
 
 
 """
