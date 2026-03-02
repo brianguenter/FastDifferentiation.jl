@@ -2401,6 +2401,34 @@ end
     h = make_function(g, [x, y])
     @test isnan(h([0.0, 2.0])[1])
     @test isapprox(h([1.1, 2.0])[1], 0.11532531756323319)
+
+    f = conditional_and(x < y, y > sqrt(x))
+    h = make_function([f], [x, y])
+    @test Bool(h([1.0, 2.0])[1]) #verify no exception thrown. make_function generates code that returns a float type matrix so a boolean result will be 1.0 or 0.0
+    @test_throws DomainError h([-1.0, 2.0]) #verify that the other branch is taken, sqrt(-1) is executed and an exception is thrown
+
+    f = conditional_or(x < y, y > sqrt(x))
+    h = make_function([f], [x, y])
+    @test Bool(h([1.0, 2.0])[1])
+    @test_throws DomainError h([-1.0, -2.0])
+
+    # conditional_and true/false branches
+    f_true = conditional_and(x > 0.0, y > 0.0)
+    h_true = make_function([f_true], [x, y])
+    @test Bool(h_true([1.0, 2.0])[1])
+    
+    f_false = conditional_and(x < 0.0, y > 0.0)
+    h_false = make_function([f_false], [x, y])
+    @test Bool(h_false([-1.0, 2.0])[1])
+
+    f_true_or = conditional_or(x > 0.0, y > 0.0)
+    h_true_or = make_function([f_true_or], [x, y])
+    @test Bool(h_true_or([1.0, -1.0])[1])  # first branch true
+
+    f_false_or = conditional_or(x < 0.0, y < 0.0)
+    h_false_or = make_function([f_false_or], [x, y])
+    @test !Bool(h_false_or([1.0, 2.0])[1])  # both branches false
+
 end
 
 
