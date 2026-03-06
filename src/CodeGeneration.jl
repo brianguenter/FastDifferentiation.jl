@@ -431,14 +431,17 @@ This can be useful for modestly sparse dense matrices with say at least 1/4 of t
 """
 function make_function(func_array::AbstractArray{T}, input_variables::AbstractVector{<:Node}...; in_place::Bool=false, init_with_zeros::Bool=true) where {T<:Node}
     vars = variables(func_array) #all unique variables in func_array
-    all_input_vars = vcat(input_variables...)
+    # all_input_vars is now a tuple of vectors; we keep lengths for checking
+    all_input_vars = input_variables  # keep as a tuple for multiple vectors
 
     #Because FD defines == operator for Node, which does not return a boolean, many builtin Julia functions will not work as expected. For example:
     #  vars ⊆ all_input_vars errors because internally issubset tests for equality between the node values using ==, not ===. == returns a Node value but the issubset function expects a Bool.
 
-    temp = Vector{eltype(vars)}(undef, 0)
+    # Flatten all_input_vars for checking only
+    flat_input_vars = vcat(input_variables...)  # just for variable presence check
+    input_dict = IdDict(zip(flat_input_vars, flat_input_vars))
 
-    input_dict = IdDict(zip(all_input_vars, all_input_vars))
+    temp = Vector{eltype(vars)}(undef, 0)
     for one_var in vars
         value = get(input_dict, one_var, nothing)
         if value === nothing
