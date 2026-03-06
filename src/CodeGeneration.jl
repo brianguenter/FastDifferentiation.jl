@@ -14,6 +14,24 @@ function sparsity(sym_func::AbstractArray{<:Node})
 end
 export sparsity
 
+function gen_true_or_false_node(node, branch_node, branch_body, node_to_var, variable_to_index)
+    if is_leaf(branch_node) #handle leaf nodes properly 
+        if is_constant(branch_node)
+            temp_val = value(branch_node)
+        else
+            temp_val = node_to_var[branch_node]
+        end
+
+        push!(branch_body.args, :($(gensym(:s)) = $(temp_val)))
+    else
+        visited = get(node_to_var, branch_node, nothing)
+        if visited !== nothing
+            push!(branch_body.args, :($(gensym(:s)) = $visited))
+        else
+            _dag_to_function!(branch_node, branch_body, variable_to_index, node_to_var)
+        end
+    end
+end
 
 function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
 
@@ -31,28 +49,8 @@ function _dag_to_function!(node, local_body, variable_to_index, node_to_var)
                 true_node = children(node)[2]
                 false_node = children(node)[3]
 
-                if is_leaf(true_node) #handle leaf nodes properly 
-                    if is_constant(true_node)
-                        temp_val = value(true_node)
-                    else
-                        temp_val = node_to_var[true_node]
-                    end
-
-                    push!(true_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
-                else
-                    _dag_to_function!(children(node)[2], true_body, variable_to_index, node_to_var)
-                end
-
-                if is_leaf(false_node)
-                    if is_constant(false_node)
-                        temp_val = value(false_node)
-                    else
-                        temp_val = node_to_var[false_node]
-                    end
-                    push!(false_body.args, :($(gensym(:s)) = $(temp_val))) #seems roundabout to use an assignment when really just want the value of the node but couldn't figure out how to make this work with Expr
-                else
-                    _dag_to_function!(children(node)[3], false_body, variable_to_index, node_to_var)
-                end
+                gen_true_or_false_node(node, true_node, true_body, node_to_var, variable_to_index)
+                gen_true_or_false_node(node, false_node, false_body, node_to_var, variable_to_index)
 
                 statement = :($(node_to_var[node]) = if $(if_cond_var)
                     $(true_body)

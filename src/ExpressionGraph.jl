@@ -183,6 +183,12 @@ function if_else(condition::Node, true_branch=Node(true_branch), false_branch=No
 end
 export if_else
 
+conditional_and(condition::Node, true_branch=Node(true_branch)) = if_else(condition, true_branch, false)
+export conditional_and
+
+conditional_or(condition::Node, false_branch=Node(false_branch)) = if_else(condition, true, false_branch)
+export conditional_or
+
 #generic cache checking for functions that don't have this special cased
 simplify_check_cache(f, a) = check_cache((f, a))::Node
 simplify_check_cache(f, a, b) = check_cache((f, a, b))::Node #this version handles ifelse
