@@ -93,20 +93,48 @@ in an expression graph by calling the actual `derivative` function.
 This function uses memoization to ensure linear complexity on the expression graph (DAG).
 """
 function expand_derivatives(a::Node)
-    memo = IdDict{Node,Node}()
-    
+    cache = IdDict{Node,Node}()
     function _expand(node::Node)
-        return get!(memo, node) do
-            if value(node) === LazyDerivative
-                # node.children[1] is the expression, node.children[2:end] are the variables
-                expanded_expr = _expand(children(node)[1])
-                vars = children(node)[2:end]
-                # After differentiating, we must expand again in case the result has new differentials
-                return _expand(derivative(expanded_expr, vars...))
-            elseif arity(node) > 0
-                return check_cache((value(node), [ _expand(c) for c in children(node) ]...))
-            else
+        if haskey(cache, node)
+            return cache[node]
+        end
+
+        if value(node) === LazyDerivative
+            # The children are [expr, var1, var2, ...]
+            # We want to compute derivative(expr, variables...)
+            args = children(node)
+            expr = _expand(args[1])
+            vars = [c for c in args[2:end]]
+            # If any vars are themselves lazy, expand them.
+            expanded_vars = [_expand(v) for v in vars]
+            
+            # Compute the derivative. 
+            # Note: derivative might return a Node that contains further LazyDerivatives 
+            # if the user nested them in ways we didn't expect, so we expand the result too.
+            res = _expand(derivative(expr, expanded_vars...))
+            cache[node] = res
+            return res
+        elseif children(node) === nothing
+            return node
+        else
+            old_children = children(node)
+            new_children = [_expand(c) for c in old_children]
+            
+            all_same = true
+            for i in eachindex(old_children)
+                if old_children[i] !== new_children[i]
+                    all_same = false
+                    break
+                end
+            end
+            
+            if all_same
+                cache[node] = node
                 return node
+            else
+                res = check_cache((value(node), new_children...))
+                cache[node] = res
+                return res
             end
         end
     end
