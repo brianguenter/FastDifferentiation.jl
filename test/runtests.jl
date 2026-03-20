@@ -2485,3 +2485,93 @@ end
 end
 
 # Write your tests here.
+
+@testitem "Lazy and Eager evaluation equivalence" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    eager_df = FD.differential(x)(f)
+    lazy_df = FD.lazy_differential(x)(f)
+
+    # Lazy df should be a wrapper, not immediately evaluated
+    @test FD.value(lazy_df) === FD.LazyDerivative
+    
+    # Upon expansion, it should be structurally identical to eager evaluation
+    expanded = FD.expand_derivatives(lazy_df)
+    @test expanded === eager_df
+end
+
+@testitem "Nested lazy evaluations" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    # Eager approach: d/dy (d/dx f)
+    eager_nested = FD.differential(y)(FD.differential(x)(f))
+
+    # Lazy approach
+    dx_lazy = FD.lazy_differential(x)
+    dy_lazy = FD.lazy_differential(y)
+    
+    lazy_nested = dy_lazy(dx_lazy(f))
+    
+    # Since we are wrapping a LazyDerivative inside a LazyDerivative:
+    @test FD.value(lazy_nested) === FD.LazyDerivative
+    @test FD.value(FD.children(lazy_nested)[1]) === FD.LazyDerivative
+
+    expanded = FD.expand_derivatives(lazy_nested)
+    @test expanded === eager_nested
+end
+
+@testitem "expand_derivatives on graph without lazy nodes is a no-op" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+    
+    # Just a normal math graph, no lazy differentials
+    expanded = FD.expand_derivatives(f)
+    @test expanded === f
+end
+
+
+@testitem "expand_derivatives on arrays" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f1 = x^2 * y
+    f2 = x + y
+    
+    # Array of expression nodes
+    arr = [f1, f2]
+    
+    # Broadcasting lazy operator across the array
+    dx_lazy = FD.lazy_differential(x)
+    lazy_arr = dx_lazy.(arr)
+    
+    expanded_arr = FD.expand_derivatives(lazy_arr)
+    
+    @test expanded_arr isa Vector{FD.Node}
+    @test expanded_arr[1] === FD.expand_derivatives(dx_lazy(f1))
+    @test expanded_arr[2] === FD.expand_derivatives(dx_lazy(f2))
+end
+
+
+@testitem "Automatic lazy derivative expansion in compilation" begin
+    import FastDifferentiation as FD
+    FD.@variables x y
+
+    f = x^2 * y
+
+    # Generate a lazy derivative function
+    lazy_df = FD.lazy_differential(x)(f)
+
+    # Test automatic expansion through the Jacobian API (which calls DerivativeGraph)
+    jac = FD.jacobian([lazy_df], [x,y])
+
+    @test jac[1, 1] === FD.derivative(FD.differential(x)(f), x)
+    @test jac[1, 2] === FD.derivative(FD.differential(x)(f), y)
+end

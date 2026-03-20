@@ -166,10 +166,12 @@ struct DerivativeGraph{T<:Integer}
 
     postorder numbers the nodes in the roots vector using a global numbering, i.e., the first root gets the numbers 1:length(roots[1]), the second root gets the numbers length(roots[1])+1:length(roots[2])+1, etc. This makes it possible to compute dominance relations, factorization subgraphs, etc., for each ℝ¹→ℝ¹ derivative subgraph using the global postorder numbers, without having to renumber each subgraph with a local set of postorder numbers."""
     function DerivativeGraph(roots::AbstractVector, index_type::Type=Int64)
+        # Automatically expand any lazy derivatives before compiling the graph
+        expanded_roots = expand_derivatives.(roots)
         postorder_number = IdDict{Node,index_type}()
 
-        new_roots = Vector{Node}(undef, length(roots))
-        for (i, root) in pairs(roots)
+        new_roots = Vector{Node}(undef, length(expanded_roots))
+        for (i, root) in pairs(expanded_roots)
             new_roots[i] = create_NoOp(root)
         end
 

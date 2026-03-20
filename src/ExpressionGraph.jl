@@ -73,7 +73,51 @@ end
 
 num_derivatives(a::Differential) = length(a.variables_wrt)
 
-#convenience function to extract the fields from Node object to check cache
+struct LazyDifferential{N}
+    variables::NTuple{N, Node}
+    LazyDifferential(vars::Node...) = new{length(vars)}(vars)
+end
+
+struct LazyDerivative
+    D::LazyDifferential
+    expr::Node
+end
+
+(D::LazyDifferential)(expr::Node) = check_cache((LazyDerivative, expr, D.variables...))
+
+"""
+    expand_derivatives(a::Node)
+
+Recursively evaluates all lazy derivative nodes (where `value(a) === LazyDerivative`)
+in an expression graph by calling the actual `derivative` function.
+This function uses memoization to ensure linear complexity on the expression graph (DAG).
+"""
+function expand_derivatives(a::Node)
+    memo = IdDict{Node,Node}()
+    
+    function _expand(node::Node)
+        return get!(memo, node) do
+            if value(node) === LazyDerivative
+                # node.children[1] is the expression, node.children[2:end] are the variables
+                expanded_expr = _expand(children(node)[1])
+                vars = children(node)[2:end]
+                # After differentiating, we must expand again in case the result has new differentials
+                return _expand(derivative(expanded_expr, vars...))
+            elseif arity(node) > 0
+                return check_cache((value(node), [ _expand(c) for c in children(node) ]...))
+            else
+                return node
+            end
+        end
+    end
+
+    return _expand(a)
+end
+
+expand_derivatives(a::AbstractArray{<:Node}) = expand_derivatives.(a)
+
+export expand_derivatives
+
 function check_cache(a::Node)
     if children(a) !== nothing
         check_cache((value(a), children(a)...))

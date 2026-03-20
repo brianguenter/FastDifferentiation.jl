@@ -51,6 +51,8 @@ include("Factoring.jl")
 include("Jacobian.jl") #functions to compute jacobians, gradients, hessians, etc.
 include("CodeGeneration.jl") #functions to convert expression graphs of Node to executable functions
 
+export expand_derivatives, LazyDifferential, LazyDerivative, lazy_differential
+
 # FastDifferentiationVisualizationExt overloads them
 function make_dot_file end
 function draw_dot end

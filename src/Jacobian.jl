@@ -450,3 +450,14 @@ function differential(variables::Node...)
     return (a::Node) -> derivative([a], variables...)[1]
 end
 export differential
+
+"""
+    lazy_differential(variables::Node...)
+
+Returns a `LazyDifferential` operator that, when applied to an expression graph, creates an unevaluated derivative tree node (`LazyDerivative`).
+The actual derivative is computed only when `expand_derivatives` is called on the resulting graph.
+"""
+function lazy_differential(variables::Node...)
+    return LazyDifferential(variables...)
+end
+export lazy_differential
