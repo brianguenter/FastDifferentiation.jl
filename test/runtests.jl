@@ -2595,4 +2595,33 @@ end
     @test expanded_g === h
 end
 
+@testitem "Lazy Evaluation Caching and Identity" begin
+    import FastDifferentiation as FD
+    FD.clear_cache()
+    FD.@variables x y
+    
+    # 1. Test operator identity caching
+    dtx1 = FD.lazy_differential(x)
+    dtx2 = FD.lazy_differential(x)
+    @test dtx1 === dtx2
+    
+    dty1 = FD.lazy_differential(y)
+    @test dtx1 !== dty1
+    
+    dtxy1 = FD.lazy_differential(x, y)
+    dtxy2 = FD.lazy_differential(x, y)
+    @test dtxy1 === dtxy2
+    
+    # 2. Test derivative node caching
+    f = x^2 * y
+    ld1 = dtx1(f)
+    ld2 = dtx2(f)
+    @test ld1 === ld2
+    
+    # 3. Test nested caching
+    nld1 = dtx1(dty1(f))
+    nld2 = dtx2(dty1(f))
+    @test nld1 === nld2
+end
+
 # Write your tests here.
