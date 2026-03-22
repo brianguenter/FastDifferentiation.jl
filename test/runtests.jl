@@ -2484,7 +2484,6 @@ end
     @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
 end
 
-# Write your tests here.
 
 @testitem "Lazy and Eager evaluation equivalence" begin
     import FastDifferentiation as FD
@@ -2575,3 +2574,25 @@ end
     @test jac[1, 1] === FD.derivative(FD.differential(x)(f), x)
     @test jac[1, 2] === FD.derivative(FD.differential(x)(f), y)
 end
+
+@testitem "Lazy differential as a child node" begin
+    import FastDifferentiation as FD
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+    g = x * lazy_df
+
+    h = x * FD.derivative(f, x)
+
+    # Verify structure before expansion
+    @test FD.value(g) === *
+    @test FD.children(g)[2] === lazy_df
+    @test FD.value(FD.children(g)[2]) === FD.LazyDerivative
+
+    # Verify expansion
+    expanded_g = FD.expand_derivatives(g)
+    @test expanded_g === h
+end
+
+# Write your tests here.

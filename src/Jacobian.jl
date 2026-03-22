@@ -458,6 +458,6 @@ Returns a `LazyDifferential` operator that, when applied to an expression graph,
 The actual derivative is computed only when `expand_derivatives` is called on the resulting graph.
 """
 function lazy_differential(variables::Node...)
-    return LazyDifferential(variables...)
+    return simplify_check_cache(LazyDifferential, variables...)
 end
 export lazy_differential

@@ -73,17 +73,8 @@ end
 
 num_derivatives(a::Differential) = length(a.variables_wrt)
 
-struct LazyDifferential{N}
-    variables::NTuple{N, Node}
-    LazyDifferential(vars::Node...) = new{length(vars)}(vars)
-end
-
-struct LazyDerivative
-    D::LazyDifferential
-    expr::Node
-end
-
-(D::LazyDifferential)(expr::Node) = check_cache((LazyDerivative, expr, D.variables...))
+struct LazyDifferential end
+struct LazyDerivative end
 
 """
     expand_derivatives(a::Node)
@@ -155,6 +146,9 @@ function check_cache(a::Node)
 end
 
 function (q::Node)(t::Node...)
+    if value(q) === LazyDifferential
+        return simplify_check_cache(LazyDerivative, t[1], children(q)...)
+    end
     @assert is_variable(q) "The syntax q(t) can only be used if both q and t are variables. In this function call q is not a variable"
     @assert all(is_variable.(t)) "The syntax q(t) can only be used if both q and t are variables. In this function call one or more of the terms in t is not a variable."
     @assert q !== t "You attempted to create a variable of the form q(q). A variable cannot be a function of itself"
@@ -259,6 +253,7 @@ export if_else
 simplify_check_cache(f, a) = check_cache((f, a))::Node
 simplify_check_cache(f, a, b) = check_cache((f, a, b))::Node #this version handles ifelse
 simplify_check_cache(f, a, b, c) = check_cache((f, a, b, c))::Node
+simplify_check_cache(f, args...) = check_cache((f, args...))::Node
 
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
