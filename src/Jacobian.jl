@@ -87,9 +87,7 @@ julia> jacobian([x*y,y*x],[x])
  y
 ```
 """
-function jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
-    return _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
-end
+jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
 export jacobian
 
 """
@@ -134,9 +132,7 @@ end
     )
 
 Returns a sparse array containing the Jacobian of the function defined by `terms`"""
-function sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
-    return _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
-end
+sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
 export sparse_jacobian
 
 """
