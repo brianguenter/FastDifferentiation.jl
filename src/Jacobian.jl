@@ -87,7 +87,9 @@ julia> jacobian([x*y,y*x],[x])
  y
 ```
 """
-jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
+function jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    return _symbolic_jacobian(DerivativeGraph(terms), partial_variables)
+end
 export jacobian
 
 """
@@ -132,7 +134,9 @@ end
     )
 
 Returns a sparse array containing the Jacobian of the function defined by `terms`"""
-sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node} = _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
+function sparse_jacobian(terms::AbstractVector{T}, partial_variables::AbstractVector{S}) where {T<:Node,S<:Node}
+    return _sparse_symbolic_jacobian!(DerivativeGraph(terms), partial_variables)
+end
 export sparse_jacobian
 
 """
@@ -392,7 +396,7 @@ function derivative(A::Node, variables...)
     end
     temp = derivative([A], variables...)
     @assert length(temp) == 1
-    derivative([A], variables...)[1]
+    return temp[1]
 end
 
 
@@ -450,14 +454,3 @@ function differential(variables::Node...)
     return (a::Node) -> derivative([a], variables...)[1]
 end
 export differential
-
-"""
-    lazy_differential(variables::Node...)
-
-Returns a `LazyDifferential` operator that, when applied to an expression graph, creates an unevaluated derivative tree node (`LazyDerivative`).
-The actual derivative is computed only when `expand_derivatives` is called on the resulting graph.
-"""
-function lazy_differential(variables::Node...)
-    return simplify_check_cache(LazyDifferential, variables...)
-end
-export lazy_differential

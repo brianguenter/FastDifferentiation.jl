@@ -51,7 +51,11 @@ const EXPRESSION_CACHE = IdDict{Any,Node}()
 function check_cache(a::Tuple{Vararg})::Node
     cache_val = get(EXPRESSION_CACHE, a, nothing)
     if cache_val === nothing
-        EXPRESSION_CACHE[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
+        if length(a) <= 4
+            EXPRESSION_CACHE[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
+        else
+            EXPRESSION_CACHE[a] = Node(a[1], MVector{length(a) - 1,Node}(a[2:end]...))
+        end
     end
 
     return EXPRESSION_CACHE[a]
@@ -83,8 +87,7 @@ Recursively evaluates all lazy derivative nodes (where `value(a) === LazyDerivat
 in an expression graph by calling the actual `derivative` function.
 This function uses memoization to ensure linear complexity on the expression graph (DAG).
 """
-function expand_derivatives(a::Node)
-    cache = IdDict{Node,Node}()
+function expand_derivatives(a::Node, cache=IdDict{Node,Node}())
     function _expand(node::Node)
         if haskey(cache, node)
             return cache[node]
@@ -98,7 +101,7 @@ function expand_derivatives(a::Node)
             vars = [c for c in args[2:end]]
             # If any vars are themselves lazy, expand them.
             expanded_vars = [_expand(v) for v in vars]
-            
+
             # Compute the derivative. 
             # Note: derivative might return a Node that contains further LazyDerivatives 
             # if the user nested them in ways we didn't expect, so we expand the result too.
@@ -110,7 +113,7 @@ function expand_derivatives(a::Node)
         else
             old_children = children(node)
             new_children = [_expand(c) for c in old_children]
-            
+
             all_same = true
             for i in eachindex(old_children)
                 if old_children[i] !== new_children[i]
@@ -118,7 +121,7 @@ function expand_derivatives(a::Node)
                     break
                 end
             end
-            
+
             if all_same
                 cache[node] = node
                 return node
@@ -133,9 +136,31 @@ function expand_derivatives(a::Node)
     return _expand(a)
 end
 
-expand_derivatives(a::AbstractArray{<:Node}) = expand_derivatives.(a)
+function expand_derivatives(a::AbstractArray{<:Node})
+    cache = IdDict{Node,Node}()
+    return expand_derivatives.(a, Ref(cache))
+end
 
 export expand_derivatives
+
+"""
+    lazy_differential(variables::Node...)
+
+Returns a `LazyDifferential` operator that, when applied to an expression graph,
+creates an unevaluated derivative tree node (`LazyDerivative`).
+
+**Important:** The resulting node is NOT automatically expanded. You must call
+`expand_derivatives` on the expression before passing it to `jacobian`,
+`make_function`, or any other pipeline function:
+
+    ready_expr = expand_derivatives(lazy_expr)
+    jac = jacobian([ready_expr], [x, y])
+"""
+function lazy_differential(variables::Node...)
+    isempty(variables) && throw(ArgumentError("lazy_differential requires at least one variable to differentiate with respect to"))
+    return simplify_check_cache(LazyDifferential, variables...)
+end
+export lazy_differential
 
 function check_cache(a::Node)
     if children(a) !== nothing
@@ -147,6 +172,7 @@ end
 
 function (q::Node)(t::Node...)
     if value(q) === LazyDifferential
+        isempty(t) && throw(ArgumentError("A lazy differential operator must be applied to an expression, e.g. Dt(f)"))
         return simplify_check_cache(LazyDerivative, t[1], children(q)...)
     end
     @assert is_variable(q) "The syntax q(t) can only be used if both q and t are variables. In this function call q is not a variable"
@@ -155,7 +181,7 @@ function (q::Node)(t::Node...)
     return Node(value(q), MVector{length(t),Node}(t))
 end
 
-is_variable_function(q::Node) = is_variable(q) && arity(q) > 0
+is_variable_function(q::Node) = (value(q) isa Symbol) && arity(q) > 0
 
 Base.zero(::Type{Node}) = Node(0)
 Base.zero(::Node) = Node(0)
@@ -478,7 +504,7 @@ is_ifelse(a::Node) = value(a) == ifelse
 conditional_error(a::Node) = ErrorException("Your expression contained a $(value(a)) expression. FastDifferentiation does not yet support differentiation through this function)")
 
 function is_unsupported_function(a::Node)
-    if is_NoOp(a)
+    if is_NoOp(a) || is_variable_function(a) # skip check for unknown functions
         return false
     elseif is_if_else(a) || is_ifelse(a) || !in(value(a), all_supported_functions)
         return true
