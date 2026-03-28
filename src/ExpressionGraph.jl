@@ -54,6 +54,9 @@ function check_cache(a::Tuple{Vararg})::Node
         if length(a) <= 4
             EXPRESSION_CACHE[a] = Node(a[1], a[2:end]...) #this should wrap everything, including basic numbers, in a Node object
         else
+            # LazyDifferential and LazyDerivative are stored as types
+            # in node_value, so we can use === to compare.
+            @assert a[1] === LazyDifferential || a[1] === LazyDerivative "N-ary nodes (more than 3 children) are only supported for LazyDifferential and LazyDerivative. Got operator: $(a[1])"
             EXPRESSION_CACHE[a] = Node(a[1], MVector{length(a) - 1,Node}(a[2:end]...))
         end
     end
@@ -95,17 +98,18 @@ function expand_derivatives(a::Node, cache=IdDict{Node,Node}())
 
         if value(node) === LazyDerivative
             # The children are [expr, var1, var2, ...]
-            # We want to compute derivative(expr, variables...)
+            # Compute the sum of partial derivatives: ∂f/∂v1 + ∂f/∂v2 + ...
             args = children(node)
             expr = _expand(args[1])
             vars = [c for c in args[2:end]]
             # If any vars are themselves lazy, expand them.
             expanded_vars = [_expand(v) for v in vars]
 
-            # Compute the derivative. 
-            # Note: derivative might return a Node that contains further LazyDerivatives 
-            # if the user nested them in ways we didn't expect, so we expand the result too.
-            res = _expand(derivative(expr, expanded_vars...))
+            # Sum individual partial derivatives rather than iterating them.
+            res = _expand(derivative(expr, expanded_vars[1]))
+            for v in expanded_vars[2:end]
+                res = res + _expand(derivative(expr, v))
+            end
             cache[node] = res
             return res
         elseif children(node) === nothing

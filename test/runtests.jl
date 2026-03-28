@@ -2676,21 +2676,59 @@ end
     @test nld1 === nld2
 end
 
-@testitem "N-ary node safety in check_cache" begin
+@testitem "check_cache blocks n-ary built-in operators" begin
     import FastDifferentiation as FD
     import StaticArrays: MVector
     FD.@variables x1 x2 x3 x4 x5
 
-    # Construct a 5-ary * node to verify check_cache handles large arity
-    children = MVector{5,FD.Node}(x1, x2, x3, x4, x5)
-    f = FD.Node(*, children)
-
+    # Directly constructing a 5-ary * node via the Node constructor is still possible,
+    # but routing it through check_cache must be rejected — simplify_check_cache and
+    # DifferentiationRules.jl assume all built-in operators are binary.
+    f = FD.Node(*, MVector{5,FD.Node}(x1, x2, x3, x4, x5))
     @test FD.arity(f) == 5
-    @test FD.value(f) === *
 
-    # Verify check_cache returns the same node for the same inputs (identity)
-    f2 = FD.Node(*, MVector{5,FD.Node}(x1, x2, x3, x4, x5))
-    @test FD.check_cache(f) === FD.check_cache(f2)
+    # check_cache must throw for any built-in operator with more than 3 children
+    @test_throws AssertionError FD.check_cache(f)
+    @test_throws AssertionError FD.check_cache((+, x1, x2, x3, x4))
+    @test_throws AssertionError FD.check_cache((*, x1, x2, x3, x4))
+    @test_throws AssertionError FD.check_cache((-, x1, x2, x3, x4))
+end
+
+@testitem "check_cache allows n-ary LazyDifferential and LazyDerivative nodes" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y z w
+
+    # lazy_differential with 4 variables must not throw — it creates a LazyDifferential
+    # node with 4 children, which hits the else branch in check_cache.
+    # LazyDifferential is stored as the TYPE (not an instance) in node_value.
+    Dxyzw = FD.lazy_differential(x, y, z, w)
+    @test FD.arity(Dxyzw) == 4
+    @test FD.value(Dxyzw) === FD.LazyDifferential
+
+    # Applying the 4-variable differential to an expression creates a LazyDerivative node
+    f = x^2 + y^2 + z^2 + w^2
+    lazy_df = Dxyzw(f)
+    @test FD.value(lazy_df) === FD.LazyDerivative
+    @test FD.arity(lazy_df) == 5  # expr + 4 variables
+end
+
+@testitem "lazy_differential with 4 variables expands correctly" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y z w
+
+    # Differentiating f = x^2 w.r.t. x via a 4-variable differential should still only
+    # give the partial derivative w.r.t. x (the other variables are irrelevant here)
+    f = x^2
+    Dx = FD.lazy_differential(x, y, z, w)
+    expanded = FD.expand_derivatives(Dx(f))
+
+    fn = FD.make_function([expanded], [x, y, z, w])
+    result = fn([3.0, 0.0, 0.0, 0.0])
+
+    # d/dx (x^2) = 2x = 6 at x=3
+    @test result[1] ≈ 6.0
 end
 
 @testitem "Expanded lazy derivative works with make_function" begin
