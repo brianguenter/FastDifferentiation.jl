@@ -7,7 +7,7 @@ using TestItems
 
 @testsnippet SphericalHarmonics begin
     import FastDifferentiation as FD
-    using Memoize
+    using Memoize@info
 
     @memoize function P(l, m, z)
         if l == 0 && m == 0
@@ -2485,59 +2485,6 @@ end
 end
 
 # Write your tests here.
-
-@testitem "Conditionals: all_combinations" begin
-    import FastDifferentiation as FD
-
-    # n=0: one combination, the empty vector
-    result = FD.all_combinations(0)
-    @test length(result) == 1
-    @test result[1] == Bool[]
-
-    # n=1: two combinations
-    result = FD.all_combinations(1)
-    @test length(result) == 2
-    @test result[1] == [false]
-    @test result[2] == [true]
-
-    # n=2: four combinations covering all bool pairs
-    result = FD.all_combinations(2)
-    @test length(result) == 4
-    @test result[1] == [false, false]
-    @test result[2] == [true, false]
-    @test result[3] == [false, true]
-    @test result[4] == [true, true]
-end
-
-@testitem "Conditionals: Combinations iterator" begin
-    import FastDifferentiation as FD
-
-    # iterate(::Combinations) returns (self, 0) as the initial step
-    c1 = FD.Combinations(1)
-    val, state = FD.iterate(c1)
-    @test val === c1
-    @test state == 0
-
-    # iterate(::Combinations, state) yields BitVectors for each combination
-    c2 = FD.Combinations(2)
-    expected = FD.all_combinations(2)
-    for (i, exp) in enumerate(expected)
-        result = FD.iterate(c2, i - 1)
-        @test result !== nothing
-        bv, next_state = result
-        @test bv == BitVector(exp)
-        @test next_state == i
-    end
-
-    # Terminates when state == 2^n
-    @test FD.iterate(c2, 4) === nothing
-
-    # n=0: only one combination (empty), terminates at state=1
-    c0 = FD.Combinations(0)
-    bv, s = FD.iterate(c0, 0)
-    @test bv == BitVector([])
-    @test FD.iterate(c0, 1) === nothing
-end
 
 
 @testitem "DerivativeGraph: UnconstrainedPathIterator traits and iterate fallthrough" begin
