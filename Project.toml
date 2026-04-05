@@ -4,14 +4,19 @@ version = "0.4.5"
 authors = ["BrianGuenter"]
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
+OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [weakdeps]
@@ -21,11 +26,15 @@ ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
 FastDifferentiationVisualizationExt = "ElectronDisplay"
 
 [compat]
+BenchmarkTools = "1.7.0"
 DataStructures = "0.18, 0.19"
+Debugger = "0.7.16"
 DiffRules = "1"
 ElectronDisplay = "1"
 Memoize = "0.4"
 NaNMath = "1"
+OhMyREPL = "0.5.32"
+Revise = "3.14.1"
 RuntimeGeneratedFunctions = "0.5"
 SpecialFunctions = "2"
 StaticArrays = "1"

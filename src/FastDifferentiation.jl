@@ -4,7 +4,7 @@ module FastDifferentiation
 using StaticArrays
 using SpecialFunctions
 using NaNMath
-# using Statistics
+using Statistics
 using RuntimeGeneratedFunctions
 import Base: iterate
 using UUIDs
@@ -42,7 +42,6 @@ include("BitVectorFunctions.jl")
 include("ExpressionGraph.jl") #definition of Node type from which FD expression graphs are created
 include("DifferentiationRules.jl")
 include("PathEdge.jl")  #functions to create and manipulate edges in derivative graphs
-include("Conditionals.jl")
 include("DerivativeGraph.jl") #functions to compute derivative graph from an expression graph of Node
 include("Reverse.jl") #symbolic implementation of conventional reverse automatic differentiation
 include("GraphProcessing.jl")

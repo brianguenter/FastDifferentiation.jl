@@ -499,7 +499,7 @@ end
     postorder(roots::AbstractVector{<:Node})
 
 Used to postorder function with multiple outputs"""
-function postorder(roots::AbstractVector{T}) where {T<:Node}
+function postorder(roots::Vector{T}) where {T<:Node}
     node_to_index = IdDict{Node,Int64}()
     nodes = Vector{Node}(undef, 0)
     variables = Vector{Node}(undef, 0)
