@@ -4,7 +4,6 @@ module FastDifferentiation
 using StaticArrays
 using SpecialFunctions
 using NaNMath
-using Statistics
 using RuntimeGeneratedFunctions
 import Base: iterate
 using UUIDs

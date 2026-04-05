@@ -72,7 +72,7 @@ struct ConstrainedPathIterator{T<:Integer}
         )
 
     `constraint_function` takes a single `PathEdge` argument and returns true or false"""
-    ConstrainedPathIterator(node_index::T, end_node_index::T, edges::Vector{PathEdge{T}}, iterate_parents::Bool, constraint_function::Function) where {T<:Integer} = new{T}(node_index, end_node_index, edges, iterate_parents, constraint_function)
+    ConstrainedPathIterator(node_index::T, end_node_index::T, edges::Vector{PathEdge{T}}, iterate_parents::Bool, constraint_function::Function) where {T<:Integer} = new{T}(node_index, edges, iterate_parents, constraint_function, end_node_index)
 end
 
 Base.IteratorSize(::ConstrainedPathIterator) = Base.SizeUnknown
@@ -392,18 +392,12 @@ dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
 
 Computes the average number of reachable variables across all the edges in the graph. Primarily useful for development."""
 function mean_reachable_variables(a::DerivativeGraph)
-    total = 0
-    num_edges = 0
+    tot_edges = unique_edges(a)
 
-    for edge_list in values(edges(a))
-        num_edges += length(edge_list)
-        total += sum(num_reachable_variables.(edge_list))
-    end
-
-    if num_edges == 0
+    if length(tot_edges) == 0
         return 0.0
     else
-        return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
+        return sum(num_reachable_variables.(tot_edges)) / length(tot_edges) #halve the result to account for 2x redundancy of edges
     end
 end
 
@@ -666,52 +660,52 @@ end
 Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
 function graph_statistics(graph::DerivativeGraph)
     # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
-    @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
+    # @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
 
-    avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
-    @info "average reachable roots $avg_reach_roots"
-    n_relations(relation_func, graph) = length.(relation_func.(values(edges(graph))))
-    pnums = n_relations(parents, graph)
-    cnums = n_relations(children, graph)
-    f(relation_func, nums) = @info "$(nameof(relation_func)): total edges $(sum(nums)) mean $(mean(nums)) max and min $(extrema(nums)) median $(median(nums)) variance $(var(nums)) quantile $(quantile(nums,.1:.1:1.0))"
+    # avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
+    # @info "average reachable roots $avg_reach_roots"
+    # n_relations(relation_func, graph) = length.(relation_func.(values(edges(graph))))
+    # pnums = n_relations(parents, graph)
+    # cnums = n_relations(children, graph)
+    # f(relation_func, nums) = @info "$(nameof(relation_func)): total edges $(sum(nums)) mean $(mean(nums)) max and min $(extrema(nums)) median $(median(nums)) variance $(var(nums)) quantile $(quantile(nums,.1:.1:1.0))"
 
-    f(parents, pnums)
-    f(children, cnums)
+    # f(parents, pnums)
+    # f(children, cnums)
 
-    shared_roots = BitVector(undef, codomain_dimension(graph))
-    shared_variables = BitVector(undef, domain_dimension(graph))
+    # shared_roots = BitVector(undef, codomain_dimension(graph))
+    # shared_variables = BitVector(undef, domain_dimension(graph))
 
-    #compute nodes with branches.
-    branch_nodes = 0
+    # #compute nodes with branches.
+    # branch_nodes = 0
 
-    for node in nodes(graph)
-        if !is_variable(graph, node) && !is_root(graph, node)
-            edges = node_edges(graph, node)
-            if edges !== nothing
-                if length(parents(edges)) == 0 || length(parents(edges)) == 1
-                    shared_roots .= 0
-                else
-                    shared_roots = copy(reachable_roots(parents(edges)[1]))
+    # for node in nodes(graph)
+    #     if !is_variable(graph, node) && !is_root(graph, node)
+    #         edges = node_edges(graph, node)
+    #         if edges !== nothing
+    #             if length(parents(edges)) == 0 || length(parents(edges)) == 1
+    #                 shared_roots .= 0
+    #             else
+    #                 shared_roots = copy(reachable_roots(parents(edges)[1]))
 
-                    for pedge in parents(edges) #poetntially redundant computation but efficiency not important
-                        shared_roots .&= reachable_roots(pedge)
-                    end
-                end
+    #                 for pedge in parents(edges) #poetntially redundant computation but efficiency not important
+    #                     shared_roots .&= reachable_roots(pedge)
+    #                 end
+    #             end
 
-                if length(children(edges)) == 0 || length(children(edges)) == 1
-                    shared_variables .= 0
-                else
-                    shared_variables = copy(reachable_variables(children(edges)[1]))
-                    for cedge in children(edges)
-                        shared_variables .&= reachable_variables(cedge)
-                    end
-                end
-                if any(shared_roots) || any(shared_variables)
-                    branch_nodes += 1
-                end
-            end
-        end
-    end
-    @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
-    @info "sparsity of Jacobian $(_sparsity(graph))"
+    #             if length(children(edges)) == 0 || length(children(edges)) == 1
+    #                 shared_variables .= 0
+    #             else
+    #                 shared_variables = copy(reachable_variables(children(edges)[1]))
+    #                 for cedge in children(edges)
+    #                     shared_variables .&= reachable_variables(cedge)
+    #                 end
+    #             end
+    #             if any(shared_roots) || any(shared_variables)
+    #                 branch_nodes += 1
+    #             end
+    #         end
+    #     end
+    # end
+    # @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
+    # @info "sparsity of Jacobian $(_sparsity(graph))"
 end

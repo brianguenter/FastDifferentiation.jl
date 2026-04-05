@@ -7,7 +7,7 @@ using TestItems
 
 @testsnippet SphericalHarmonics begin
     import FastDifferentiation as FD
-    using Memoize@info
+    using Memoize
 
     @memoize function P(l, m, z)
         if l == 0 && m == 0
@@ -2011,32 +2011,32 @@ end
     @test isapprox(mat, [1 10; 10 1])
 
     #NOT a test because of difficulty and fragility of parsing generated code. You have to verify these by looking at the output.
-    p = make_variables(:p, 21)
+    # p = make_variables(:p, 21)
 
-    println("NO array zero statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    # println("NO array zero statement")
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
-    p[21] = 0
+    # p[21] = 0
 
-    println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    println("this should not have an array zero statement nor should have a p[21] = 0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    println("should not have an array zero statement but should have a p[21] = 0 statement")
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    # println("shouldn't have an array zero statement but it should have a p[21]= 0 statement")
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    # println("this should not have an array zero statement nor should have a p[21] = 0 statement")
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    # println("should not have an array zero statement but should have a p[21] = 0 statement")
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 
-    p[20] = 0
-    println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=true))
-    println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, in_place=true, init_with_zeros=false))
-    println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
-    show(make_Expr(p, p, in_place=false, init_with_zeros=true))
-    show(make_Expr(p, p, in_place=false, init_with_zeros=false))
+    # p[20] = 0
+    # println("this should have an array zero statement should not have p[20]=0 or p[21]=0 statementt")
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=true))
+    # println("this should not have an array zero statement should not have p[20]=0 or p[21]=0 statement")
+    # show(make_Expr(p, p, in_place=true, init_with_zeros=false))
+    # println("these should both have an array zero creation but should not have p[20]=0 or p[21]=0 statement")
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=true))
+    # show(make_Expr(p, p, in_place=false, init_with_zeros=false))
 end
 
 
@@ -2096,21 +2096,21 @@ end
 
         # out of place
         f_callable = FD.make_function(f_node, x_node)
-        @show f_callable
+
         result = f_callable(input)
         @test isapprox(result, correct_result)
         @test typeof(result) <: typeof(correct_result)
 
         # in_place, init_with_zeros
         f_callable_init! = FD.make_function(f_node, x_node; in_place=true, init_with_zeros=true)
-        @show f_callable_init!
+
         result = similar(correct_result)
         f_callable_init!(result, input) == correct_result
         @test isapprox(result, correct_result)
 
         # in_place, !init_with_zeros
         f_callable_no_init! = FD.make_function(f_node, x_node; in_place=true, init_with_zeros=false)
-        @show f_callable_no_init!
+
         result = similar(correct_result)
         result_copy = copy(result)
         f_callable_no_init!(result, input)
@@ -2123,42 +2123,36 @@ end
 
     # systematically enumerate the four different branches of `make_Expr`:
     # all constant, mostly zeros
-    @info "all constant, mostly zeros"
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
     end
 
     # all constant, some zeros
-    @info "all constant, some zeros"
     test_code_generation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) do x
         [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
     end
 
     # mostly constants
-    @info "mostly constants"
     test_code_generation(3.0) do x
         [2.1 * x[1], 1, 2]
     end
 
     # non-constant at non-first position
-    @info "non-constant at non-first position"
     test_code_generation(3.0) do x
         [1, 2.1 * x[1], 2]
     end
 
     # mostly zeros
-    @info "mostly zeros"
     test_code_generation(3.0) do x
         [x[1]^2, 0, 0]
     end
 
     # all non-constant
-    @info "all non-constant"
     test_code_generation(3.0) do x
         [2.1 * x[1], x[1]^2, sqrt(x[1])]
     end
 
-    @info "evaluate with exotic eltype"
+
     test_code_generation(Complex(1.0)) do x
         [1, 2.1 * x[1], 2]
     end
