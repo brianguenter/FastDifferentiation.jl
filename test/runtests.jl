@@ -7,7 +7,7 @@ using TestItems
 
 @testsnippet SphericalHarmonics begin
     import FastDifferentiation as FD
-    using Memoize
+    using Memoize@info
 
     @memoize function P(l, m, z)
         if l == 0 && m == 0
@@ -1118,7 +1118,7 @@ end
     _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
 
     ed, nod = FD.deconstruct_subgraph(subs[3])
-    println(ed)
+
     sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
     @test issetequal(sub_4_1, ed)
     @test issetequal([1, 2, 3, 4], nod)
@@ -1455,7 +1455,7 @@ end
 
     tmp00 = FD.make_function([FD.node(graph, 4)], [x])
     origfsimp(x) = tmp00([x])[1]
-    println(origfsimp(3.0))
+    
     @test isapprox(FiniteDifferences.central_fdm(5, 1)(origfsimp, 3), dfsimp(3)[1])
 
     graph = complex_dominator_graph()
@@ -2006,7 +2006,7 @@ end
     @test isapprox(mat, [1 0; 0 1])
     fn2 = FD.make_function(A, [x, y], in_place=true, init_with_zeros=false)
     mat = [10 10; 10 10]
-    println(mat)
+    
     fn2(mat, [1, 1])
     @test isapprox(mat, [1 10; 10 1])
 
@@ -2485,3 +2485,212 @@ end
 end
 
 # Write your tests here.
+
+
+@testitem "DerivativeGraph: UnconstrainedPathIterator traits and iterate fallthrough" begin
+    import FastDifferentiation as FD
+
+    edges_v = FD.PathEdge{Int64}[]
+    iter = FD.UnconstrainedPathIterator(Int64(1), edges_v, true)
+
+    # Trait methods (lines 20-22)
+    @test Base.IteratorSize(iter) === Base.SizeUnknown
+    @test Base.IteratorEltype(iter) === Base.HasEltype
+    @test Base.eltype(iter) == Int64
+
+    # iterate fallthrough (lines 43-44): edge whose bott_vertex ≠ node_index forces state += 1
+    # PathEdge(v1, v2, ...) sorts so top > bott, so PathEdge(5,2,...) → top=5, bott=2
+    e_skip  = FD.PathEdge(Int64(5), Int64(2), FD.Node(1.0), Int64(2), Int64(2))  # bott=2, skip
+    e_match = FD.PathEdge(Int64(5), Int64(1), FD.Node(1.0), Int64(2), Int64(2))  # bott=1, match
+    iter2 = FD.UnconstrainedPathIterator(Int64(1), FD.PathEdge{Int64}[e_skip, e_match], true)
+    result = Int64[]
+    for v in iter2
+        push!(result, v)
+    end
+    @test result == [Int64(5)]  # e_skip forces state+=1, e_match returns top=5
+end
+
+@testitem "DerivativeGraph: ConstrainedPathIterator" begin
+    import FastDifferentiation as FD
+
+    # PathEdge(v1,v2,...) with v1>v2 → top=v1, bott=v2
+    e1 = FD.PathEdge(Int64(5), Int64(3), FD.Node(1.0), Int64(2), Int64(2))  # top=5, bott=3
+    e2 = FD.PathEdge(Int64(5), Int64(1), FD.Node(1.0), Int64(2), Int64(2))  # top=5, bott=1
+    e3 = FD.PathEdge(Int64(4), Int64(3), FD.Node(1.0), Int64(2), Int64(2))  # top=4, bott=3
+    edges_v = FD.PathEdge{Int64}[e1, e2, e3]
+
+    # Constructor (line 75) and traits (lines 78-80)
+    iter = FD.ConstrainedPathIterator(Int64(3), Int64(5), edges_v, true, _ -> true)
+    @test Base.IteratorSize(iter) === Base.SizeUnknown
+    @test Base.IteratorEltype(iter) === Base.HasEltype
+    @test Base.eltype(iter) == Int64
+
+    # iterate_parents=true, constraint always passes (lines 83-93)
+    # e1: bott=3 == node_index=3 → returns top=5
+    # e2: bott=1 ≠ 3 → state+=1 (line 101)
+    # e3: bott=3 == 3 → returns top=4
+    # next: state > length → nothing (line 88)
+    result = Int64[]
+    for v in iter
+        push!(result, v)
+    end
+    @test sort(result) == [4, 5]
+
+    # iterate_parents=false, constraint always passes (lines 96-97)
+    # e1: top=5 == node_index=5 → returns bott=3
+    # e2: top=5 == 5 → returns bott=1
+    # e3: top=4 ≠ 5 → state+=1 (line 101)
+    iter_c = FD.ConstrainedPathIterator(Int64(5), Int64(1), edges_v, false, _ -> true)
+    result = Int64[]
+    for v in iter_c
+        push!(result, v)
+    end
+    @test sort(result) == [1, 3]
+
+    # constraint returning false also hits state+=1 (line 101)
+    iter_f = FD.ConstrainedPathIterator(Int64(5), Int64(1), edges_v, false,
+                                        e -> FD.bott_vertex(e) == Int64(3))
+    result = Int64[]
+    for v in iter_f
+        push!(result, v)
+    end
+    @test result == [Int64(3)]
+end
+
+@testitem "DerivativeGraph: accessor and query functions" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    xy = x * y
+    n5 = FD.Node(5)
+    f1 = n5 * xy
+    n3 = FD.Node(3)
+    f2 = xy * n3
+    graph = FD.DerivativeGraph([f1, f2])
+
+    # root_postorder_to_index (line 263)
+    r1_pnum = FD.root_index_to_postorder_number(graph, 1)
+    @test FD.root_postorder_to_index(graph, r1_pnum) == 1
+
+    # is_root(graph, node::Node) — both branches (lines 269-276)
+    root_node = FD.roots(graph)[1]
+    @test FD.is_root(graph, root_node) == true          # node in graph AND is a root (line 274)
+    @test FD.is_root(graph, x) == false                 # node in graph but not a root (line 274)
+    @test FD.is_root(graph, FD.Node(99.0)) == false     # node not in graph → nothing branch (line 272)
+
+    # is_variable(graph, node::Node) (line 280)
+    @test FD.is_variable(graph, x) == true
+    @test FD.is_variable(graph, xy) == false
+
+    # is_tree(graph, postorder_index) and is_tree(graph, node) (lines 282-283)
+    xy_pnum = FD.postorder_number(graph, xy)
+    x_pnum  = FD.postorder_number(graph, x)
+    @test FD.is_tree(graph, xy_pnum) == true
+    @test FD.is_tree(graph, x_pnum)  == false
+    @test FD.is_tree(graph, xy) == true
+    @test FD.is_tree(graph, x)  == false
+
+    # variable(graph, index) (line 287)
+    @test FD.variable(graph, 1) === FD.variables(graph)[1]
+
+    # node_edges(graph, node::Node) — the Node-dispatch overload (line 346)
+    @test FD.node_edges(graph, xy) !== nothing
+
+    # reachable_variables when node_index not in edges (line 351)
+    @test FD.reachable_variables(graph, 99999) == falses(2)
+
+    # reachable_roots for a root node sets its own bit (line 376)
+    rr = FD.reachable_roots(graph, r1_pnum)
+    @test rr[1] == true
+
+    # dimensions (line 387)
+    @test FD.dimensions(graph) == (2, 2)
+
+    # child_edges(graph, node::Node): nothing branch (node not in graph)
+    @test FD.child_edges(graph, FD.Node(99.0)) == FD.PathEdge{Int64}[]
+    # child_edges(graph, node::Node): else branch (node IS in graph, line 428/429)
+    @test length(FD.child_edges(graph, xy)) >= 1
+
+    # parent_edges(graph, node::Node): nothing branch (node not in graph)
+    @test FD.parent_edges(graph, FD.Node(99.0)) == FD.PathEdge{Int64}[]
+    # parent_edges(graph, node::Node): else branch (node IS in graph, line 456/457)
+    @test FD.parent_edges(graph, xy) isa Vector
+
+    # is_constant(graph, postorder_index) (line 463) — all nodes in nodes(graph) are non-constant
+    @test FD.is_constant(graph, x_pnum) == false
+    @test FD.is_constant(graph, xy_pnum) == false
+
+    # partial_value(graph, parent::Node, child_index) (line 465)
+    pv = FD.partial_value(graph, xy, 1)
+    @test pv isa FD.Node
+end
+
+@testitem "DerivativeGraph: add_edge! and delete_edge!" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    xy = x * y
+    graph = FD.DerivativeGraph([xy])
+
+    # add_edge! throws when edge already exists (line 561)
+    existing = FD.child_edges(graph, xy)[1]
+    @test_throws ErrorException FD.add_edge!(graph, existing)
+
+    # delete_edge! throws when edge does not exist (line 598)
+    fake = FD.PathEdge(Int64(100), Int64(50), FD.Node(1.0), Int64(2), Int64(1))
+    @test_throws ErrorException FD.delete_edge!(graph, fake)
+
+    # delete_edge! happy path (line 599 — end of the guard if-block, reached when edge exists)
+    # Zero out the reachable masks so can_delete passes, then delete the edge
+    edge = FD.child_edges(graph, xy)[1]
+    FD.reachable_roots(edge) .= 0
+    FD.reachable_variables(edge) .= 0
+    FD.delete_edge!(graph, edge)
+    @test !FD.edge_exists(graph, edge)
+
+    # add_edge! happy path (line 562 — end of the guard if-block, reached when edge is new)
+    FD.add_edge!(graph, edge)
+    @test FD.edge_exists(graph, edge)
+end
+
+@testitem "DerivativeGraph: mean_reachable_variables, fraction_reachable_variables" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    xy = x * y
+    f1 = FD.Node(5) * xy
+    f2 = xy * FD.Node(3)
+    graph = FD.DerivativeGraph([f1, f2])
+
+    m = FD.mean_reachable_variables(graph)
+    @test m isa Float64
+    @test m >= 0.0
+
+    fr = FD.fraction_reachable_variables(graph)
+    @test fr isa Float64
+    @test fr >= 0.0
+
+    # Empty-edge graph (constant root): covers the num_edges == 0 early-return (line 398)
+    cgraph = FD.DerivativeGraph([FD.Node(5.0)])
+    @test FD.mean_reachable_variables(cgraph) == 0.0
+end
+
+@testitem "DerivativeGraph: _sparsity and number_of_operations" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    xy = x * y
+    f1 = FD.Node(5) * xy
+    f2 = xy * FD.Node(3)
+    graph = FD.DerivativeGraph([f1, f2])
+
+    # _sparsity: both outputs depend on both inputs → 1.0
+    @test FD._sparsity(graph) == 1.0
+
+    # number_of_operations
+    n = FD.number_of_operations(graph)
+    @test n isa Integer
+    @test n > 0
+end
+
+

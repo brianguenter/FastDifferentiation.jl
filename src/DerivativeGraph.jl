@@ -399,7 +399,12 @@ function mean_reachable_variables(a::DerivativeGraph)
         num_edges += length(edge_list)
         total += sum(num_reachable_variables.(edge_list))
     end
-    return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
+
+    if num_edges == 0
+        return 0.0
+    else
+        return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
+    end
 end
 
 function fraction_reachable_variables(a::DerivativeGraph)
