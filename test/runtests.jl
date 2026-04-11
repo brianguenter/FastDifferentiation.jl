@@ -2484,4 +2484,403 @@ end
     @test_throws ArgumentError f_callable_sparse!(result, x_val, y_val)
 end
 
-# Write your tests here.
+
+@testitem "Lazy and Eager evaluation equivalence" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    eager_df = FD.differential(x)(f)
+    lazy_df = FD.lazy_differential(x)(f)
+
+    # Lazy df should be a wrapper, not immediately evaluated
+    @test FD.value(lazy_df) === FD.LazyDerivative
+    
+    # Upon expansion, it should be structurally identical to eager evaluation
+    expanded = FD.expand_derivatives(lazy_df)
+    @test expanded === eager_df
+end
+
+@testitem "Nested lazy evaluations" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    # Eager approach: d/dy (d/dx f)
+    eager_nested = FD.differential(y)(FD.differential(x)(f))
+
+    # Lazy approach
+    dx_lazy = FD.lazy_differential(x)
+    dy_lazy = FD.lazy_differential(y)
+    
+    lazy_nested = dy_lazy(dx_lazy(f))
+
+    # Outer and inner nodes are both LazyDerivative
+    @test FD.value(lazy_nested) === FD.LazyDerivative
+    @test FD.value(FD.children(lazy_nested)[1]) === FD.LazyDerivative
+
+    expanded = FD.expand_derivatives(lazy_nested)
+    @test expanded === eager_nested
+end
+
+@testitem "expand_derivatives on graph without lazy nodes is a no-op" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    # A normal math graph with no lazy differentials should be returned unchanged
+    expanded = FD.expand_derivatives(f)
+    @test expanded === f
+end
+
+@testitem "expand_derivatives on arrays" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f1 = x^2 * y
+    f2 = x + y
+
+    # Broadcasting lazy operator across the array
+    dx_lazy = FD.lazy_differential(x)
+    lazy_arr = dx_lazy.([ f1, f2 ])
+
+    expanded_arr = FD.expand_derivatives(lazy_arr)
+
+    @test expanded_arr isa Vector{FD.Node}
+    @test expanded_arr[1] === FD.expand_derivatives(dx_lazy(f1))
+    @test expanded_arr[2] === FD.expand_derivatives(dx_lazy(f2))
+end
+
+@testitem "Explicit expand_derivatives before jacobian gives correct results" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    # Build lazy derivative and expand BEFORE passing to jacobian
+    lazy_df = FD.lazy_differential(x)(f)
+    expanded = FD.expand_derivatives(lazy_df)
+    jac = FD.jacobian([expanded], [x, y])
+
+    # Verify jacobian values match manually computed eager derivatives
+    @test jac[1, 1] === FD.derivative(FD.differential(x)(f), x)
+    @test jac[1, 2] === FD.derivative(FD.differential(x)(f), y)
+end
+
+@testitem "Unexpanded LazyDerivative passed to jacobian errors" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    # Build a lazy derivative but do NOT expand
+    lazy_df = FD.lazy_differential(x)(f)
+
+    # Passing an unexpanded lazy node to jacobian should error (downstream MethodError)
+    @test_throws Exception FD.jacobian([lazy_df], [x, y])
+end
+
+@testitem "Unexpanded LazyDerivative passed to make_function errors at runtime" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+
+    # make_function compiles without error, but calling with numeric values
+    # fails because LazyDerivative cannot be evaluated as a concrete operation.
+    fn = FD.make_function([lazy_df], [x, y])
+    @test_throws Exception fn([2.0, 3.0])
+end
+
+@testitem "Lazy derivative guards and errors" begin
+    import FastDifferentiation as FD
+    FD.@variables x t
+
+    # Empty lazy_differential must throw
+    @test_throws ArgumentError FD.lazy_differential()
+
+    # Applying a lazy differential operator with no arguments must throw
+    Dt = FD.lazy_differential(x)
+    @test_throws ArgumentError Dt()
+end
+
+@testitem "Lazy differential as a child node" begin
+    import FastDifferentiation as FD
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+    g = x * lazy_df
+
+    h = x * FD.derivative(f, x)
+
+    # Verify structure before expansion
+    @test FD.value(g) === *
+    @test FD.children(g)[2] === lazy_df
+    @test FD.value(FD.children(g)[2]) === FD.LazyDerivative
+
+    # Verify expansion propagates into child nodes
+    expanded_g = FD.expand_derivatives(g)
+    @test expanded_g === h
+end
+
+@testitem "q(t) differentiation support" begin
+    import FastDifferentiation as FD
+    FD.@variables x t
+
+    # unknown function x(t)
+    f = x(t)
+    df = FD.derivative(f, t)
+
+    @test FD.value(df) === FD.Differential
+    @test FD.children(df)[1] === t
+
+    # Lazy equivalent must match after expansion
+    Dt = FD.lazy_differential(t)
+    lazy_f = Dt(f)
+    expanded = FD.expand_derivatives(lazy_f)
+    @test expanded === df
+end
+
+@testitem "Lazy Evaluation Caching and Identity" begin
+    import FastDifferentiation as FD
+    FD.clear_cache()
+    FD.@variables x y
+
+    # Operator identity caching
+    dtx1 = FD.lazy_differential(x)
+    dtx2 = FD.lazy_differential(x)
+    @test dtx1 === dtx2
+
+    dty1 = FD.lazy_differential(y)
+    @test dtx1 !== dty1
+
+    dtxy1 = FD.lazy_differential(x, y)
+    dtxy2 = FD.lazy_differential(x, y)
+    @test dtxy1 === dtxy2
+
+    # Derivative node caching
+    f = x^2 * y
+    ld1 = dtx1(f)
+    ld2 = dtx2(f)
+    @test ld1 === ld2
+
+    # Nested caching
+    nld1 = dtx1(dty1(f))
+    nld2 = dtx2(dty1(f))
+    @test nld1 === nld2
+end
+
+@testitem "check_cache blocks n-ary built-in operators" begin
+    import FastDifferentiation as FD
+    import StaticArrays: MVector
+    FD.@variables x1 x2 x3 x4 x5
+
+    # Directly constructing a 5-ary * node via the Node constructor is still possible,
+    # but routing it through check_cache must be rejected — simplify_check_cache and
+    # DifferentiationRules.jl assume all built-in operators are binary.
+    f = FD.Node(*, MVector{5,FD.Node}(x1, x2, x3, x4, x5))
+    @test FD.arity(f) == 5
+
+    # check_cache must throw for any built-in operator with more than 3 children
+    @test_throws AssertionError FD.check_cache(f)
+    @test_throws AssertionError FD.check_cache((+, x1, x2, x3, x4))
+    @test_throws AssertionError FD.check_cache((*, x1, x2, x3, x4))
+    @test_throws AssertionError FD.check_cache((-, x1, x2, x3, x4))
+end
+
+@testitem "check_cache allows n-ary LazyDifferential and LazyDerivative nodes" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y z w
+
+    # lazy_differential with 4 variables must not throw — it creates a LazyDifferential
+    # node with 4 children, which hits the else branch in check_cache.
+    # LazyDifferential is stored as the TYPE (not an instance) in node_value.
+    Dxyzw = FD.lazy_differential(x, y, z, w)
+    @test FD.arity(Dxyzw) == 4
+    @test FD.value(Dxyzw) === FD.LazyDifferential
+
+    # Applying the 4-variable differential to an expression creates a LazyDerivative node
+    f = x^2 + y^2 + z^2 + w^2
+    lazy_df = Dxyzw(f)
+    @test FD.value(lazy_df) === FD.LazyDerivative
+    @test FD.arity(lazy_df) == 5  # expr + 4 variables
+end
+
+@testitem "lazy_differential with 4 variables expands correctly" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y z w
+
+    # Differentiating f = x^2 w.r.t. x via a 4-variable differential should still only
+    # give the partial derivative w.r.t. x (the other variables are irrelevant here)
+    f = x^2
+    Dx = FD.lazy_differential(x, y, z, w)
+    expanded = FD.expand_derivatives(Dx(f))
+
+    fn = FD.make_function([expanded], [x, y, z, w])
+    result = fn([3.0, 0.0, 0.0, 0.0])
+
+    # d/dx (x^2) = 2x = 6 at x=3
+    @test result[1] ≈ 6.0
+end
+
+@testitem "Expanded lazy derivative works with make_function" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+    expanded = FD.expand_derivatives(lazy_df)
+
+    # Build and evaluate the compiled function
+    fn = FD.make_function([expanded], [x, y])
+    result = fn([2.0, 3.0])
+
+    # d/dx (x^2 * y) = 2xy, at x=2, y=3 => 12.0
+    @test result[1] ≈ 12.0
+end
+
+@testitem "Expanded nested lazy derivative gives correct numerical result" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    dx = FD.lazy_differential(x)
+    dy = FD.lazy_differential(y)
+
+    # d/dy(d/dx(x^2 * y)) = d/dy(2xy) = 2x
+    nested_lazy = dy(dx(f))
+    expanded = FD.expand_derivatives(nested_lazy)
+
+    fn = FD.make_function([expanded], [x, y])
+    result = fn([5.0, 99.0])
+
+    # Should be 2*x = 2*5 = 10, independent of y
+    @test result[1] ≈ 10.0
+end
+
+@testitem "Expanded lazy derivative works with sparse_jacobian" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^3 + y^2
+
+    lazy_df = FD.lazy_differential(x)(f)
+    expanded = FD.expand_derivatives(lazy_df)
+
+    # d/dx(x^3 + y^2) = 3x^2
+    sjac = FD.sparse_jacobian([expanded], [x, y])
+
+    fn = FD.make_function(sjac, [x, y])
+    result = fn([2.0, 5.0])
+
+    # d/dx(3x^2) w.r.t. x = 6x = 12.0, d/dx(3x^2) w.r.t. y = 0
+    @test result[1] ≈ 12.0
+    @test result[2] ≈ 0.0
+end
+
+@testitem "expand_derivatives array then jacobian" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f1 = x^2 * y
+    f2 = x + y^3
+
+    dx = FD.lazy_differential(x)
+    lazy_arr = dx.([f1, f2])
+
+    # Expand the entire array, then pass to jacobian
+    expanded_arr = FD.expand_derivatives(lazy_arr)
+    jac = FD.jacobian(expanded_arr, [x, y])
+
+    fn = FD.make_function(jac, [x, y])
+    result = fn([2.0, 3.0])
+
+    # expanded_arr[1] = d/dx(x^2*y) = 2xy ; expanded_arr[2] = d/dx(x+y^3) = 1
+    # jac[1,1] = d/dx(2xy) = 2y = 6, jac[1,2] = d/dy(2xy) = 2x = 4
+    # jac[2,1] = d/dx(1) = 0,         jac[2,2] = d/dy(1) = 0
+    @test result[1, 1] ≈ 6.0
+    @test result[1, 2] ≈ 4.0
+    @test result[2, 1] ≈ 0.0
+    @test result[2, 2] ≈ 0.0
+end
+
+@testitem "Expanded lazy derivative works with hessian" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^3 + x * y^2
+
+    lazy_df = FD.lazy_differential(x)(f)
+    expanded = FD.expand_derivatives(lazy_df)
+
+    # d/dx(x^3 + x*y^2) = 3x^2 + y^2
+    # hessian of (3x^2 + y^2) w.r.t. [x, y]:
+    #   d²/dx² = 6, d²/dxdy = 0
+    #   d²/dydx = 0, d²/dy² = 2
+    hess = FD.hessian(expanded, [x, y])
+    fn = FD.make_function(hess, [x, y])
+    result = fn([2.0, 3.0])
+
+    @test result[1, 1] ≈ 6.0   # d²/dx²(3x²+y²) = 6
+    @test result[1, 2] ≈ 0.0
+    @test result[2, 1] ≈ 0.0
+    @test result[2, 2] ≈ 2.0
+end
+
+@testitem "Unexpanded LazyDerivative passed to hessian errors" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+
+    @test_throws Exception FD.hessian(lazy_df, [x, y])
+end
+
+@testitem "Unexpanded LazyDerivative passed to sparse_jacobian errors" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+
+    @test_throws Exception FD.sparse_jacobian([lazy_df], [x, y])
+end
+
+@testitem "Unexpanded LazyDerivative passed to sparse_hessian errors" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y
+
+    lazy_df = FD.lazy_differential(x)(f)
+
+    @test_throws Exception FD.sparse_hessian(lazy_df, [x, y])
+end
+
+@testitem "expand_derivatives on non-lazy graph has zero overhead" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+    f = x^2 * y + sin(x) * cos(y)
+
+    # Warm up
+    FD.expand_derivatives(f)
+
+    # Measure allocations — should be modest since graph has no lazy nodes
+    # (only IdDict overhead for the visited set, no graph copy)
+    allocs = @allocations FD.expand_derivatives(f)
+    @test allocs <= 100
+end

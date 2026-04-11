@@ -392,7 +392,7 @@ function derivative(A::Node, variables...)
     end
     temp = derivative([A], variables...)
     @assert length(temp) == 1
-    derivative([A], variables...)[1]
+    return temp[1]
 end
 
 
