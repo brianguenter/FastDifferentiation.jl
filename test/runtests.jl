@@ -1816,6 +1816,129 @@ end
     )
 end
 
+@testitem "higher_order_derivatives order1 matches jacobian" begin
+    import FastDifferentiation as FD
+    FD.@variables x y
+
+    f = [x^2 + y, x * y]
+    hod = FD.higher_order_derivatives(f, [x, y], 1)
+    jac = FD.jacobian(f, [x, y])
+
+    hod_exe = FD.make_function(hod, [x, y])
+    jac_exe = FD.make_function(jac, [x, y])
+
+    @test isapprox(hod_exe([1.5, -2.0]), jac_exe([1.5, -2.0]))
+end
+
+@testitem "higher_order_derivatives order2 matches hessian" begin
+    import FastDifferentiation as FD
+    FD.@variables x y z
+
+    f = x^2 * y^2 * z^2
+    hod = FD.higher_order_derivatives(f, [x, y, z], 2)
+    h = FD.hessian(f, [x, y, z])
+
+    hod_exe = FD.make_function(hod, [x, y, z])
+    h_exe = FD.make_function(h, [x, y, z])
+
+    @test isapprox(hod_exe([1, 2, 3]), h_exe([1, 2, 3]))
+end
+
+@testitem "higher_order_derivatives symmetry and order3 entry" begin
+    import FastDifferentiation as FD
+    FD.@variables x y
+
+    f = x^3 * y^2
+    hod2 = FD.higher_order_derivatives(f, [x, y], 2; symmetric=true)
+    @test hod2[1, 2] === hod2[2, 1]
+
+    hod3 = FD.higher_order_derivatives(f, [x, y], 3; symmetric=false)
+    dxyx = FD.derivative([f], x, y, x)[1]
+
+    hod3_exe = FD.make_function(hod3, [x, y])
+    dxyx_exe = FD.make_function([dxyx], [x, y])
+
+    @test isapprox(hod3_exe([2.0, -1.5])[1, 2, 1], dxyx_exe([2.0, -1.5])[1])
+end
+
+@testitem "higher_order_derivatives performance (opt-in)" begin
+    import FastDifferentiation as FD
+
+    if get(ENV, "FD_PERF", "") != "1"
+        @info "Skipping performance test. Set FD_PERF=1 to run."
+        return
+    end
+
+    function old_all_partials_scalar(f, vars, order)
+        n = length(vars)
+        result = Array{FD.Node}(undef, ntuple(_ -> n, order)...)
+        for idx in Iterators.product(ntuple(_ -> 1:n, order)...)
+            var_tuple = ntuple(j -> vars[idx[j]], order)
+            result[idx...] = FD.derivative([f], var_tuple...)[1]
+        end
+        return result
+    end
+
+    function old_all_partials_array(terms::AbstractArray{<:FD.Node}, vars, order)
+        n = length(vars)
+        result = Array{FD.Node}(undef, size(terms)..., ntuple(_ -> n, order)...)
+        term_axes = axes(terms)
+        for idx in Iterators.product(ntuple(_ -> 1:n, order)...)
+            var_tuple = ntuple(j -> vars[idx[j]], order)
+            deriv = FD.derivative(terms, var_tuple...)
+            view(result, term_axes..., idx...) .= deriv
+        end
+        return result
+    end
+
+    function timed_min(fn; repeats=3)
+        times = Float64[]
+        for _ in 1:repeats
+            GC.gc()
+            push!(times, @elapsed fn())
+        end
+        return minimum(times)
+    end
+
+    function perf_case(label, old_fn, new_fn; repeats=3)
+        old_fn()
+        new_fn()
+        old_t = timed_min(old_fn; repeats=repeats)
+        new_t = timed_min(new_fn; repeats=repeats)
+        ratio = old_t / new_t
+        @info "higher_order_derivatives perf" label=label old_seconds=old_t new_seconds=new_t speedup=ratio
+        return ratio
+    end
+
+    FD.clear_cache()
+
+    FD.@variables t
+    A = [t t^2; 3t^2 5]
+    ratio_column = perf_case(
+        "Examples/columnderivative.jl",
+        () -> old_all_partials_array(A, [t], 2),
+        () -> FD.higher_order_derivatives(A, [t], 2; symmetric=true)
+    )
+
+    FD.@variables x y z
+    vars_xyz = [x, y, z]
+    f_quad = x^2 + y^2 + z^2
+    ratio_hess_quad = perf_case(
+        "Examples/hessian.jl: x^2+y^2+z^2",
+        () -> old_all_partials_scalar(f_quad, vars_xyz, 2),
+        () -> FD.higher_order_derivatives(f_quad, vars_xyz, 2; symmetric=true)
+    )
+
+    f_prod = x * y * z
+    ratio_hess_prod = perf_case(
+        "Examples/hessian.jl: x*y*z",
+        () -> old_all_partials_scalar(f_prod, vars_xyz, 2),
+        () -> FD.higher_order_derivatives(f_prod, vars_xyz, 2; symmetric=true)
+    )
+
+    @test all(isfinite.([ratio_column, ratio_hess_quad, ratio_hess_prod]))
+end
+
 @testitem "sparse hessian" begin
     using SparseArrays
     import FastDifferentiation as FD

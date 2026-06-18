@@ -87,6 +87,8 @@ julia> derivative([f],x,y,x) #take derivative wrt x, then y, then x
 
 [:, :, 2] =
  (((((x * y) + 1) * exp((x * y))) * y) + (y * exp((x * y))))
+
+julia> higher_order_derivatives(f, [x, y], 3; symmetric=false); #all mixed partials, order 3
 ```
 
 Compute derivative of a function and make executable
