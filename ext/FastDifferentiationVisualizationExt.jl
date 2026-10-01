@@ -144,8 +144,6 @@ function draw_dot(graph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing
     display("image/svg+xml", svg)
 end
 
-draw_dot(subgraph::FastDifferentiation.FactorableSubgraph, graph_label::String="", reachability_labels=true, value_labels=false) = draw_dot(graph(subgraph), collect(subgraph_edges(subgraph)), graph_label=graph_label, reachability_labels=reachability_labels, value_labels=value_labels)
-
 function write_dot(filename, graph::DerivativeGraph; start_nodes::Union{Nothing,AbstractVector{Int}}=nothing, graph_label::String="", reachability_labels=true, value_labels=true, no_path_edges=false)
     gr = make_dot_file(graph, start_nodes, graph_label, reachability_labels, value_labels, no_path_edges)
     write_dot(filename, gr)

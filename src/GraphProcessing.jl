@@ -1,7 +1,7 @@
 
 
 
-"""This and PathConstraint are highly redundant. There is one function, compute_dominance_tables, which used PathConstraint in a slightly different way than all the other code. This caused endless bugs. For now make a new constraint struct just for compute_dominance_tables, since that code is complicated and don't want to rewrite it now. Later get rid of DomPathConstraint struct, since it is only used by one function."""
+"""Restricts the traversal in `compute_dom_table` to the edges on paths to a single root (when `iterate_parents` is true) or to a single variable (when it is false)."""
 struct DomPathConstraint{T<:Integer}
     graph::DerivativeGraph{T}
     iterate_parents::Bool
@@ -35,61 +35,11 @@ end
 graph(a::DomPathConstraint) = a.graph
 roots_mask(a::DomPathConstraint) = a.roots_mask
 variables_mask(a::DomPathConstraint) = a.variables_mask
-relations(a::DomPathConstraint) = a.relations
 
-"""Contains information used to constrain graph traversal to only edges/vertices that are on the path to a root or variable vertex"""
-struct PathConstraint{T<:Integer}
-    dominating_node::T
-    graph::DerivativeGraph{T}
-    iterate_parents::Bool
-    roots_mask::BitVector
-    variables_mask::BitVector
-    relations::Vector{T} #scratch vector that is used to hold temporary values for iteration
-
-
-    function PathConstraint(dominating_node::T, graph::DerivativeGraph{T}, iterate_parents::Bool, roots_mask::BitVector, variables_mask::BitVector) where {T}
-        relations = Vector{T}(undef, 5) #initialize to small size since num parents or children is likely to be small for any given node. 
-        # @assert !is_zero(roots_mask) #can't iterate with all roots constrained out
-        # @assert !is_zero(variables_mask) #can't iterate with all variables constrained out
-        return new{T}(dominating_node::T, graph, iterate_parents, roots_mask, variables_mask, relations)
-    end
-end
-
-
-function PathConstraint(graph::DerivativeGraph, iterate_parents::Bool, root_or_leaf_index::Integer)
-    if iterate_parents
-        roots_mask = falses(codomain_dimension(graph))
-        roots_mask[root_or_leaf_index] = 1
-        variables_mask = falses(domain_dimension(graph))
-    else
-        roots_mask = falses(codomain_dimension(graph))
-        variables_mask = falses(domain_dimension(graph))
-        variables_mask[root_or_leaf_index] = 1
-    end
-
-    return PathConstraint(graph, iterate_parents, roots_mask, variables_mask)
-end
-
-dominating_node(a::PathConstraint) = a.dominating_node
-roots_mask(a::PathConstraint) = a.roots_mask
-variables_mask(a::PathConstraint) = a.variables_mask
-
-# path_mask(a::PathConstraint) = a.roots_mask
-# export path_mask
-graph(a::PathConstraint) = a.graph
-
-
-
-is_dominator_constraint(a::PathConstraint) = a.iterate_parents
-
-function Base.show(io::IO, a::PathConstraint)
-    print(io, "iterate_parents $(a.iterate_parents) [$(to_string(roots_mask(a),"r")) ↔ $(to_string(variables_mask(a),"v"))]")
-end
-
-"""Returns node indices connected to `node_index` which satisfy the path constraint. This is different from edge_relations functions below which return edges, not node indices."""
+"""Returns the indices of the nodes connected to `node_index` by edges that satisfy the path constraint, or `nothing` if there are none."""
 function relation_node_indices(a::DomPathConstraint{T}, node_index::T) where {T<:Integer}
     # node_relations = a.relations #use scratch array in path constraint. This should only be used by a single thread so this should be multi-thread safe and avoids allocating many small arrays.
-    # #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a PathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
+    # #TODO might want to change this. This seems intrinsically dangerous since node_relations is returned but is also a component of a DomPathConstraint. Could lead to very subtle bugs. The only caller of this function is compute_dominance_tables. The path constraint is created in a loop and used and consumed in that loop so it should never be possible to another piece of code to mess with this variable. Still seems too tricky.
     # empty!(node_relations) #reset array to zero
     node_relations = T[] #for now do not reuse a.relations since this could cause subtle bugs. Optimize later
 
@@ -116,79 +66,8 @@ function relation_node_indices(a::DomPathConstraint{T}, node_index::T) where {T<
     if length(node_relations) == 0
         return nothing
     else
-        return node_relations #this is kind of bad because functions can mess with relations instance variable. But ConstrainedPathIterator doesn't need it to remain unchanged between calls to relations. 
+        return node_relations
     end
-end
-
-
-"""returns edges emanating from a vertex which satisfy the PathConstraint"""
-function relation_edges!(a::PathConstraint{T}, node_index::T, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
-    if result === nothing
-        result = PathEdge{T}[]
-    else
-        empty!(result)
-    end
-
-    tmp_edges = node_edges(graph(a), node_index)
-    if tmp_edges === nothing
-        return nothing
-    end
-
-    #these tests allow for either empty variables_mask or roots_mask. The functions which call this depend on being able to do this.
-    if a.iterate_parents
-        for edge in parents(tmp_edges)
-            if subset(roots_mask(a), reachable_roots(edge)) && overlap(variables_mask(a), reachable_variables(edge))
-                push!(result, edge)
-            end
-        end
-    else
-        for edge in children(tmp_edges)
-            if subset(variables_mask(a), reachable_variables(edge)) && overlap(roots_mask(a), reachable_roots(edge))
-                push!(result, edge)
-            end
-        end
-    end
-
-    return result
-end
-
-"""returns edges along a single path which satisfy the PathConstraint"""
-function relation_edges!(a::PathConstraint{T}, edge::PathEdge, result::Union{Nothing,Vector{PathEdge{Int64}}}=nothing) where {T<:Integer}
-    if result === nothing
-        result = PathEdge{T}[]
-    else
-        empty!(result)
-    end
-    #these tests do not allow for empty variables_mask or roots_mask. The functions which call this variant of this function depend on this. Hacky, should be fixed. Later.
-    if a.iterate_parents
-        tmp = node_edges(graph(a), top_vertex(edge))
-
-        if tmp === nothing
-            return nothing
-        end
-
-        tmp_edges = parents(tmp)
-        for one_edge in tmp_edges
-            if top_vertex(one_edge) ≤ dominating_node(a) && subset(roots_mask(a), reachable_roots(one_edge)) && overlap(variables_mask(a), reachable_variables(one_edge))
-                push!(result, one_edge)
-            end
-        end
-    else
-        tmp = node_edges(graph(a), bott_vertex(edge))
-
-        if tmp === nothing
-            return nothing
-        end
-
-        tmp_edges = children(tmp)
-
-        for one_edge in tmp_edges
-            if bott_vertex(one_edge) ≥ dominating_node(a) && subset(variables_mask(a), reachable_variables(one_edge)) && overlap(roots_mask(a), reachable_roots(one_edge))
-                push!(result, one_edge)
-            end
-        end
-    end
-    return result
 end
 
 
@@ -353,42 +232,4 @@ function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, 
     end
 
     return current_dom
-end
-
-"""Computes immediate dominators/postdominators of all nodes in a graph. Assumes `predecessors` contains the predecessors of nodes in post order for dominators (the leaves of the graph have the lowest post order numbers and come earliest in predecessors), and reverse post order for postdominators (similar except order of nodes reverse). In the immediate **dominator** case the root node is visited first and is its own dominator. The remaining nodes are visited in reverse post order. The immediate dominator of any node i = node i ∪ (∩ dominance(predecessors[i]))."""
-function simple_dominance(predecessors::Vector{Vector{Int64}}, dominance::Union{Nothing,Vector{BitVector}}=nothing, idoms::Union{Nothing,Vector{Int64}}=nothing)
-    num_preds = length(predecessors)
-    if dominance === nothing
-        dominance = [falses(num_preds) for _ in 1:num_preds]
-    end
-
-    temp = BitVector(undef, num_preds)
-    if idoms === nothing
-        idoms = Vector{Int64}(undef, num_preds)
-    end
-
-    for index in length(dominance):-1:1
-        dominance[index][index] = 1
-        if length(predecessors[index]) != 0
-            temp .= dominance[predecessors[index][1]] #first value in intersection of dom_masks of predecessors. This intersection contains all the dominators of this node
-        else
-            temp .= dominance[index] #root or varible node gets its own dom_mask
-        end
-
-        for i in 2:min(2, length(predecessors[index]))
-            @. temp = temp & dominance[predecessors[index][i]]
-        end
-        @. dominance[index] |= temp
-    end
-
-    for (i, mask) in pairs(dominance)
-        if i ≠ length(dominance) #don't reset root or variable node mask since it is the only node that can be its own idom.
-            mask[i] = 0 #set dom mask for this node index to 0 so don't incorrectly find it to be its own idom.
-            idoms[i] = findfirst(mask) #nodes are in reverse post order for doms and post order for pdoms. The index of the first non-zero bit in mask is the immediate dominator of node i.
-        else
-            idoms[i] = i
-        end
-    end
-
-    return idoms
 end

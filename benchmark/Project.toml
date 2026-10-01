@@ -1,0 +1,18 @@
+[deps]
+ADNLPModels = "54578032-b7ea-4c30-94aa-7cbd1cce6c9a"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+FastDifferentiation = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"
+NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
+OptimizationProblems = "5049e819-d29b-5fba-b941-0eee7e64c1c6"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[sources]
+FastDifferentiation = {path = ".."}

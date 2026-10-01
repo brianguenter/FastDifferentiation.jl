@@ -101,22 +101,11 @@ function function_body!(dag::Node, variable_to_index::IdDict{Node,Union{Expr,Int
     return body, _dag_to_function!(dag, body, variable_to_index, node_to_var)
 end
 
-function zero_array_declaration(array::StaticArray{S,<:Any,N}) where {S,N}
-    #need to initialize array to zero because this is no longer being done by simple assignment statements.
-    :($(undef_array_declaration(array)); result .= 0)
-end
-
 function undef_array_declaration(::StaticArray{S,<:Any,N}) where {S,N}
     #need to initialize array to zero because this is no longer being done by simple assignment statements.
     :(result = MArray{$(S),result_element_type,$N}(undef))
 end
 
-"""
-    return_declaration(func_array::Array, input_variables::AbstractVector)
-
-Fills the return array with zeros, which is much more efficient for sparse arrays than setting each element with a line of code
-"""
-zero_array_declaration(func_array::Array{T,N}) where {T,N} = :(result = zeros(result_element_type, $(size(func_array))))
 undef_array_declaration(func_array::Array{T,N}) where {T,N} = :(result = Array{result_element_type}(undef, $(size(func_array))))
 
 return_expression(::SArray) = :(return SArray(result))
@@ -161,16 +150,6 @@ function variable_names(input_variables::NTuple{N,AbstractVector}) where {N}
     end
 
     return input_variable_names, node_to_index
-end
-
-function return_array_type!(body::Expr, func_array, input_variable_names::AbstractVector, in_place::Bool)
-    # declare result element type, and result variable if not provided by the user
-    if in_place
-        return :(result_element_type = promote_type(eltype.(($(input_variable_names...),))...))
-    else
-        push!(body.args, :(result_element_type = promote_type($(_infer_numeric_eltype(func_array)), (eltype.(($(input_variable_names...),)))...)))
-        push!(body.args, undef_array_declaration(func_array))
-    end
 end
 
 function input_output_size_check(func_array, expected_input_lengths, input_variable_names, in_place)

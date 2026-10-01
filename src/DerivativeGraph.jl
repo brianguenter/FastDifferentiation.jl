@@ -44,64 +44,6 @@ function Base.iterate(unconstrained::UnconstrainedPathIterator{T}, state::T=1) w
     end
 end
 
-"""
-    ConstrainedPathIterator{T<:Integer}
-
-# Fields
-
-- `node_index::T`
-- `edges::Vector{PathEdge{T}}`
-- `iterate_parents::Bool`
-- `constraint::Function`
-- `end_node_index::T`
-"""
-struct ConstrainedPathIterator{T<:Integer}
-    node_index::T
-    edges::Vector{PathEdge{T}}
-    iterate_parents::Bool
-    constraint::Function
-    end_node_index::T
-
-    @doc """
-        ConstrainedPathIterator(
-            node_index::T,
-            end_node_index::T,
-            edges::Vector{PathEdge{T}},
-            iterate_parents::Bool,
-            constraint_function::Function
-        )
-
-    `constraint_function` takes a single `PathEdge` argument and returns true or false"""
-    ConstrainedPathIterator(node_index::T, end_node_index::T, edges::Vector{PathEdge{T}}, iterate_parents::Bool, constraint_function::Function) where {T<:Integer} = new{T}(node_index, end_node_index, edges, iterate_parents, constraint_function)
-end
-
-Base.IteratorSize(::ConstrainedPathIterator) = Base.SizeUnknown
-Base.IteratorEltype(::ConstrainedPathIterator) = Base.HasEltype
-Base.eltype(::ConstrainedPathIterator{T}) where {T<:Integer} = T
-
-
-function Base.iterate(path_iterator::ConstrainedPathIterator{T}, state::T=1) where {T<:Integer}
-    node_edges = path_iterator.edges
-
-    while true
-        if state > length(node_edges)
-            return nothing
-        else
-            edge = node_edges[state]
-            if path_iterator.iterate_parents
-                if edge.bott_vertex == path_iterator.node_index && path_iterator.constraint(edge) #edge.top_vertex is a parent of node_index
-                    return edge.top_vertex, state + 1
-                end
-            else
-                if edge.top_vertex == path_iterator.node_index && path_iterator.constraint(edge) #edge.bott_vertex is a child of node_index
-                    return edge.bott_vertex, state + 1
-                end
-            end
-        end
-        state += 1
-    end
-end
-
 struct EdgeRelations{T}
     parents::Vector{PathEdge{T}}
     children::Vector{PathEdge{T}}
@@ -170,7 +112,7 @@ struct DerivativeGraph{T<:Integer}
 
         new_roots = Vector{Node}(undef, length(roots))
         for (i, root) in pairs(roots)
-            new_roots[i] = create_NoOp(root)
+            new_roots[i] = create_NoOp(is_NoOp(root) ? children(root)[1] : root)
         end
 
         (postorder_number, nodes, var_array) = postorder(new_roots)
@@ -204,6 +146,14 @@ struct DerivativeGraph{T<:Integer}
 
         num_nodes = length(postorder_number)
         compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
+        initialize_edge_masks!(
+            edges,
+            num_nodes,
+            length(var_array),
+            length(new_roots),
+            variable_postorder_to_index,
+            root_postorder_to_index,
+        )
 
 
 
@@ -220,6 +170,61 @@ struct DerivativeGraph{T<:Integer}
             expression_cache
         )
     end
+end
+
+"""
+    initialize_edge_masks!(
+        edges,
+        num_nodes,
+        domain_dimension,
+        codomain_dimension,
+        variable_postorder_to_index,
+        root_postorder_to_index,
+    )
+
+Initialize each edge's reachability masks from the graph topology. An edge
+inherits the variables reachable below its bottom vertex and the roots
+reachable above its top vertex.
+"""
+function initialize_edge_masks!(
+    edges::Dict{T,EdgeRelations{T}},
+    num_nodes::T,
+    domain_dimension::T,
+    codomain_dimension::T,
+    variable_postorder_to_index::IdDict{T,T},
+    root_postorder_to_index::IdDict{T,T},
+) where {T<:Integer}
+    variable_masks = [falses(domain_dimension) for _ in 1:num_nodes]
+    for node_index in one(T):num_nodes
+        mask = variable_masks[node_index]
+        variable_index = get(variable_postorder_to_index, node_index, nothing)
+        variable_index === nothing || (mask[variable_index] = true)
+        node_edges = get(edges, node_index, nothing)
+        node_edges === nothing && continue
+        for edge in children(node_edges)
+            mask .|= variable_masks[bott_vertex(edge)]
+        end
+    end
+
+    root_masks = [falses(codomain_dimension) for _ in 1:num_nodes]
+    for node_index in num_nodes:-one(T):one(T)
+        mask = root_masks[node_index]
+        root_index = get(root_postorder_to_index, node_index, nothing)
+        root_index === nothing || (mask[root_index] = true)
+        node_edges = get(edges, node_index, nothing)
+        node_edges === nothing && continue
+        for edge in parents(node_edges)
+            mask .|= root_masks[top_vertex(edge)]
+        end
+    end
+
+    for node_edges in values(edges)
+        for edge in children(node_edges)
+            reachable_variables(edge) .= variable_masks[bott_vertex(edge)]
+            reachable_roots(edge) .= root_masks[top_vertex(edge)]
+        end
+    end
+    return nothing
 end
 
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
@@ -384,29 +389,6 @@ codomain_dimension(a::DerivativeGraph) = length(roots(a))
 
 domain_dimension(a::DerivativeGraph) = length(variables(a))
 
-dimensions(a::DerivativeGraph) = (domain_dimension(a), codomain_dimension(a))
-
-
-"""
-    mean_reachable_variables(a::DerivativeGraph)
-
-Computes the average number of reachable variables across all the edges in the graph. Primarily useful for development."""
-function mean_reachable_variables(a::DerivativeGraph)
-    total = 0
-    num_edges = 0
-
-    for edge_list in values(edges(a))
-        num_edges += length(edge_list)
-        total += sum(num_reachable_variables.(edge_list))
-    end
-    return 0.5 * total / num_edges #halve the result to account for 2x redundancy of edges
-end
-
-function fraction_reachable_variables(a::DerivativeGraph)
-    return mean_reachable_variables(a) / domain_dimension(a)
-end
-
-
 #these functions implicitly assume the nodes are postorder numbered. Parent nodes will have higher numbers than children nodes. Vertices in PathEdge are sorted with highest number first. These are inefficient since the filtering happens at every access. Change to fixed parent, child fields if this is too slow.
 """
     child_edges(dgraph::DerivativeGraph, node_index::Integer)
@@ -431,8 +413,6 @@ function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     end
 end
 
-child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
-
 """
     parent_edges(dgraph::DerivativeGraph, node_index::Integer)
 
@@ -446,9 +426,6 @@ function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
     end
 end
 
-
-parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
-
 function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     num = postorder_number(dgraph, node)
 
@@ -461,8 +438,6 @@ end
 
 #put this function here because it requires child_edges to be defined before it in the file. And child edges has a dependency on _node_edges so it shouldn't move up.
 is_constant(graph::DerivativeGraph, postorder_index::Integer) = is_constant(node(graph, postorder_index))
-
-partial_value(dgraph::DerivativeGraph, parent::Node, child_index::T) where {T<:Integer} = value(child_edges(dgraph, parent)[child_index])
 
 """
     _partial_edges(
@@ -628,21 +603,6 @@ function delete_edge!(graph::DerivativeGraph, edge::PathEdge, force::Bool=false)
     return nothing
 end
 
-
-"""
-    _sparsity(graph::DerivativeGraph)
-
-Computes sparsity of Jacobian matrix = non_zero_entries/total_entries."""
-function _sparsity(graph::DerivativeGraph)
-    total_entries = codomain_dimension(graph) * domain_dimension(graph)
-    non_zero = 0
-    for i in eachindex(roots(graph))
-        non_zero += sum(reachable_variables(graph, root_index_to_postorder_number(graph, i)))
-    end
-    return non_zero / total_entries
-end
-
-
 function number_of_operations(graph::DerivativeGraph)
     #Set makes more sense but causes a weird type promotion error.
     nodes_in_graph = IdDict{Node,Bool}()
@@ -653,60 +613,4 @@ function number_of_operations(graph::DerivativeGraph)
     end
 
     return length(filter(x -> is_tree(x), collect(keys(nodes_in_graph))))
-end
-
-"""
-    graph_statistics(graph::DerivativeGraph)
-
-Computes statistics of DerivativeGraph. Primarily useful for debugging or development."""
-function graph_statistics(graph::DerivativeGraph)
-    # throw(ErrorException("this code is modifying the graph. It shouldn't. Don't use till fixed"))
-    @info "num nodes $(length(nodes(graph))) num roots $(codomain_dimension(graph)) num variables $(domain_dimension(graph))"
-
-    avg_reach_roots = mean(sum.(reachable_roots.(Iterators.flatten(parents.(values(edges(graph)))))))
-    @info "average reachable roots $avg_reach_roots"
-    n_relations(relation_func, graph) = length.(relation_func.(values(edges(graph))))
-    pnums = n_relations(parents, graph)
-    cnums = n_relations(children, graph)
-    f(relation_func, nums) = @info "$(nameof(relation_func)): total edges $(sum(nums)) mean $(mean(nums)) max and min $(extrema(nums)) median $(median(nums)) variance $(var(nums)) quantile $(quantile(nums,.1:.1:1.0))"
-
-    f(parents, pnums)
-    f(children, cnums)
-
-    shared_roots = BitVector(undef, codomain_dimension(graph))
-    shared_variables = BitVector(undef, domain_dimension(graph))
-
-    #compute nodes with branches.
-    branch_nodes = 0
-
-    for node in nodes(graph)
-        if !is_variable(graph, node) && !is_root(graph, node)
-            edges = node_edges(graph, node)
-            if edges !== nothing
-                if length(parents(edges)) == 0 || length(parents(edges)) == 1
-                    shared_roots .= 0
-                else
-                    shared_roots = copy(reachable_roots(parents(edges)[1]))
-
-                    for pedge in parents(edges) #poetntially redundant computation but efficiency not important
-                        shared_roots .&= reachable_roots(pedge)
-                    end
-                end
-
-                if length(children(edges)) == 0 || length(children(edges)) == 1
-                    shared_variables .= 0
-                else
-                    shared_variables = copy(reachable_variables(children(edges)[1]))
-                    for cedge in children(edges)
-                        shared_variables .&= reachable_variables(cedge)
-                    end
-                end
-                if any(shared_roots) || any(shared_variables)
-                    branch_nodes += 1
-                end
-            end
-        end
-    end
-    @info "$branch_nodes nodes have branches out of a total of $(length(nodes(graph))) nodes"
-    @info "sparsity of Jacobian $(_sparsity(graph))"
 end

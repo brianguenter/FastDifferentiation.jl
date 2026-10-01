@@ -9,10 +9,6 @@ DiffRules.@define_diffrule Base.:^(x, y) = :($y * ($x^($y - 1))), :(if_else($x i
 
 DiffRules.@define_diffrule Base.mod2pi(x) = :(if_else(isinteger($x / $DiffRules.twoπ), oftype(float($x), NaN), one(float($x))))
 
-# We provide this hook for special number types like `Interval`
-# that need their own special definition of `abs`.
-_abs_deriv(x) = signbit(x) ? -one(x) : one(x)
-
 for (modu, fun, arity) ∈ DiffRules.diffrules(; filter_modules=(:Base, :SpecialFunctions, :NaNMath))
     fun in [:*, :+, :abs, :mod, :rem, :max, :min] && continue # special
     for i ∈ 1:arity

@@ -196,74 +196,6 @@ end
 
 
 
-@testitem "FD.isa_connected_path 1" begin # case when path is one edge long
-    using DataStructures
-    import FastDifferentiation as FD
-
-
-    FD.@variables x y
-
-    func = x * x
-
-    gr = FD.DerivativeGraph([func])
-    subs_heap = FD.compute_factorable_subgraphs(gr)
-    subs = extract_all!(subs_heap)
-    test_sub = subs[1]
-
-    etmp = FD.parent_edges(gr, FD.dominated_node(test_sub))
-    rroots = FD.reachable_roots(etmp[1])
-    rroots .= rroots .& .!rroots
-
-    @test !FD.isa_connected_path(test_sub, etmp[1])
-    @test FD.isa_connected_path(test_sub, etmp[2])
-end
-
-@testitem "FD.isa_connected_path 2" begin #cases when path is longer than one edge and various FD.edges have either FD.roots or FD.variables reset.
-    using DataStructures
-    import FastDifferentiation as FD
-
-    FD.@variables x y
-
-    n2 = x * y
-    n4 = n2 * y
-    n5 = n2 * n4
-
-
-    graph = FD.DerivativeGraph([n4, n5])
-    subs_heap = FD.compute_factorable_subgraphs(graph)
-    subs = extract_all!(subs_heap)
-
-    _6_3_index = findfirst(x -> FD.vertices(x) == (6, 3), subs)
-    _6_3 = subs[_6_3_index]
-
-    _2_4_index = findfirst(x -> FD.vertices(x) == (2, 4), subs)
-    _2_4 = subs[_2_4_index]
-
-    _3_6_index = findfirst(x -> FD.vertices(x) == (3, 6), subs)
-    _3_6 = subs[_3_6_index]
-
-    etmp = FD.edges(graph, 3, 6)[1]
-    @test FD.isa_connected_path(_6_3, etmp)
-
-
-    etmp = FD.edges(graph, 3, 4)[1]
-    @test FD.isa_connected_path(_6_3, etmp)
-    rts = FD.reachable_roots(etmp)
-    rts[2] = 0
-
-    @test !FD.isa_connected_path(_6_3, etmp)
-    #reset path
-    rts[2] = 1
-
-    e2_4 = FD.edges(graph, 2, 4)[1]
-    @test FD.isa_connected_path(_2_4, e2_4)
-    e2_3 = FD.edges(graph, 2, 3)[1]
-    @test FD.isa_connected_path(_2_4, e2_3)
-    e3_4 = FD.edges(graph, 3, 4)[1]
-    vars = FD.reachable_variables(e3_4)
-    @. vars &= !vars
-    @test !FD.isa_connected_path(_2_4, e3_4)
-end
 @testitem "add_non_dom_edges" begin
     import FastDifferentiation as FD
     using DataStructures
@@ -317,60 +249,6 @@ end
     test_edge = (FD.PathEdge(4, 3, y, BitVector([0, 1]), BitVector([1, 1])))
     @test count(edge_fields_equal.(edges3_4, Ref(test_edge))) == 1
 end
-
-@testitem "iteration" begin
-    import FastDifferentiation as FD
-    using DataStructures
-
-
-    FD.@variables x y
-
-    n2 = x * y
-    n4 = n2 * y
-    n5 = n2 * n4
-
-
-    graph = FD.DerivativeGraph([n4, n5])
-    subs_heap = FD.compute_factorable_subgraphs(graph)
-
-    subs = extract_all!(subs_heap)
-
-
-    _6_3_index = findfirst(x -> FD.vertices(x) == (6, 3), subs)
-    _6_3 = subs[_6_3_index]
-
-    _2_4_index = findfirst(x -> FD.vertices(x) == (2, 4), subs)
-    _2_4 = subs[_2_4_index]
-
-    _3_6_index = findfirst(x -> FD.vertices(x) == (3, 6), subs)
-    _3_6 = subs[_3_6_index]
-
-    e6_3 = FD.edges(graph, 6, 3)[1]
-
-    pedges = collect(FD.edge_path(_6_3, e6_3))
-    @test length(pedges) == 1
-    @test e6_3 in pedges
-
-    e3_4 = FD.edges(graph, 3, 4)[1]
-    e6_4 = FD.edges(graph, 6, 4)[1]
-
-    pedges = collect(FD.edge_path(_6_3, e3_4))
-    @test length(pedges) == 2
-    @test all(in.((e3_4, e6_4), Ref(pedges)))
-
-    e2_3 = FD.edges(graph, 2, 3)[1]
-    e2_4 = FD.edges(graph, 2, 4)[1]
-
-    pedges = collect(FD.edge_path(_2_4, e3_4))
-    @test length(pedges) == 2
-    @test all(in.((e2_3, e3_4), Ref(pedges)))
-
-    pedges = collect(FD.edge_path(_2_4, e2_4))
-    @test length(pedges) == 1
-    @test e2_4 in pedges
-end
-
-
 
 @testitem "FD.is_tree" begin
     import FastDifferentiation as FD
@@ -433,14 +311,12 @@ end
     _6_1 = FD.dominator_subgraph(graph, 6, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
     _1_6 = FD.postdominator_subgraph(graph, 1, 6, Bool[1, 0], Bool[0, 1], Bool[1, 0])
 
-    correctly_ordered_subs = (_6_3, _1_4, _4_1, _3_6, _1_6, _6_1) #order of last two could switch and still be correct but all others should be in exactly this order.
-
-    tmp = zip(correctly_ordered_subs[1:4], subs[1:4])
-    for (correct, computed) in tmp
-        @test FD.value_equal(correct, computed)
-    end
-    #last two
-    @test (FD.value_equal(_6_1, subs[6]) && FD.value_equal(_1_6, subs[5])) || (FD.value_equal(_1_6, subs[6]) && FD.value_equal(6_1, subs[5]))
+    @test FD.value_equal(subs[1], _6_3)
+    @test FD.value_equal(subs[2], _1_4)
+    # subs[3] and subs[4] have identical diff and times_used so either order is valid
+    @test (FD.value_equal(_4_1, subs[3]) && FD.value_equal(_3_6, subs[4])) || (FD.value_equal(_3_6, subs[3]) && FD.value_equal(_4_1, subs[4]))
+    # last two
+    @test (FD.value_equal(_6_1, subs[6]) && FD.value_equal(_1_6, subs[5])) || (FD.value_equal(_1_6, subs[6]) && FD.value_equal(_6_1, subs[5]))
 end
 
 
@@ -958,10 +834,6 @@ end
     @test FD.reachable_variables(graph, 1) == one_zero
 end
 
-@testitem "relation_edges" begin
-
-end
-
 @testitem "factor_order" setup = [SimpleDominatorGraph] begin
     using DataStructures
     import FastDifferentiation as FD
@@ -1012,16 +884,14 @@ end
     @test index_1_3 < index_1_4
 end
 
-@testitem "subgraph_edges" setup = [ComplexDominatorDAG] begin
-
+@testitem "subgraph_region" setup = [ComplexDominatorDAG] begin
     using DataStructures
     import FastDifferentiation as FD
 
     dgraph = FD.DerivativeGraph([complex_dominator_dag()])
 
-    _1_4_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((4, 3), (4, 2), (2, 1), (3, 1)))))
-
-    _8_4_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((8, 7), (8, 5), (5, 4), (7, 4)))))
+    # the region of a subgraph is every node on one of its edges, except the dominated node
+    region(sub_edges, dominated) = setdiff(union(sub_edges...), (dominated,))
 
     subs = extract_all!(FD.compute_factorable_subgraphs(dgraph))
     _1_4_sub = subs[findfirst(x -> FD.vertices(x) == (1, 4), subs)]
@@ -1030,101 +900,14 @@ end
     _8_1_sub = subs[findfirst(x -> FD.vertices(x) == (8, 1), subs)]
     _1_8_sub = subs[findfirst(x -> FD.vertices(x) == (1, 8), subs)]
 
-    @test issetequal(_1_4_sub_ref, FD.subgraph_edges(_1_4_sub))
+    @test issetequal(region(((4, 3), (4, 2), (2, 1), (3, 1)), 4), FD.subgraph_region(_1_4_sub))
     FD.factor_subgraph!(_1_4_sub)
-    _1_7_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)))))
-
-
-    @test issetequal(_1_7_sub_ref, FD.subgraph_edges(_1_7_sub))
-    @test issetequal(_8_4_sub_ref, FD.subgraph_edges(_8_4_sub))
+    @test issetequal(region(((4, 1), (3, 1), (7, 4), (7, 6), (6, 3)), 7), FD.subgraph_region(_1_7_sub))
+    @test issetequal(region(((8, 7), (8, 5), (5, 4), (7, 4)), 4), FD.subgraph_region(_8_4_sub))
     FD.factor_subgraph!(_8_4_sub)
-    _8_1_sub_ref = Set(map(x -> x[1], FD.edges.(Ref(dgraph), ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6)))))
-    @test issetequal(_8_1_sub_ref, FD.subgraph_edges(_8_1_sub))
-    @test issetequal(_8_1_sub_ref, FD.subgraph_edges(_1_8_sub))
-
-end
-
-@testitem "subgraph_edges with branching" begin
-    import FastDifferentiation as FD
-
-
-
-    FD.@variables x
-
-    x = FD.Node(x)
-    gr = FD.DerivativeGraph((cos(x) * cos(x)) + x)
-    # Vis.draw_dot(gr)
-    # Vis.draw_dot(gr)
-    sub = FD.FactorableSubgraph{Int64,FD.DominatorSubgraph}(gr, 4, 1, BitVector([1]), BitVector([1]), BitVector([1]))
-
-    edges_4_1 = collect(FD.subgraph_edges(sub))
-
-    sub = FD.FactorableSubgraph{Int64,FD.PostDominatorSubgraph}(gr, 1, 4, BitVector([1]), BitVector([1]), BitVector([1]))
-    edges_1_4 = collect(FD.subgraph_edges(sub))
-
-    @test count(x -> FD.vertices(x) == (4, 3), edges_4_1) == 1
-    @test count(x -> FD.vertices(x) == (4, 1), edges_4_1) == 1
-    @test count(x -> FD.vertices(x) == (3, 2), edges_4_1) == 2
-    @test count(x -> FD.vertices(x) == (2, 1), edges_4_1) == 1
-
-    @test count(x -> FD.vertices(x) == (4, 3), edges_1_4) == 1
-    @test count(x -> FD.vertices(x) == (4, 1), edges_1_4) == 1
-    @test count(x -> FD.vertices(x) == (3, 2), edges_1_4) == 2
-    @test count(x -> FD.vertices(x) == (2, 1), edges_1_4) == 1
-end
-
-@testitem "deconstruct_subgraph" setup = [SimpleDominatorGraph] begin
-    import FastDifferentiation as FD
-    using DataStructures
-
-    """returns 4 factorable subgraphs in this order: (4,2),(1,3),(1,4),(4,1)"""
-    function simple_factorable_subgraphs()
-        _, graph, _, _ = simple_dominator_graph()
-        temp = extract_all!(FD.compute_factorable_subgraphs(graph))
-        return graph, [
-            temp[findfirst(x -> FastDifferentiation.vertices(x) == (4, 2), temp)],
-            temp[findfirst(x -> FastDifferentiation.vertices(x) == (1, 3), temp)],
-            temp[findfirst(x -> FastDifferentiation.vertices(x) == (1, 4), temp)],
-            temp[findfirst(x -> FastDifferentiation.vertices(x) == (4, 1), temp)]
-        ]
-    end
-
-    graph, subs = simple_factorable_subgraphs()
-
-    all_edges = collect(FD.unique_edges(graph))
-
-    _4_2 = all_edges[findfirst(x -> FD.vertices(x) == (4, 2), all_edges)]
-    _4_3 = all_edges[findfirst(x -> FD.vertices(x) == (4, 3), all_edges)]
-    _3_2 = all_edges[findfirst(x -> FD.vertices(x) == (3, 2), all_edges)]
-    _2_1 = all_edges[findfirst(x -> FD.vertices(x) == (2, 1), all_edges)]
-    _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
-
-    ed, nod = FD.deconstruct_subgraph(subs[1]) #can only deconstruct these two subgraphs because the larger ones need to be factored first.
-    @test issetequal([4, 2, 3], nod)
-    @test issetequal((_4_2, _4_3, _3_2), ed)
-
-    ed, nod = FD.deconstruct_subgraph(subs[2])
-    @test issetequal((_3_2, _3_1, _2_1), ed)
-    @test issetequal([1, 2, 3], nod)
-
-    FD.factor_subgraph!(subs[1]) #now can test larger subgraphs
-
-    #new FD.edges created and some FD.edges deleted during factorization so get them again
-    all_edges = collect(FD.unique_edges(graph))
-
-    _4_2 = all_edges[findfirst(x -> FD.vertices(x) == (4, 2), all_edges)]
-    _4_3 = all_edges[findfirst(x -> FD.vertices(x) == (4, 3), all_edges)]
-    _2_1 = all_edges[findfirst(x -> FD.vertices(x) == (2, 1), all_edges)]
-    _3_1 = all_edges[findfirst(x -> FD.vertices(x) == (3, 1), all_edges)]
-
-    ed, nod = FD.deconstruct_subgraph(subs[3])
-    println(ed)
-    sub_4_1 = (_4_3, _4_2, _3_1, _2_1)
-    @test issetequal(sub_4_1, ed)
-    @test issetequal([1, 2, 3, 4], nod)
-    ed, nod = FD.deconstruct_subgraph(subs[4])
-    @test issetequal(sub_4_1, ed)
-    @test issetequal([1, 2, 3, 4], nod)
+    _8_1_edges = ((8, 7), (8, 4), (4, 1), (3, 1), (6, 3), (7, 6))
+    @test issetequal(region(_8_1_edges, 1), FD.subgraph_region(_8_1_sub))
+    @test issetequal(region(_8_1_edges, 8), FD.subgraph_region(_1_8_sub))
 end
 
 @testitem "subgraph FD.reachable_roots, FD.reachable_variables" begin
@@ -1166,82 +949,6 @@ end
     end
 end
 
-@testitem "Path_Iterator" begin
-    import FastDifferentiation as FD
-    using DataStructures
-
-
-    FD.@variables nx1 ny2
-
-
-    nxy3 = nx1 * ny2
-    r2_4 = nx1 * nxy3
-    r1_5 = r2_4 * nxy3
-
-    gnodes = (nx1, ny2, nxy3, r2_4, r1_5)
-
-    graph = FD.DerivativeGraph([r1_5, r2_4])
-
-    #first verify all nodes have the postorder numbers we expect
-    for (i, nd) in pairs(gnodes)
-        @test FD.node(graph, i) === nd
-    end
-
-    sub_heap = FD.compute_factorable_subgraphs(graph)
-    subs = extract_all!(sub_heap)
-
-    sub_5_3 = first(filter(x -> x.subgraph == (5, 3), subs))
-    sub_3_5 = first((filter(x -> x.subgraph == (3, 5), subs)))
-
-    rmask = FD.reachable_dominance(sub_5_3)
-    V = FD.reachable_variables(sub_5_3)
-
-
-    path_edges1 = [FD.edges(graph, 4, 3)[1], FD.edges(graph, 5, 4)[1]]
-    path_edges2 = [FD.edges(graph, 5, 3)[1]]
-
-
-    start_edges = FD.forward_edges(sub_5_3, FD.dominated_node(sub_5_3))
-    temp_edges = collect(FD.edge_path(sub_5_3, start_edges[1]))
-
-    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    temp_edges = collect(FD.edge_path(sub_5_3, start_edges[2]))
-    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
-
-    #for postdominator subgraph (3,5)
-
-    start_edges = FD.forward_edges(sub_3_5, FD.dominated_node(sub_3_5))
-
-    temp_edges = collect(FD.edge_path(sub_3_5, start_edges[1]))
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges1), temp_edges))
-    temp_edges = collect(FD.edge_path(sub_3_5, start_edges[2]))
-    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
-
-
-    path_edges1 = [FD.edges(graph, 4, 1)[1]]
-    path_edges2 = [FD.edges(graph, 3, 1)[1], FD.edges(graph, 4, 3)[1]]
-    sub_4_1 = first(filter(x -> x.subgraph == (4, 1), subs))
-    sub_1_4 = first(filter(x -> x.subgraph == (1, 4), subs))
-
-
-    start_edges = FD.forward_edges(sub_4_1, FD.dominated_node(sub_4_1))
-    #for dominator subgraph (4,1)
-
-    temp_edges = collect(FD.edge_path(sub_4_1, start_edges[1]))
-    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    temp_edges = collect(FD.edge_path(sub_4_1, start_edges[2]))
-    @test all(x -> x[1] == x[2], zip(path_edges2, temp_edges))
-
-
-    #for postdominator subgraph (1,4)
-    start_edges = FD.forward_edges(sub_1_4, FD.dominated_node(sub_1_4))
-    temp_edges = collect(FD.edge_path(sub_1_4, start_edges[1]))
-
-    @test all(x -> x[1] == x[2], zip(path_edges1, temp_edges))
-    temp_edges = collect(FD.edge_path(sub_1_4, start_edges[2]))
-    @test all(x -> x[1] == x[2], zip(reverse(path_edges2), temp_edges))
-end
-
 @testitem "FD.set_diff" begin
     import FastDifferentiation as FD
 
@@ -1251,7 +958,7 @@ end
     @test FD.set_diff(trues(1), trues(1)) == falses(1)
 end
 
-@testitem "make_factored_edge" begin
+@testitem "factored_edges" begin
     import FastDifferentiation as FD
     using DataStructures
 
@@ -1269,17 +976,22 @@ end
     sub_heap = FD.compute_factorable_subgraphs(graph)
     subs = extract_all!(sub_heap)
 
+    # both subgraphs contain the two paths 3 → 5 and 3 → 4 → 5
     _5_3 = filter(x -> FD.vertices(x) == (5, 3), subs)[1]
-    e_5_3 = FD.make_factored_edge(_5_3, FD.evaluate_subgraph(_5_3))
+    edges_5_3, max_paths_5_3 = FD.factored_edges(_5_3)
+    e_5_3 = only(edges_5_3)
 
     _3_5 = filter(x -> FD.vertices(x) == (3, 5), subs)[1]
-    e_3_5 = FD.make_factored_edge(_3_5, FD.evaluate_subgraph(_3_5))
+    edges_3_5, max_paths_3_5 = FD.factored_edges(_3_5)
+    e_3_5 = only(edges_3_5)
 
-    @test FD.bit_equal(FD.reachable_roots(e_5_3), BitVector([1, 0]))
-    @test FD.bit_equal(FD.reachable_variables(e_5_3), BitVector([1, 1]))
+    @test max_paths_5_3 == 2
+    @test FD.reachable_roots(e_5_3) == BitVector([1, 0])
+    @test FD.reachable_variables(e_5_3) == BitVector([1, 1])
 
-    @test FD.bit_equal(FD.reachable_roots(e_3_5), BitVector([1, 1]))
-    @test FD.bit_equal(FD.reachable_variables(e_3_5), BitVector([1, 0]))
+    @test max_paths_3_5 == 2
+    @test FD.reachable_roots(e_3_5) == BitVector([1, 1])
+    @test FD.reachable_variables(e_3_5) == BitVector([1, 0])
 end
 
 
@@ -1306,7 +1018,6 @@ end
     _5_1 = FD.dominator_subgraph(graph, 5, 1, Bool[0, 1], Bool[0, 1], Bool[1, 0])
     _1_5 = FD.postdominator_subgraph(graph, 1, 5, Bool[1, 0], Bool[0, 1], Bool[1, 0])
 
-    sub_eval = FD.evaluate_subgraph(_5_3)
     FD.factor_subgraph!(_5_3)
 end
 
@@ -1330,16 +1041,6 @@ end
 end
 
 
-
-@testitem "evaluate_subgraph" setup = [SimpleDominatorGraph] begin
-
-    import FastDifferentiation as FD
-
-
-    _, graph, _, _ = simple_dominator_graph()
-
-    sub = FD.postdominator_subgraph(graph, 1, 3, BitVector([1]), BitVector([1]), BitVector([1]))
-end
 
 @testitem "factor simple ℝ²->ℝ²" begin
     import FastDifferentiation as FD
@@ -1402,41 +1103,6 @@ end
     @test FD.times_used(e) == 4
 end
 
-@testitem "FD.path_sort_order" begin
-    import FastDifferentiation as FD
-
-    e1 = FD.PathEdge(1, 2, FD.Node(1), BitVector([1, 0, 1]), BitVector([0, 0, 1]))
-    e2 = FD.PathEdge(3, 2, FD.Node(1), BitVector([1, 0, 0]), BitVector([0, 0, 1]))
-    @test FD.path_sort_order(e1, e2) == true
-
-    e3 = FD.PathEdge(3, 2, FD.Node(1), BitVector([1, 1, 0]), BitVector([0, 0, 1]))
-    @test FD.path_sort_order(e1, e3) == false
-end
-
-@testitem "FD.multiply_sequence" begin
-    import FastDifferentiation as FD
-
-
-    FD.@variables x y z w u
-
-    e1 = FD.PathEdge(1, 2, x, BitVector([1, 0, 1]), BitVector([0, 0, 1]))
-    e2 = FD.PathEdge(3, 2, y, BitVector([1, 0, 0]), BitVector([0, 0, 1]))
-    e3 = FD.PathEdge(3, 2, z, BitVector([1, 1, 0]), BitVector([0, 0, 1]))
-    e4 = FD.PathEdge(3, 2, w, BitVector([1, 1, 0]), BitVector([1, 0, 1]))
-    e5 = FD.PathEdge(3, 2, u, BitVector([1, 1, 0]), BitVector([0, 1, 1]))
-
-
-    path = [e1, e3, e2]   #2,2,1 times used
-    @test (x * z) * y === FD.multiply_sequence(path)
-    path = [e4, e5]
-    @test (w * u) === FD.multiply_sequence(path)
-    path = [e4, e5, e1]
-    @test (w * u) * x === FD.multiply_sequence(path)
-    path = [e4, e5, e1, e3]
-    @test (w * u) * (x * z) === FD.multiply_sequence(path)
-end
-
-
 @testitem "factor ℝ¹->ℝ¹ " setup = [ComplexDominatorDAG, SimpleDominatorGraph] begin
 
     import FiniteDifferences
@@ -1488,7 +1154,7 @@ end
     graph = FD.DerivativeGraph([n4, n5])
 
     df21(x, y) = 2 * x * y^3
-    df22(x, y) = 4 * x^2 * y^2
+    df22(x, y) = 3 * x^2 * y^2
     df11(x, y) = y^2
     df12(x, y) = 2 * x * y
 

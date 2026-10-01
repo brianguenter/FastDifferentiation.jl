@@ -282,12 +282,14 @@ julia> hessian(x^2*y^2,[x,y])
  (2 * (y ^ 2))  (4 * (y * x))
  (4 * (x * y))  (2 * (x ^ 2))
 ```
+
+The gradient is represented as one multi-output derivative graph, so its
+second derivative is factored with shared subexpression reuse across all
+components.
 """
 function hessian(expression::Node, variable_order::AbstractVector{S}) where {S<:Node} #would prefer to return a Symmetric matrix but that type only works with elements that are subtypes of Number. Which Node is not. Fix later, if possible.
-    tmp = DerivativeGraph(expression)
-    jac = _symbolic_jacobian!(tmp, variable_order)
-    tmp2 = DerivativeGraph(vec(jac))
-    return _symbolic_jacobian!(tmp2, variable_order)
+    gradient = jacobian([expression], variable_order)
+    return jacobian(vec(gradient), variable_order)
 end
 export hessian
 

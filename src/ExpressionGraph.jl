@@ -191,11 +191,6 @@ simplify_check_cache(f, a, b, c) = check_cache((f, a, b, c))::Node
 #Simple algebraic simplification rules for *,+,-,/. These are mostly safe, i.e., they will return exactly the same results as IEEE arithmetic. However multiplication by 0 always simplifies to 0, which is not true for IEEE arithmetic: 0*NaN=NaN, 0*Inf = NaN, for example. This should be a good tradeoff, since zeros are common in derivative expressions and can result in considerable expression simplification. Maybe later make this opt-out.
 
 
-is_nary(a::Node) = arity(a) > 2
-is_times(a::Node) = value(a) == *
-
-is_nary_times(a::Node) = is_nary(a) && value(a) == typeof(*)
-
 function simplify_check_cache(::typeof(^), a, b)
     na = Node(a)
     nb = Node(b)

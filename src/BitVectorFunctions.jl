@@ -1,13 +1,10 @@
 #These functions appear to be 
 bitvector_cache::Dict{Int64,BitVector} = Dict{Int64,BitVector}()
 
-peak_bitvector_cache_size::Int64 = 0
-
 #Really should occasionally 
 
 function get_bitvector(numbits::T) where {T<:Integer}
     global bitvector_cache
-    global peak_bitvector_cache_size
 
     tmp = get(bitvector_cache, numbits, nothing)
     if tmp !== nothing
@@ -46,17 +43,6 @@ end
 
 
 """
-    set_diff!(a::BitVector, b::BitVector)
-
-Removes elements of b from a."""
-function set_diff!(a::BitVector, b::BitVector)
-    @assert length(a) == length(b)
-    @. a = !(a & b) & a
-    return nothing
-end
-
-
-"""
     overlap(a::BitVector, b::BitVector)
 
 Returns true if a ∩ b is not empty."""
@@ -66,11 +52,6 @@ function overlap(a::BitVector, b::BitVector)
     temp .= a .& b
     result = any(temp)
     return result
-end
-
-function bit_equal(a::BitVector, b::BitVector)
-    @assert length(a) == length(b)
-    return !any(a .⊻ b)
 end
 
 is_zero(a::BitVector) = !any(a)

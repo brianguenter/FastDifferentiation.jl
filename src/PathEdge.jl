@@ -81,13 +81,6 @@ reachable_variables(e::PathEdge) = e.reachable_variables
 
 is_variable_reachable(e::PathEdge, variable_index::Integer) = reachable_variables(e)[variable_index]
 
-"""
-    to_tuple(e::PathEdge)
-
-used for printing out a more readable version of Edge"""
-to_tuple(e::PathEdge) = (e.top_vertex, e.bott_vertex)
-
-
 num_reachable_variables(e::PathEdge) = sum(e.reachable_variables)
 
 num_reachable_roots(e::PathEdge) = sum(e.reachable_roots)
@@ -100,23 +93,3 @@ can_delete(e::PathEdge) = !any(reachable_roots(e)) || !any(reachable_variables(e
 function Base.show(io::IO, a::PathEdge)
     print(io, "($(top_vertex(a)) $(bott_vertex(a))  $(num_uses(a)) $(value(a)) $(reachable_roots(a)) $(reachable_variables(a)))")
 end
-
-mask_roots!(e::PathEdge, mask::BitVector) = e.reachable_roots .= e.reachable_roots .& mask
-mask_variables!(e::PathEdge, mask::BitVector) = e.reachable_variables .= e.reachable_variables .& mask
-
-"""
-    zero_roots!(e::PathEdge, root_mask::BitVector)
-
-`root_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from root `i` and a 0 otherwise. Changes the `reachable_roots` field of the edge to be 0 where `root_mask` is 1 and unchanged otherwise."""
-zero_roots!(e::PathEdge, root_mask::BitVector) = @. e.reachable_roots = e.reachable_roots & (!root_mask)
-
-"""
-    zero_variables!(e::PathEdge, variable_mask::BitVector)
-
-`variable_mask` is a `BitVector` containing a 1 at index `i` if the edge is reachable from variable `i` and a 0 otherwise. Changes the `reachable_variables` field of the edge to be 0 where `variable_mask` is 1 and unchanged otherwise."""
-zero_variables!(e::PathEdge, variable_mask::BitVector) = @. e.reachable_variables = e.reachable_variables & (!variable_mask)
-
-
-roots_resettable(e::PathEdge, root_mask::BitVector) = overlap(e.reachable_roots, root_mask)
-
-variables_resettable(e::PathEdge, variable_mask::BitVector) = overlap(e.reachable_variables, variable_mask)
