@@ -1543,6 +1543,32 @@ end
     end
 end
 
+@testitem "Jv with a repeated variable" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y
+
+    # J has two equal columns for x, so Jv = 2xy (v₁ + v₂) + x² v₃
+    jv, v = FD.jacobian_times_v([x^2 * y], [x, x, y])
+    @test FD.make_function(jv, [[x, y]; v])([2.0, 3.0, 5.0, 7.0, 11.0]) ≈ [12.0 * (5.0 + 7.0) + 4.0 * 11.0]
+end
+
+@testitem "Jv, Jᵀv, and Hv with variables absent from the graph" begin
+    import FastDifferentiation as FD
+
+    FD.@variables x y z
+
+    # z does not occur in the function, and y does not occur in the gradient of x^3
+    jv, v = FD.jacobian_times_v([x^2, x * y], [x, y, z])
+    @test FD.make_function(jv, [[x, y, z]; v])([2.0, 3.0, 5.0, 7.0, 11.0, 13.0]) ≈ [28.0, 3.0 * 7.0 + 2.0 * 11.0]
+
+    jtv, r = FD.jacobian_transpose_v([x^2, x * y], [x, y, z])
+    @test FD.make_function(jtv, [[x, y, z]; r])([2.0, 3.0, 5.0, 7.0, 11.0]) ≈ [4.0 * 7.0 + 3.0 * 11.0, 2.0 * 11.0, 0.0]
+
+    hv, v2 = FD.hessian_times_v(x^3, [x, y])
+    @test FD.make_function(hv, [[x, y]; v2])([2.0, 3.0, 5.0, 7.0]) ≈ [60.0, 0.0]
+end
+
 @testitem "sparse runtime generated functions" begin
     using SparseArrays
     import FastDifferentiation as FD

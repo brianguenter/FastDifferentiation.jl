@@ -146,15 +146,33 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
     graph = DerivativeGraph(terms)
     v_vector = make_variables(gensym(), length(partial_variables))
     factor!(graph)
+
+    #a variable may occur more than once in partial_variables. Its edges are scaled once, by the sum of its v's, because scaling them again for each occurrence would multiply the v's together.
+    var_indices = Int[]
+    scales = Node[]
+    position = Dict{Int,Int}()
     for (variable, one_v) in zip(partial_variables, v_vector)
+        var_index = variable_node_to_index(graph, variable)
+        var_index === nothing && continue #variable not in the graph, so it contributes nothing to Jv
+        k = get(position, var_index, nothing)
+        if k === nothing
+            push!(var_indices, var_index)
+            push!(scales, one_v)
+            position[var_index] = length(var_indices)
+        else
+            scales[k] += one_v
+        end
+    end
+
+    for (var_index, scale) in zip(var_indices, scales)
         new_edges = PathEdge[]
-        old_edges = collect(parent_edges(graph, variable)) #can't use iterator returned by parent_edges because it will include new edges. Need snapshot of old edges.
+        old_edges = collect(parent_edges(graph, variable_index_to_postorder_number(graph, var_index))) #can't use iterator returned by parent_edges because it will include new edges. Need snapshot of old edges.
         for parent in old_edges
             push!(new_edges,
                 PathEdge(
                     top_vertex(parent),
                     bott_vertex(parent),
-                    value(parent) * one_v,
+                    value(parent) * scale,
                     copy(reachable_variables(parent)),
                     copy(reachable_roots(parent))
                 )
@@ -183,14 +201,9 @@ function jacobian_times_v(terms::AbstractVector{T}, partial_variables::AbstractV
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
-    for (i, var) in pairs(partial_variables)
-        var_index = variable_node_to_index(graph, var)
+    for var_index in var_indices
         for root_index in 1:codomain_dimension(graph)
-            if var_index !== nothing
-                result[root_index] += evaluate_path(graph, root_index, var_index)
-            else
-                result[root_index, i] = zero(Node) #TODO fix this so get more generic zero value
-            end
+            result[root_index] += evaluate_path(graph, root_index, var_index)
         end
     end
 
@@ -253,13 +266,10 @@ function jacobian_transpose_v(terms::AbstractVector{T}, partial_variables::Abstr
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
     for (i, var) in pairs(partial_variables)
+        var_index = variable_node_to_index(graph, var)
+        var_index === nothing && continue #variable not in the graph, so its entry of Jᵀv stays zero
         for root_index in 1:codomain_dimension(graph)
-            var_index = variable_node_to_index(graph, var)
-            if var_index !== nothing
-                result[i] += evaluate_path(graph, root_index, var_index)
-            else
-                result[i] = zero(Node) #TODO fix this so get more generic zero value
-            end
+            result[i] += evaluate_path(graph, root_index, var_index)
         end
     end
 

@@ -185,47 +185,49 @@ const PathGroup = Tuple{BitVector,BitVector,Node,Int}
 const PathGroups = Dict{Tuple{Vector{UInt64},Vector{UInt64}},PathGroup}
 
 """
-    subgraph_path_groups(subgraph, current_node, memo)
+    subgraph_path_groups(subgraph::FactorableSubgraph{T,DominatorSubgraph}, region)
 
-Returns the live paths from `current_node` to `dominating_node(subgraph)`, grouped by the pair of masks (dominance, non-dominance) for which every edge of the path is live.  Each group stores the sum of its path products and its number of paths.  The dynamic-programming evaluation handles branching inside the subgraph without enumerating complete paths.
-"""
-function subgraph_path_groups(subgraph::FactorableSubgraph{T,S}, current_node::T, memo::Dict{T,PathGroups}) where {T,S<:AbstractFactorableSubgraph}
-    cached = get(memo, current_node, nothing)
-    cached === nothing || return cached
+Returns the live paths from `dominated_node(subgraph)` to `dominating_node(subgraph)`, grouped by the pair of masks (dominance, non-dominance) for which every edge of the path is live.  Each group stores the sum of its path products and its number of paths.  The dynamic-programming evaluation handles branching inside the subgraph without enumerating complete paths.
 
-    result = PathGroups()
-    if current_node == dominating_node(subgraph)
-        dom, nondom = copy(reachable_dominance(subgraph)), copy(non_dominance_mask(subgraph))
-        result[(mask_key(dom), mask_key(nondom))] = (dom, nondom, Node(1), 1)
-        memo[current_node] = result
-        return result
-    end
-
-    for edge in forward_edges(subgraph, current_node)
-        on_subgraph_path(subgraph, edge) || continue
-        dmask = reachable_dominance(subgraph, edge)
-        nmask = non_dominance_mask(subgraph, edge)
-        for (suffix_dom, suffix_nondom, suffix_value, suffix_count) in values(subgraph_path_groups(subgraph, forward_vertex(subgraph, edge), memo))
-            dom = dmask .& suffix_dom
-            nondom = nmask .& suffix_nondom
-            (any(dom) && any(nondom)) || continue
-            key = (mask_key(dom), mask_key(nondom))
-            # multiply from the top of the subgraph downwards, which is the order
-            # in which follow_path forms products, so that products can be shared
-            path_value = suffix_value * value(edge)
-            previous = get(result, key, nothing)
-            result[key] = previous === nothing ? (dom, nondom, path_value, suffix_count) : (dom, nondom, previous[3] + path_value, previous[4] + suffix_count)
+The nodes of `region` are visited in topological order from the top down, and each node pulls the groups of the nodes above it, so that each product is formed from the top of the subgraph down.  The traversal is iterative so that long paths cannot overflow the stack."""
+function subgraph_path_groups(subgraph::FactorableSubgraph{T,DominatorSubgraph}, region::Vector{T}) where {T}
+    top = dominating_node(subgraph)
+    bottom = dominated_node(subgraph)
+    suffixes = Dict{T,PathGroups}()
+    for u in sort!(vcat(bottom, region), rev=true) # topological order, from the top down
+        result = PathGroups()
+        if u == top
+            dom, nondom = copy(reachable_dominance(subgraph)), copy(non_dominance_mask(subgraph))
+            result[(mask_key(dom), mask_key(nondom))] = (dom, nondom, Node(1), 1)
+        else
+            for edge in forward_edges(subgraph, u)
+                on_subgraph_path(subgraph, edge) || continue
+                suffix = get(suffixes, forward_vertex(subgraph, edge), nothing)
+                suffix === nothing && continue
+                dmask = reachable_dominance(subgraph, edge)
+                nmask = non_dominance_mask(subgraph, edge)
+                for (suffix_dom, suffix_nondom, suffix_value, suffix_count) in values(suffix)
+                    dom = dmask .& suffix_dom
+                    nondom = nmask .& suffix_nondom
+                    (any(dom) && any(nondom)) || continue
+                    key = (mask_key(dom), mask_key(nondom))
+                    # multiply from the top of the subgraph downwards, which is the order
+                    # in which follow_path forms products, so that products can be shared
+                    path_value = suffix_value * value(edge)
+                    previous = get(result, key, nothing)
+                    result[key] = previous === nothing ? (dom, nondom, path_value, suffix_count) : (dom, nondom, previous[3] + path_value, previous[4] + suffix_count)
+                end
+            end
         end
+        suffixes[u] = result
     end
-
-    memo[current_node] = result
-    return result
+    return suffixes[bottom]
 end
 
 """
     subgraph_path_groups(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, region)
 
-Returns the same path groups as the recursive method for dominator subgraphs, for the paths from `dominated_node(subgraph)` down to `dominating_node(subgraph)`.  The groups are pushed downwards through the nodes of `region` in topological order, so that each product is formed from the top of the subgraph down, as it is for dominator subgraphs."""
+Returns the same path groups as the method for dominator subgraphs, for the paths from `dominated_node(subgraph)` down to `dominating_node(subgraph)`.  The groups are pushed downwards through the nodes of `region` in topological order, so that each product is formed from the top of the subgraph down, as it is for dominator subgraphs."""
 function subgraph_path_groups(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}, region::Vector{T}) where {T}
     top = dominated_node(subgraph)
     bottom = dominating_node(subgraph)
@@ -289,12 +291,7 @@ Returns the replacement edges for `subgraph` and the largest number of paths tha
 function factored_edges(subgraph::FactorableSubgraph{T,S}, region::Vector{T}=subgraph_region(subgraph)) where {T,S<:AbstractFactorableSubgraph}
     dom = dominating_node(subgraph)
     dmd = dominated_node(subgraph)
-    path_groups = if S === DominatorSubgraph
-        subgraph_path_groups(subgraph, dmd, Dict{T,PathGroups}())
-    else
-        subgraph_path_groups(subgraph, region)
-    end
-    groups = collect(values(path_groups))
+    groups = collect(values(subgraph_path_groups(subgraph, region)))
     rows = index_classes(BitVector[g[1] for g in groups], length(reachable_dominance(subgraph)))
     columns = index_classes(BitVector[g[2] for g in groups], non_dominance_dimension(subgraph))
 
