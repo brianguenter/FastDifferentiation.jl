@@ -180,11 +180,9 @@ end
 function _compute_dom_table(graph::DerivativeGraph{T}, ::Val{compute_dominators}, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T,compute_dominators}
     if compute_dominators
         next_vertices_relation = (gr, curr_node::T) -> children(gr, curr_node)
-        upward_path = true
         order_test = <
     else
         next_vertices_relation = (gr, curr_node::T) -> parents(gr, curr_node)
-        upward_path = false
         order_test = >
     end
 
@@ -196,48 +194,40 @@ function _compute_dom_table(graph::DerivativeGraph{T}, ::Val{compute_dominators}
         empty!(current_dom)
     end
 
-    #this is only necessary if trying to multithread, otherwise can have single work_heap allocated outside for loop which is almost certainly more efficient for single threaded code.
-    if compute_dominators
-        work_heap = MutableBinaryMaxHeap{T}()
-    else
-        work_heap = MutableBinaryMinHeap{T}()
-    end
-
-    visited = Set{T}()
-
-    push!(work_heap, node_postorder_number)
-
-    #do BFS traversal of graph from largest postorder numbers downward. Don't think BFS is necessary and would probably be faster to use DFS without work_heap.
-
-
-    while length(work_heap) != 0
-        curr_level = length(work_heap)
-
-        for _ in 1:curr_level
-
-            curr_node = pop!(work_heap)
-
-            parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
-
-            if compute_dominators
-                start_node = root_index_to_postorder_number(graph, start_index)
-            else
-                start_node = variable_index_to_postorder_number(graph, start_index)
-            end
-
-            fill_idom_table!(parent_vertices, current_dom, curr_node, order_test, start_node)
-
-            if next_vertices_relation(graph, curr_node) !== nothing
-                #get next set of vertices
-                for next_vertex in next_vertices_relation(graph, curr_node) #for dominator this is the children of the current node, unconstrained. for postdominator it is the parents, unconstrained.
-                    if !(next_vertex in visited)
-                        push!(work_heap, next_vertex)
-                        push!(visited, next_vertex)
-                    end
-
+    #fill_idom_table! requires nodes to be processed in strictly decreasing (dominators) / increasing
+    #(postdominators) postorder-number order: it looks up already-computed dom-table entries for a node's
+    #parents (dominators) / children (postdominators), which always have a larger (dominators) / smaller
+    #(postdominators) postorder number under this graph's postorder-numbering invariant (parents > children).
+    #Collect the set of nodes reachable from node_postorder_number via next_vertices_relation (unconstrained
+    #children/parents - same relation the old code used to grow its worklist), then sort once and process in
+    #that order. This replaces a binary heap used purely as a sorted worklist (one push!/pop! per node) with a
+    #single bulk sort, which is cheaper in practice for the typically-small reachable sets this is called with
+    #(once per root and once per variable, every factor! call).
+    num_nodes = num_vertices(graph)
+    discovered = falses(num_nodes)
+    discovered[node_postorder_number] = true
+    reachable = T[node_postorder_number]
+    i = 1
+    while i <= length(reachable)
+        curr_node = reachable[i]
+        nxt = next_vertices_relation(graph, curr_node)
+        if nxt !== nothing
+            for next_vertex in nxt
+                if !discovered[next_vertex]
+                    discovered[next_vertex] = true
+                    push!(reachable, next_vertex)
                 end
             end
         end
+        i += 1
+    end
+    sort!(reachable, rev=compute_dominators)
+
+    start_node = compute_dominators ? root_index_to_postorder_number(graph, start_index) : variable_index_to_postorder_number(graph, start_index)
+
+    for curr_node in reachable
+        parent_vertices = relation_node_indices(path_constraint, curr_node) #for dominator this will return the parents of the current node, constrained to lie on the path to the start_vertex.
+        fill_idom_table!(parent_vertices, current_dom, curr_node, order_test, start_node)
     end
 
     return current_dom
