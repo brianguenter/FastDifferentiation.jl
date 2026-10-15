@@ -40,10 +40,17 @@ function _symbolic_jacobian!(graph::DerivativeGraph, partial_variables::Abstract
 
     @assert verify_paths(graph) #ensure a single path from each root to each variable. Derivative is likely incorrect if this is not true.
 
-    for (i, var) in pairs(partial_variables)
-        var_index = variable_node_to_index(graph, var)
-        for root_index in 1:codomain_dimension(graph)
-            if var_index !== nothing
+    #Precompute each variable's index once (it doesn't depend on root_index), and, once per root, which
+    #variables are reachable at all from that root. evaluate_path/follow_path would otherwise be called for
+    #every (root,variable) pair regardless of sparsity, walking the graph and allocating a path vector only to
+    #discover there is no path and return zero(Node). Most (root,variable) pairs are structurally zero for
+    #sparse Jacobians/Hessians, so this turns an O(outdim * nvars) number of full graph walks into one cheap
+    #bitmask check per pair, with outdim bitmask computations and nvars index lookups total.
+    var_indices = [variable_node_to_index(graph, var) for var in partial_variables]
+    for root_index in 1:outdim
+        root_vars = reachable_variables(graph, root_index_to_postorder_number(graph, root_index))
+        for (i, var_index) in pairs(var_indices)
+            if var_index !== nothing && root_vars[var_index]
                 result[root_index, i] = evaluate_path(graph, root_index, var_index)
             else
                 result[root_index, i] = zero(Node) #TODO fix this so get more generic zero value

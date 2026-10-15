@@ -169,6 +169,15 @@ end
 
 """compute the idom or pidom table starting from root or variable corresponding to start_index."""
 function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
+    return _compute_dom_table(graph, Val(compute_dominators), start_index, node_postorder_number, current_dom)
+end
+
+#Function barrier for compute_dom_table. compute_dominators is a runtime Bool in the public method above, so
+#order_test and next_vertices_relation would otherwise be inferred as a 2-way union of distinct operator/closure
+#types, forcing dynamic dispatch on every comparison and relation lookup in the BFS below (which runs up to
+#num_nodes times, across n+m calls per factor!). Moving the branch to a Val type parameter makes each branch a
+#separate compiled specialization with concrete, non-Union types throughout.
+function _compute_dom_table(graph::DerivativeGraph{T}, ::Val{compute_dominators}, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T,compute_dominators}
     if compute_dominators
         next_vertices_relation = (gr, curr_node::T) -> children(gr, curr_node)
         upward_path = true
