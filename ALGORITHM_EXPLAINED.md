@@ -3,11 +3,13 @@
 This document explains, in plain language backed by a real traced example, what was
 wrong with factorization on `main`, how the new algorithm on this branch fixes it,
 and why the fix is actually correct — not just "passes the tests we happened to
-write." This branch makes the minimum change needed to fix factorization: it keeps
-every existing function (including the ones the new code no longer calls) and adds
-only what correctness requires, in `src/DerivativeGraph.jl`, `src/FactorableSubgraph.jl`,
-and `src/Factoring.jl`, plus a regression test (`test/test-complex-expressions.jl`) for
-the issues below.
+write." This branch makes the minimum change needed to fix factorization: the
+functions described below, in `src/DerivativeGraph.jl`, `src/FactorableSubgraph.jl`,
+and `src/Factoring.jl`, plus the code in those same files (and in
+`src/GraphProcessing.jl`) that the fix leaves with no remaining caller, which is
+removed along with it. A regression test (`test/test-complex-expressions.jl`) covers
+the issues below, and `test/test-differentiation-interface.jl` runs the broader
+`DifferentiationInterfaceTest` scenario suite against this branch.
 
 ---
 
@@ -59,31 +61,33 @@ masks and path groups printed out.
 
 ```julia
 using FastDifferentiation
-@variables x02 x04 u1
-vars = [x02, x04, u1]
+@variables v1 v2 v3
+vars = [v1, v2, v3]
 
-d   = x04 - u1
-s   = x02 * d
-p   = x02 + x04
-n12 = x04 + s
+d   = v2 - v3
+s   = v1 * d
+p   = v1 + v2
+n12 = v2 + s
 n10 = p + s
 n15 = n12 * p
-n16 = x04 + n15
-n18 = n16 * x02
-f   = n10 + n18
+n16 = v2 + n15
+n18 = n16 * v1
+r1  = n10 + n18
 ```
 
-`s` is computed once but used twice — directly inside `n10`, and again (buried
-inside `n12`) on the way to `n18`. Those two uses reconverge only at `f` itself.
-That's the shape that creates a genuine factorable subgraph: a node with two
-parents whose paths merge again further up the graph. `p` is shared the same way
-(used by both `n10` and `n15`), which turns out to matter for *why* the bug
-triggers, below.
+`v1`, `v2`, `v3` are the three input variables and `r1` is the single output
+(root), matching the `v:i`/`r:i` labels used in the masks and diagrams throughout
+this document. `s` is computed once but used twice — directly inside `n10`, and
+again (buried inside `n12`) on the way to `n18`. Those two uses reconverge only at
+`r1` itself. That's the shape that creates a genuine factorable subgraph: a node
+with two parents whose paths merge again further up the graph. `p` is shared the
+same way (used by both `n10` and `n15`), which turns out to matter for *why* the
+bug triggers, below.
 
 ### 2.2 Confirmed broken on `main`
 
 ```julia
-j = jacobian([f], vars)
+j = jacobian([r1], vars)
 ```
 ```
 ERROR: AssertionError: Should only be one path from root 1 to variable 2.
@@ -106,23 +110,23 @@ Agrees with central finite differences at every test point.
 
 ### 2.4 What the graph actually looks like
 
-Postorder numbering, straight from `DerivativeGraph`'s own output (`x02`→1,
-`x04`→2, `u1`→4):
+Postorder numbering, straight from `DerivativeGraph`'s own output (`v1`→1,
+`v2`→2, `v3`→4):
 
 ```
-3  = p  = x02 + x04        -- used by BOTH node 7 and node 9 below
-5  = d  = x04 - u1
-6  = s  = x02 * d           -- used by BOTH node 7 and node 8 below
+3  = p  = v1 + v2        -- used by BOTH node 7 and node 9 below
+5  = d  = v2 - v3
+6  = s  = v1 * d           -- used by BOTH node 7 and node 8 below
 7  = n10 = p + s
-8  = n12 = x04 + s
+8  = n12 = v2 + s
 9  = n15 = n12 * p
-10 = n16 = x04 + n15
-11 = n18 = n16 * x02
-12 = f  = n10 + n18
+10 = n16 = v2 + n15
+11 = n18 = n16 * v1
+12 = r1  = n10 + n18
 ```
 
 Node **6** (`s`) has two parents — the edge `7→6` and the edge `8→6` — and both
-chains reconverge at **node 12** (`f`). That's the factorable subgraph `[b=12,
+chains reconverge at **node 12** (`r1`). That's the factorable subgraph `[b=12,
 c=6]`: a dominator subgraph, since node 12 is on every path from node 6 up to the
 (single) root.
 
@@ -195,12 +199,12 @@ visible.
 ### 2.5 Why the *old* algorithm broke here — concretely
 
 The subgraph's variable mask (the union of every variable reachable from node 6)
-is `[x02, x04, u1] = [1,1,1]`. But when `subgraph_path_groups` (the new code)
+is `[v1, v2, v3] = [1,1,1]`. But when `subgraph_path_groups` (the new code)
 actually walks the two real paths from node 6 up to node 12, it finds they are
 **not** the same:
 
 ```
-path through node 7 (n10 = p + s):        non_dom_mask = [1, 0, 1]   (x02, u1 — no x04)
+path through node 7 (n10 = p + s):        non_dom_mask = [1, 0, 1]   (v1, v3 — no v2)
 path through node 8→9→10→11 (n12→n15→n16→n18): non_dom_mask = [1, 1, 1]   (all three)
 ```
 
@@ -213,7 +217,7 @@ subset(reachable_mask, reachable_variables(edge))   # reachable_mask = [1,1,1], 
 ```
 
 i.e. it demanded that *each individual edge's own mask be a superset of the whole
-subgraph's union mask*. The edge on the `node 7` path carries only `x02` and `u1`
+subgraph's union mask*. The edge on the `node 7` path carries only `v1` and `v3`
 — correct and genuine — and fails that test against `[1,1,1]`, so the path gets
 rejected mid-walk. That's a real derivative term silently dropped, which is exactly
 how the graph was left with node 12 still pointing at two unresolved children when
@@ -229,16 +233,16 @@ all — node 6 (`s`) itself depends on all three variables, so you might expect
 every edge on the way up from it to carry `[1,1,1]`. Tracing the real sequence of
 `factor!` steps shows what happens: **exactly one** smaller, unrelated subgraph is
 factored before `[12, 6]` is reached. Node 7 (`n10 = p + s`) has two children, `p`
-and `s`, that *both* separately reach `x04` (`p = x02+x04` directly; `s` via `d =
-x04-u1`) — so `[2, 7]` (collapse the two routes to `x04`) fires first. That step
-splits the `x04` bit off the `7→6` edge onto a brand-new direct edge from node 7
-straight to variable `x04`, because there were two routes into `x04` to collapse
-into one. Node 8 (`n12 = x04+s`) has no such redundancy for `x04` (its only route to
-`x04` other than the direct one *is* the direct one), and no sibling at all for
-`x02`, so nothing touches the `8→...→6` chain before `[12, 6]`'s turn comes.
+and `s`, that *both* separately reach `v2` (`p = v1+v2` directly; `s` via `d =
+v2-v3`) — so `[2, 7]` (collapse the two routes to `v2`) fires first. That step
+splits the `v2` bit off the `7→6` edge onto a brand-new direct edge from node 7
+straight to variable `v2`, because there were two routes into `v2` to collapse
+into one. Node 8 (`n12 = v2+s`) has no such redundancy for `v2` (its only route to
+`v2` other than the direct one *is* the direct one), and no sibling at all for
+`v1`, so nothing touches the `8→...→6` chain before `[12, 6]`'s turn comes.
 
 By the time `[12, 6]` itself is processed (step 2 of 14), edge `7→6` has already
-lost its `x04` bit to that one earlier step and carries only `x02` and `u1` —
+lost its `v2` bit to that one earlier step and carries only `v1` and `v3` —
 hence the `[1,0,1]` path. Edge `8→6` was never touched and still carries
 everything — hence the `[1,1,1]` path. The `[1,1,1]` printed as the subgraph's own
 `reach_vars` is its mask *as recorded at discovery time*, before that one prior
@@ -316,18 +320,18 @@ graph TD
 ```
 
 It's tempting to read the dashed edges at nodes 8 and 10 above (both landing on
-`x04`) as "each node on the long path needs its own extra route to `x04`." That's
+`v2`) as "each node on the long path needs its own extra route to `v2`." That's
 not actually it — I checked by replacing those dashed edges with a plain,
-unrelated constant at every hop (so nothing downstream touches `x04` a second time
+unrelated constant at every hop (so nothing downstream touches `v2` a second time
 at all) and the crash on `main` was unaffected. What *is* load-bearing is simply
-the **length** of the long path. With only one or two nodes between `s` and `f`
+the **length** of the long path. With only one or two nodes between `s` and `r1`
 instead of four, `main` gets the right answer — the bug doesn't appear at all. At
 three nodes, `main` silently computes a *wrong* answer (a genuine bug, just a
 quiet one — confirmed by hand, it has a spurious duplicated term). Only at four
 nodes does it escalate to this unambiguous crash. The reason is `factor!`'s
 processing order: subgraphs are popped off its heap by a priority number that
-grows with the distance between a subgraph's two ends, so the `[f, s]` subgraph
-and the short path's `x04`-collapsing subgraph (`[2, 7]`, discussed above) race for
+grows with the distance between a subgraph's two ends, so the `[r1, s]` subgraph
+and the short path's `v2`-collapsing subgraph (`[2, 7]`, discussed above) race for
 which one gets processed first — and the long path needs to be *this* long before
 the race comes out the way that exposes the bug. So this example is already at the
 node count where the failure is a clean, unmissable assertion rather than a subtle
@@ -342,29 +346,29 @@ group's edges actually have in common, instead of lumping everything into one
 union. The real, printed output for this subgraph:
 
 ```
-group (short path, node 7):  dom_mask=[root 1]   non_dom_mask=[x02, —, u1]   1 path   value = 1
-group (long path, 8→9→10→11): dom_mask=[root 1]  non_dom_mask=[x02,x04,u1]   1 path   value = x02 * (x02 + x04)
+group (short path, node 7):  dom_mask=[root 1]   non_dom_mask=[v1, —, v3]   1 path   value = 1
+group (long path, 8→9→10→11): dom_mask=[root 1]  non_dom_mask=[v1,v2,v3]   1 path   value = v1 * (v1 + v2)
 ```
 
 (Those values are exactly `∂n10/∂s = 1` for the short path, and
-`∂n18/∂n16 · ∂n15/∂n12 = x02 · (x02+x04)` for the long one — real products of real
+`∂n18/∂n16 · ∂n15/∂n12 = v1 · (v1+v2)` for the long one — real products of real
 edge values, not illustrative numbers.)
 
 `factored_edges` then partitions the variable indices by *which groups actually
-cover them* — `x02` and `u1` are covered by both groups, `x04` is covered only by
+cover them* — `v1` and `v3` are covered by both groups, `v2` is covered only by
 the long-path group — and emits one replacement edge per resulting class, each
 carrying the exact sum of the groups that apply to it. The real before/after at
 node 12:
 
 ```
-BEFORE factoring, children of node 12 (= f):
+BEFORE factoring, children of node 12 (= r1):
     12 -> 7    reach_vars=[1,1,1]  reach_roots=[1]
     12 -> 11   reach_vars=[1,1,1]  reach_roots=[1]
 
 AFTER factor!, children of node 12:
-    12 -> 6    reach_vars=[0,0,1]  reach_roots=[1]     # the u1-only part, through s
-    12 -> 2    reach_vars=[0,1,0]  reach_roots=[1]     # the x04-only part, direct
-    12 -> 1    reach_vars=[1,0,0]  reach_roots=[1]     # the x02-only part, direct
+    12 -> 6    reach_vars=[0,0,1]  reach_roots=[1]     # the v3-only part, through s
+    12 -> 2    reach_vars=[0,1,0]  reach_roots=[1]     # the v2-only part, direct
+    12 -> 1    reach_vars=[1,0,0]  reach_roots=[1]     # the v1-only part, direct
 ```
 
 Three disjoint edges whose masks tile the original `[1,1,1]` exactly, instead of
@@ -392,9 +396,9 @@ graph TD
     n4y(["4<br/>r:1 v:3"]):::var
 
     n13y --> n12y
-    n12y -->|"u1 (through s)"| n6y
-    n12y -->|"x04 (direct)"| n2y
-    n12y -->|"x02 (direct)"| n1y
+    n12y -->|"v3 (through s)"| n6y
+    n12y -->|"v2 (direct)"| n2y
+    n12y -->|"v1 (direct)"| n1y
     n6y --> n1y
     n6y --> n5y
     n5y --> n2y
@@ -407,17 +411,17 @@ graph TD
 
 Node 12 now has exactly one edge per variable — the single-path structure that
 `follow_path` needs — and `s` is still computed once and shared, carrying only the
-`u1` contribution that actually still routes through it. That's the whole payoff:
+`v3` contribution that actually still routes through it. That's the whole payoff:
 same three numbers in the Jacobian, far fewer operations to get them, and (unlike
 `main`) no crash.
 
 One thing worth not glossing over: node 6 (`s`) and node 5 (`d`) are labeled
 `v:3` here, down from `v:1,v:2,v:3` before factoring — even though `s` still
-*literally equals* `x02 * (x04 - u1)` and mathematically depends on all three
+*literally equals* `v1 * (v2 - v3)` and mathematically depends on all three
 variables just as much as it ever did. The mask isn't describing what `s`
 depends on; it's describing which variables still route *through this specific
-edge structure* to reach the output. Once the `x02` and `x04` contributions were
-relocated onto their own direct edges (`12→1`, `12→2`), the `x02`/`x04` bits on
+edge structure* to reach the output. Once the `v1` and `v2` contributions were
+relocated onto their own direct edges (`12→1`, `12→2`), the `v1`/`v2` bits on
 `s`'s own edges became dead weight — nothing above them would ever read them
 again — so `prune_stale_masks!` (acting on the *other*, later-processed
 subgraphs for nodes 1, 2 and 3, not `[12,6]` itself) cleared them. This is the
@@ -549,10 +553,10 @@ live edge — so no genuinely live path ever loses an edge it needs.
 
 This matters for more than tidiness: Claims A and B both depend on every edge's
 mask accurately reflecting live reachability. Stale bits left behind are exactly
-what made the *old* `subgraph_exists` check (still present in the source, but no
-longer called by `factor_subgraph!`) misjudge a resolved subgraph as still forked,
-or vice versa, and either crash or silently leave a second path alive for some
-`(i,j)` pair.
+what made the *old* `subgraph_exists` check (removed, along with the rest of the
+path-walking code it depended on, since `factor_subgraph!` no longer calls it)
+misjudge a resolved subgraph as still forked, or vice versa, and either crash or
+silently leave a second path alive for some `(i,j)` pair.
 
 ### 3.6 From one step to the whole algorithm
 

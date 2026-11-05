@@ -494,8 +494,6 @@ function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     end
 end
 
-child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
-
 """
     parent_edges(dgraph::DerivativeGraph, node_index::Integer)
 
@@ -509,8 +507,6 @@ function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
     end
 end
 
-
-parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
 
 function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     num = postorder_number(dgraph, node)
