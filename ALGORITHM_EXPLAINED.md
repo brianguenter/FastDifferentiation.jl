@@ -204,8 +204,21 @@ through word-level mask operations.
 ### 4.3 Detaching the old paths — `add_non_dom_edges!`, `reset_edge_masks!`
 
 For each new edge, the pairs it now carries must be removed from the old paths
-through `[b, c]`. Every such path starts with an edge leaving `c` toward `b` (a
-*boundary* edge), so it suffices to edit those:
+through `[b, c]`. Let the new edge's block have dominance bits `R` (its row
+class) and non-dominance bits `C` (its column class). A **boundary edge** of
+the block is an edge `e` such that
+
+- `e` is incident to `c` on the side facing `b`: for a dominator subgraph `c`
+  is `e`'s bottom vertex (`e` is a parent edge of `c`); for a postdominator
+  subgraph `c` is `e`'s top vertex (`e` is a child edge of `c`);
+- `e`'s dominance mask contains **all** of `R`; and
+- `e`'s non-dominance mask contains **at least one** bit of `C`.
+
+(This is `test_edge` applied to a subgraph whose masks are `R` and `C`.)
+Requiring all of `R` misses nothing: the bits of `R` lie in exactly the same
+path groups, so an edge on a live path through `[b, c]` carries either all of
+`R` or none of it. Every old path that serves a pair in `R × C` starts at `c`
+with a boundary edge, so editing the boundary edges suffices:
 
 - `add_non_dom_edges!` splits a boundary edge whose dominance mask has bits
   outside the block's row class, so that the copy carrying the block's rows can
