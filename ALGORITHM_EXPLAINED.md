@@ -234,12 +234,85 @@ every edge on the way up from it to carry `[1,1,1]`. Tracing the real sequence o
 `factor!` steps shows what happens: **exactly one** smaller, unrelated subgraph is
 factored before `[12, 6]` is reached. Node 7 (`n10 = p + s`) has two children, `p`
 and `s`, that *both* separately reach `v2` (`p = v1+v2` directly; `s` via `d =
-v2-v3`) — so `[2, 7]` (collapse the two routes to `v2`) fires first. That step
-splits the `v2` bit off the `7→6` edge onto a brand-new direct edge from node 7
-straight to variable `v2`, because there were two routes into `v2` to collapse
-into one. Node 8 (`n12 = v2+s`) has no such redundancy for `v2` (its only route to
-`v2` other than the direct one *is* the direct one), and no sibling at all for
-`v1`, so nothing touches the `8→...→6` chain before `[12, 6]`'s turn comes.
+v2-v3`) — so `[2, 7]` (collapse the two routes to `v2`) fires first, as step 1 of
+the 14 steps `factor!` runs on this graph. That step splits the `v2` bit off the
+`7→6` edge onto a brand-new direct edge from node 7 straight to variable `v2`,
+because there were two routes into `v2` to collapse into one. Node 8 (`n12 =
+v2+s`) has no such redundancy for `v2` (its only route to `v2` other than the
+direct one *is* the direct one), and no sibling at all for `v1`, so nothing
+touches the `8→...→6` chain before `[12, 6]`'s turn comes.
+
+#### Diagram: the `[2, 7]` step that narrows edge `7→6`
+
+This is the one step that runs before `[12, 6]`, shown on just the nodes it
+touches. Before it runs, node 7 has two separate routes down to `v2` — directly
+through `3` (`p`'s own `+v2` term), and buried inside `6`'s child `5` (`d`'s
+`v2-v3` term) — and both boundary edges leaving `7` carry the full `[1,1,1]`,
+exactly as the previous diagram showed:
+
+```mermaid
+graph TD
+    n7a["7 (n10 = p + s)"]
+    n3a["3 (p = v1+v2)"]
+    n6a["6 (s)"]
+    n5a["5 (d = v2-v3)"]
+    n1a(["1 = v1"]):::var
+    n2a(["2 = v2"]):::var
+    n4a(["4 = v3"]):::var
+
+    n7a -->|"vars: v1,v2,v3"| n3a
+    n7a -->|"vars: v1,v2,v3"| n6a
+    n3a --> n1a
+    n3a -->|"route to v2, #1"| n2a
+    n6a --> n1a
+    n6a --> n5a
+    n5a -->|"route to v2, #2"| n2a
+    n5a --> n4a
+
+    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
+    linkStyle 3,6 stroke:#cc2222,stroke-width:3px
+```
+
+Two distinct paths from `7` down to `2` is exactly the postdominator pattern:
+`factor_subgraph!` finds this as `[b=2, c=7]` (`2` postdominates `7`) and
+collapses it — summing the two routes' contributions (`∂p/∂v2 = 1` and
+`∂s/∂v2 = v1·∂d/∂v2 = v1`) into one new edge from `7` straight to `2`, worth
+`v1+1`, and clearing the `v2` bit from *every* boundary edge leaving `7` that
+used to feed that sum. Both `7→3` and `7→6` lose it — only `7→6` matters for
+`[12,6]`, but the mechanism doesn't single it out:
+
+```mermaid
+graph TD
+    n7b["7 (n10 = p + s)"]
+    n3b["3 (p)"]
+    n6b["6 (s)"]
+    n5b["5 (d)"]
+    n1b(["1 = v1"]):::var
+    n2b(["2 = v2"]):::var
+    n4b(["4 = v3"]):::var
+
+    n7b -->|"vars: v1 only"| n3b
+    n7b -->|"vars: v1,v3 (v2 gone)"| n6b
+    n7b ==>|"NEW edge, value = v1+1"| n2b
+    n3b --> n1b
+    n3b --> n2b
+    n6b --> n1b
+    n6b --> n5b
+    n5b --> n2b
+    n5b --> n4b
+
+    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
+    linkStyle 2 stroke:#cc2222,stroke-width:3px
+```
+
+(Edges `3→2` and `5→2` keep showing `v2` in both diagrams — that bit just means
+"this edge's bottom vertex is variable `v2`," which is true of them no matter
+what happens above, so it is never touched. It's specifically the edges leaving
+`7` — whose job was "collect `7`'s contributions that reach `v2`" — that lose the
+bit, because `7`'s new direct edge now does that job alone.) This is the real
+output of `factor_subgraph!`, not an illustration: the next section's computed
+node numbers, edge values, and masks are all taken from running exactly this
+example.
 
 By the time `[12, 6]` itself is processed (step 2 of 14), edge `7→6` has already
 lost its `v2` bit to that one earlier step and carries only `v1` and `v3` —
