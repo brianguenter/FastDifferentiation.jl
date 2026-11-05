@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 820" width="860" height="820" font-family="Helvetica,Arial,sans-serif">
+  <rect x="0" y="0" width="860" height="820" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#333333"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#7a1fa2"/>
+    </marker>
+  </defs>
+
+  <g>
+    <line x1="430.0" y1="56.0" x2="430.0" y2="94.0" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="454.7527425934169" y1="127.95623869074115" x2="685.2472574065831" y2="202.04376130925885" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="405.2472574065831" y1="127.95623869074115" x2="174.75274259341688" y2="202.04376130925885" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="691.2840483190622" y1="228.04752483519002" x2="448.7159516809378" y2="461.95247516481" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="694.0375440486121" y1="230.5231576517845" x2="445.96245595138794" y2="549.4768423482155" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="150.0" y1="236.0" x2="150.0" y2="274.0" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="164.0842346769022" y1="231.85484691243445" x2="425.9157653230978" y2="638.1451530875655" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="159.6561575852067" y1="324.1403939630167" x2="320.3438424147933" y2="725.8596060369832" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="150.0" y1="326.0" x2="150.0" y2="364.0" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="150.0" y1="416.0" x2="150.0" y2="454.0" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="174.75274259341688" y1="397.95623869074115" x2="405.2472574065831" y2="472.04376130925885" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="164.42220510185595" y1="501.6333076527839" x2="315.577794898144" y2="728.366692347216" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="174.75274259341688" y1="487.95623869074115" x2="405.2472574065831" y2="562.0437613092589" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="432.871219677946" y1="595.8409771015141" x2="437.128780322054" y2="634.1590228984859" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="453.497183811232" y1="581.1302449632152" x2="596.502816188768" y2="648.8697550367848" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="431.4422205101856" y1="505.9599691833407" x2="438.5577794898144" y2="634.0400308166593" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="420.96982674858657" y1="504.3814677788163" x2="339.03017325141343" y2="725.6185322211837" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="595.1683324429079" y1="667.7063795866837" x2="354.83166755709215" y2="742.2936204133163" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <line x1="617.128780322054" y1="685.8409771015141" x2="612.871219677946" y2="724.1590228984859" stroke="#333333" stroke-width="1.6"  marker-end="url(#arrow)"/>
+    <ellipse cx="440" cy="660" rx="70" ry="24" fill="#c8f0c8" stroke="#1f7a1f" stroke-width="2"/>
+    <text x="440" y="656" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">1</text>
+<text x="440" y="673" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1</text>
+    <ellipse cx="330" cy="750" rx="70" ry="24" fill="#c8f0c8" stroke="#1f7a1f" stroke-width="2"/>
+    <text x="330" y="746" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">2</text>
+<text x="330" y="763" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:2</text>
+    <rect x="360" y="456" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="430" y="476" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">3</text>
+<text x="430" y="493" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2</text>
+    <ellipse cx="610" cy="750" rx="70" ry="24" fill="#c8f0c8" stroke="#1f7a1f" stroke-width="2"/>
+    <text x="610" y="746" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">4</text>
+<text x="610" y="763" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:3</text>
+    <rect x="550" y="636" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="620" y="656" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">5</text>
+<text x="620" y="673" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v2,v3</text>
+    <rect x="360" y="546" width="140" height="48" rx="8" ry="8" fill="#ffd27f" stroke="#9a5b00" stroke-width="2"/>
+    <text x="430" y="566" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">6</text>
+<text x="430" y="583" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="640" y="186" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="710" y="206" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">7</text>
+<text x="710" y="223" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="80" y="456" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="150" y="476" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">8</text>
+<text x="150" y="493" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="80" y="366" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="150" y="386" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">9</text>
+<text x="150" y="403" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="80" y="276" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="150" y="296" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">10</text>
+<text x="150" y="313" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="80" y="186" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="150" y="206" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">11</text>
+<text x="150" y="223" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="360" y="96" width="140" height="48" rx="8" ry="8" fill="#9fd3ff" stroke="#00488f" stroke-width="2"/>
+    <text x="430" y="116" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">12</text>
+<text x="430" y="133" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+    <rect x="360" y="6" width="140" height="48" rx="8" ry="8" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>
+    <text x="430" y="26" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#000000">13</text>
+<text x="430" y="43" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#000000">r:1 v:1,v2,v3</text>
+  </g>
+</svg>

@@ -140,46 +140,7 @@ mistake. Orange is the dominated node `c = 6` (two parents, both reachable up to
 node 12); blue is the dominating node `b = 12` where those two parents
 reconverge; green stadiums are the variable leaves.
 
-```mermaid
-graph TD
-    n13["13<br/>r:1 v:1,v:2,v:3"]
-    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-    n7["7<br/>r:1 v:1,v:2,v:3"]
-    n11["11<br/>r:1 v:1,v:2,v:3"]
-    n10["10<br/>r:1 v:1,v:2,v:3"]
-    n9["9<br/>r:1 v:1,v:2,v:3"]
-    n8["8<br/>r:1 v:1,v:2,v:3"]
-    n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
-    n3["3<br/>r:1 v:1,v:2"]
-    n5["5<br/>r:1 v:2,v:3"]
-    n1(["1<br/>r:1 v:1"]):::var
-    n2(["2<br/>r:1 v:2"]):::var
-    n4(["4<br/>r:1 v:3"]):::var
-
-    n13 --> n12
-    n12 --> n7
-    n12 --> n11
-    n7 --> n3
-    n7 --> n6
-    n11 --> n10
-    n11 --> n1
-    n10 --> n2
-    n10 --> n9
-    n9 --> n8
-    n9 --> n3
-    n8 --> n2
-    n8 --> n6
-    n6 --> n1
-    n6 --> n5
-    n3 --> n1
-    n3 --> n2
-    n5 --> n2
-    n5 --> n4
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-```
+![The derivative graph before any factoring: 13 nodes, node 12 (blue) is where the two paths from node 6 (orange) reconverge, 1/2/4 (green) are the variable leaves.](img/fig-graph-before.svg)
 
 Every non-leaf node here has exactly two children or two parents; there's nothing
 left that's purely a pass-through link in a chain. Node 6 (`s`) has two parents,
@@ -244,156 +205,35 @@ touches the `8→...→6` chain before `[12, 6]`'s turn comes.
 
 #### Diagram: the `[2, 7]` step that narrows edge `7→6`
 
-This is the one step that runs before `[12, 6]`. To keep it comparable to the
-diagram above, all three pictures below use the exact same 13 nodes, the exact
-same edges, and the exact same box contents (node number and `r:`/`v:` masks
-only) as "the graph before factoring" — nothing is removed or renumbered, so a
-node that doesn't move keeps the same neighbors and the same position.
+This is the one step that runs before `[12, 6]`. The three pictures below are
+not separately auto-laid-out diagrams that happen to look similar — all three,
+plus "the graph before factoring" above, are rendered from one fixed table of
+node coordinates, so every node sits at the exact same pixel position in every
+picture it appears in. Nothing moves except what the picture is specifically
+showing you.
 
 First, the graph exactly as shown before, for reference:
 
-```mermaid
-graph TD
-    n13["13<br/>r:1 v:1,v:2,v:3"]
-    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-    n7["7<br/>r:1 v:1,v:2,v:3"]
-    n11["11<br/>r:1 v:1,v:2,v:3"]
-    n10["10<br/>r:1 v:1,v:2,v:3"]
-    n9["9<br/>r:1 v:1,v:2,v:3"]
-    n8["8<br/>r:1 v:1,v:2,v:3"]
-    n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
-    n3["3<br/>r:1 v:1,v:2"]
-    n5["5<br/>r:1 v:2,v:3"]
-    n1(["1<br/>r:1 v:1"]):::var
-    n2(["2<br/>r:1 v:2"]):::var
-    n4(["4<br/>r:1 v:3"]):::var
-
-    n13 --> n12
-    n12 --> n7
-    n12 --> n11
-    n7 --> n3
-    n7 --> n6
-    n11 --> n10
-    n11 --> n1
-    n10 --> n2
-    n10 --> n9
-    n9 --> n8
-    n9 --> n3
-    n8 --> n2
-    n8 --> n6
-    n6 --> n1
-    n6 --> n5
-    n3 --> n1
-    n3 --> n2
-    n5 --> n2
-    n5 --> n4
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-```
+![The same 13-node graph as above, repeated for reference.](img/fig-graph-before.svg)
 
 Node 7 has two separate routes down to `2`: directly through `3` (`p`'s own
 `+v2` term), and through `6`'s child `5` (buried inside `d`'s `v2-v3` term).
 Two distinct paths from `7` down to `2` is exactly the postdominator pattern,
 so `factor_subgraph!` finds `[b=2, c=7]` (`2` postdominates `7`) and factors it
-— this is what runs first, before `[12, 6]`. Here is the same graph, same
-layout, with that subgraph's two routes picked out in purple and boxed:
+— this is what runs first, before `[12, 6]`. Here is the same picture — same
+file, even, not just the same layout reproduced by hand — with that subgraph's
+two routes picked out in purple and boxed:
 
-```mermaid
-graph TD
-    n13["13<br/>r:1 v:1,v:2,v:3"]
-    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-    subgraph FOCUS["subgraph about to be factored: [b=2, c=7]"]
-        n7["7<br/>r:1 v:1,v:2,v:3"]
-        n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
-        n3["3<br/>r:1 v:1,v:2"]
-        n5["5<br/>r:1 v:2,v:3"]
-        n2(["2<br/>r:1 v:2"]):::var
-    end
-    n11["11<br/>r:1 v:1,v:2,v:3"]
-    n10["10<br/>r:1 v:1,v:2,v:3"]
-    n9["9<br/>r:1 v:1,v:2,v:3"]
-    n8["8<br/>r:1 v:1,v:2,v:3"]
-    n1(["1<br/>r:1 v:1"]):::var
-    n4(["4<br/>r:1 v:3"]):::var
-
-    n13 --> n12
-    n12 --> n7
-    n12 --> n11
-    n7 --> n3
-    n7 --> n6
-    n11 --> n10
-    n11 --> n1
-    n10 --> n2
-    n10 --> n9
-    n9 --> n8
-    n9 --> n3
-    n8 --> n2
-    n8 --> n6
-    n6 --> n1
-    n6 --> n5
-    n3 --> n1
-    n3 --> n2
-    n5 --> n2
-    n5 --> n4
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-    linkStyle 3,16 stroke:#7a1fa2,stroke-width:3px
-    linkStyle 4,14,17 stroke:#7a1fa2,stroke-width:3px
-```
+![The same graph, same node positions, with the two routes from node 7 down to node 2 (via node 3, and via node 6 then node 5) highlighted in purple and boxed.](img/fig-step1-highlight.svg)
 
 `factor_subgraph!` sums the two routes' contributions (`∂p/∂v2 = 1` and
 `∂s/∂v2 = v1·∂d/∂v2 = v1`) into one new edge from `7` straight to `2`, and
 clears the `v2` bit from *every* boundary edge leaving `7` that used to feed
 that sum — both `7→3` and `7→6`, even though only `7→6` matters for `[12, 6]`.
-Same graph, same layout, with only that one addition — the new edge, in
-purple:
+Same picture again, every node in the same place, with only one addition — the
+new edge, in purple:
 
-```mermaid
-graph TD
-    n13["13<br/>r:1 v:1,v:2,v:3"]
-    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-    n7["7<br/>r:1 v:1,v:2,v:3"]
-    n11["11<br/>r:1 v:1,v:2,v:3"]
-    n10["10<br/>r:1 v:1,v:2,v:3"]
-    n9["9<br/>r:1 v:1,v:2,v:3"]
-    n8["8<br/>r:1 v:1,v:2,v:3"]
-    n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
-    n3["3<br/>r:1 v:1,v:2"]
-    n5["5<br/>r:1 v:2,v:3"]
-    n1(["1<br/>r:1 v:1"]):::var
-    n2(["2<br/>r:1 v:2"]):::var
-    n4(["4<br/>r:1 v:3"]):::var
-
-    n13 --> n12
-    n12 --> n7
-    n12 --> n11
-    n7 --> n3
-    n7 --> n6
-    n7 --> n2
-    n11 --> n10
-    n11 --> n1
-    n10 --> n2
-    n10 --> n9
-    n9 --> n8
-    n9 --> n3
-    n8 --> n2
-    n8 --> n6
-    n6 --> n1
-    n6 --> n5
-    n3 --> n1
-    n3 --> n2
-    n5 --> n2
-    n5 --> n4
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-    linkStyle 5 stroke:#7a1fa2,stroke-width:3px
-```
+![The same graph, same node positions, with one new purple edge added directly from node 7 to node 2.](img/fig-step1-after.svg)
 
 Every node box is unchanged from the first picture in this section —
 `reachable_variables`/`reachable_roots` are per-node aggregates, and node 7
