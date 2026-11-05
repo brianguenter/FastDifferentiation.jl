@@ -244,75 +244,166 @@ touches the `8→...→6` chain before `[12, 6]`'s turn comes.
 
 #### Diagram: the `[2, 7]` step that narrows edge `7→6`
 
-This is the one step that runs before `[12, 6]`, shown on just the nodes it
-touches. Before it runs, node 7 has two separate routes down to `v2` — directly
-through `3` (`p`'s own `+v2` term), and buried inside `6`'s child `5` (`d`'s
-`v2-v3` term) — and both boundary edges leaving `7` carry the full `[1,1,1]`,
-exactly as the previous diagram showed:
+This is the one step that runs before `[12, 6]`. To keep it comparable to the
+diagram above, all three pictures below use the exact same 13 nodes, the exact
+same edges, and the exact same box contents (node number and `r:`/`v:` masks
+only) as "the graph before factoring" — nothing is removed or renumbered, so a
+node that doesn't move keeps the same neighbors and the same position.
+
+First, the graph exactly as shown before, for reference:
 
 ```mermaid
 graph TD
-    n7a["7 (n10 = p + s)"]
-    n3a["3 (p = v1+v2)"]
-    n6a["6 (s)"]
-    n5a["5 (d = v2-v3)"]
-    n1a(["1 = v1"]):::var
-    n2a(["2 = v2"]):::var
-    n4a(["4 = v3"]):::var
+    n13["13<br/>r:1 v:1,v:2,v:3"]
+    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
+    n7["7<br/>r:1 v:1,v:2,v:3"]
+    n11["11<br/>r:1 v:1,v:2,v:3"]
+    n10["10<br/>r:1 v:1,v:2,v:3"]
+    n9["9<br/>r:1 v:1,v:2,v:3"]
+    n8["8<br/>r:1 v:1,v:2,v:3"]
+    n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
+    n3["3<br/>r:1 v:1,v:2"]
+    n5["5<br/>r:1 v:2,v:3"]
+    n1(["1<br/>r:1 v:1"]):::var
+    n2(["2<br/>r:1 v:2"]):::var
+    n4(["4<br/>r:1 v:3"]):::var
 
-    n7a -->|"vars: v1,v2,v3"| n3a
-    n7a -->|"vars: v1,v2,v3"| n6a
-    n3a --> n1a
-    n3a -->|"route to v2, #1"| n2a
-    n6a --> n1a
-    n6a --> n5a
-    n5a -->|"route to v2, #2"| n2a
-    n5a --> n4a
+    n13 --> n12
+    n12 --> n7
+    n12 --> n11
+    n7 --> n3
+    n7 --> n6
+    n11 --> n10
+    n11 --> n1
+    n10 --> n2
+    n10 --> n9
+    n9 --> n8
+    n9 --> n3
+    n8 --> n2
+    n8 --> n6
+    n6 --> n1
+    n6 --> n5
+    n3 --> n1
+    n3 --> n2
+    n5 --> n2
+    n5 --> n4
 
+    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
+    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
     classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-    linkStyle 3,6 stroke:#cc2222,stroke-width:3px
 ```
 
-Two distinct paths from `7` down to `2` is exactly the postdominator pattern:
-`factor_subgraph!` finds this as `[b=2, c=7]` (`2` postdominates `7`) and
-collapses it — summing the two routes' contributions (`∂p/∂v2 = 1` and
-`∂s/∂v2 = v1·∂d/∂v2 = v1`) into one new edge from `7` straight to `2`, worth
-`v1+1`, and clearing the `v2` bit from *every* boundary edge leaving `7` that
-used to feed that sum. Both `7→3` and `7→6` lose it — only `7→6` matters for
-`[12,6]`, but the mechanism doesn't single it out:
+Node 7 has two separate routes down to `2`: directly through `3` (`p`'s own
+`+v2` term), and through `6`'s child `5` (buried inside `d`'s `v2-v3` term).
+Two distinct paths from `7` down to `2` is exactly the postdominator pattern,
+so `factor_subgraph!` finds `[b=2, c=7]` (`2` postdominates `7`) and factors it
+— this is what runs first, before `[12, 6]`. Here is the same graph, same
+layout, with that subgraph's two routes picked out in purple and boxed:
 
 ```mermaid
 graph TD
-    n7b["7 (n10 = p + s)"]
-    n3b["3 (p)"]
-    n6b["6 (s)"]
-    n5b["5 (d)"]
-    n1b(["1 = v1"]):::var
-    n2b(["2 = v2"]):::var
-    n4b(["4 = v3"]):::var
+    n13["13<br/>r:1 v:1,v:2,v:3"]
+    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
+    subgraph FOCUS["subgraph about to be factored: [b=2, c=7]"]
+        n7["7<br/>r:1 v:1,v:2,v:3"]
+        n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
+        n3["3<br/>r:1 v:1,v:2"]
+        n5["5<br/>r:1 v:2,v:3"]
+        n2(["2<br/>r:1 v:2"]):::var
+    end
+    n11["11<br/>r:1 v:1,v:2,v:3"]
+    n10["10<br/>r:1 v:1,v:2,v:3"]
+    n9["9<br/>r:1 v:1,v:2,v:3"]
+    n8["8<br/>r:1 v:1,v:2,v:3"]
+    n1(["1<br/>r:1 v:1"]):::var
+    n4(["4<br/>r:1 v:3"]):::var
 
-    n7b -->|"vars: v1 only"| n3b
-    n7b -->|"vars: v1,v3 (v2 gone)"| n6b
-    n7b ==>|"NEW edge, value = v1+1"| n2b
-    n3b --> n1b
-    n3b --> n2b
-    n6b --> n1b
-    n6b --> n5b
-    n5b --> n2b
-    n5b --> n4b
+    n13 --> n12
+    n12 --> n7
+    n12 --> n11
+    n7 --> n3
+    n7 --> n6
+    n11 --> n10
+    n11 --> n1
+    n10 --> n2
+    n10 --> n9
+    n9 --> n8
+    n9 --> n3
+    n8 --> n2
+    n8 --> n6
+    n6 --> n1
+    n6 --> n5
+    n3 --> n1
+    n3 --> n2
+    n5 --> n2
+    n5 --> n4
 
+    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
+    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
     classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-    linkStyle 2 stroke:#cc2222,stroke-width:3px
+    linkStyle 3,16 stroke:#7a1fa2,stroke-width:3px
+    linkStyle 4,14,17 stroke:#7a1fa2,stroke-width:3px
 ```
 
-(Edges `3→2` and `5→2` keep showing `v2` in both diagrams — that bit just means
-"this edge's bottom vertex is variable `v2`," which is true of them no matter
-what happens above, so it is never touched. It's specifically the edges leaving
-`7` — whose job was "collect `7`'s contributions that reach `v2`" — that lose the
-bit, because `7`'s new direct edge now does that job alone.) This is the real
-output of `factor_subgraph!`, not an illustration: the next section's computed
-node numbers, edge values, and masks are all taken from running exactly this
-example.
+`factor_subgraph!` sums the two routes' contributions (`∂p/∂v2 = 1` and
+`∂s/∂v2 = v1·∂d/∂v2 = v1`) into one new edge from `7` straight to `2`, and
+clears the `v2` bit from *every* boundary edge leaving `7` that used to feed
+that sum — both `7→3` and `7→6`, even though only `7→6` matters for `[12, 6]`.
+Same graph, same layout, with only that one addition — the new edge, in
+purple:
+
+```mermaid
+graph TD
+    n13["13<br/>r:1 v:1,v:2,v:3"]
+    n12["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
+    n7["7<br/>r:1 v:1,v:2,v:3"]
+    n11["11<br/>r:1 v:1,v:2,v:3"]
+    n10["10<br/>r:1 v:1,v:2,v:3"]
+    n9["9<br/>r:1 v:1,v:2,v:3"]
+    n8["8<br/>r:1 v:1,v:2,v:3"]
+    n6["6<br/>r:1 v:1,v:2,v:3"]:::shared
+    n3["3<br/>r:1 v:1,v:2"]
+    n5["5<br/>r:1 v:2,v:3"]
+    n1(["1<br/>r:1 v:1"]):::var
+    n2(["2<br/>r:1 v:2"]):::var
+    n4(["4<br/>r:1 v:3"]):::var
+
+    n13 --> n12
+    n12 --> n7
+    n12 --> n11
+    n7 --> n3
+    n7 --> n6
+    n7 --> n2
+    n11 --> n10
+    n11 --> n1
+    n10 --> n2
+    n10 --> n9
+    n9 --> n8
+    n9 --> n3
+    n8 --> n2
+    n8 --> n6
+    n6 --> n1
+    n6 --> n5
+    n3 --> n1
+    n3 --> n2
+    n5 --> n2
+    n5 --> n4
+
+    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
+    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
+    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
+    linkStyle 5 stroke:#7a1fa2,stroke-width:3px
+```
+
+Every node box is unchanged from the first picture in this section —
+`reachable_variables`/`reachable_roots` are per-node aggregates, and node 7
+reaches the same three variables either way, just through a different edge for
+`v2` now. The change that matters for `[12, 6]` is invisible at the node level
+and only shows up on the edge itself: `7→6`'s own `reachable_variables` goes from
+`[1,1,1]` to `[1,0,1]`, because the new `7→2` edge carries the `v2` contribution
+that used to be folded into it. This is the real output of `factor_subgraph!`,
+not an illustration: the next section's computed node numbers, edge values, and
+masks are all taken from running exactly this example.
 
 By the time `[12, 6]` itself is processed (step 2 of 14), edge `7→6` has already
 lost its `v2` bit to that one earlier step and carries only `v1` and `v3` —
@@ -354,14 +445,14 @@ looked at the per-node one.)
 graph TD
     subgraph SG["region: nodes between c=6 and b=12"]
         direction TB
-        n12z["12 (dominating node b)<br/>r:1 v:1,v:2,v:3"]:::reconverge
+        n12z["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
         n7z["7<br/>r:1 v:1,v:2,v:3"]
         n8z["8<br/>r:1 v:1,v:2,v:3"]
         n9z["9<br/>r:1 v:1,v:2,v:3"]
         n10z["10<br/>r:1 v:1,v:2,v:3"]
         n11z["11<br/>r:1 v:1,v:2,v:3"]
     end
-    n6z["6 (dominated node c)<br/>r:1 v:1,v:2,v:3"]:::shared
+    n6z["6<br/>r:1 v:1,v:2,v:3"]:::shared
     n3z["3<br/>r:1 v:1,v:2"]:::outside
     n2z(["2<br/>r:1 v:2"]):::var
     n1z(["1<br/>r:1 v:1"]):::var
