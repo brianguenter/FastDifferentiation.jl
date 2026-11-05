@@ -132,15 +132,20 @@ c=6]`: a dominator subgraph, since node 12 is on every path from node 6 up to th
 
 #### Diagram: the graph before factoring
 
-Each box shows the node number and that node's own `reachable_roots` /
-`reachable_variables` masks, written as `r:i` for each set root bit and `v:i` for
-each set variable bit (a `0` bit contributes nothing to the label). There's only
-one root in this example, so `r:1` appears on every node — that's expected, not a
-mistake. Orange is the dominated node `c = 6` (two parents, both reachable up to
-node 12); blue is the dominating node `b = 12` where those two parents
-reconverge; green stadiums are the variable leaves.
+Node boxes carry only the node number; the mask that matters — each edge's own
+`reachable_roots`/`reachable_variables`, written as `r:i` for each set root bit
+and `v:i` for each set variable bit — is labeled directly on the edge that
+carries it. This is deliberate: `reachable_variables`/`reachable_roots` are
+fields of `PathEdge`, not of a node, and a node's "mask" is only ever the union
+of its children's edges. Putting masks on the edges, not the boxes, is what
+makes it possible to just read the parent and child edges of a node and see its
+mask follow directly — no separate aggregation step. There's only one root in
+this example, so `r:1` appears on every edge — that's expected, not a mistake.
+Orange is the dominated node `c = 6` (two parents, both reachable up to node
+12); blue is the dominating node `b = 12` where those two parents reconverge;
+green stadiums are the variable leaves.
 
-![The derivative graph before any factoring: 13 nodes, node 12 (blue) is where the two paths from node 6 (orange) reconverge, 1/2/4 (green) are the variable leaves.](img/fig-graph-before.svg)
+![The derivative graph before any factoring: 13 nodes, node 12 (blue) is where the two paths from node 6 (orange) reconverge, 1/2/4 (green) are the variable leaves, and every edge is labeled with its own reachable-roots/reachable-variables mask.](img/fig-graph-before.svg)
 
 Every non-leaf node here has exactly two children or two parents; there's nothing
 left that's purely a pass-through link in a chain. Node 6 (`s`) has two parents,
@@ -149,13 +154,13 @@ that round trip is the factorable subgraph. Node 3 (`p`) is *also* shared, by
 nodes `7` and `9` — it doesn't trigger the bug on its own, but it's the reason the
 bug triggers at node 6, as the next section shows.
 
-Notice that nodes 6 through 13 all show the *identical* mask, `r:1 v:1,v:2,v:3` —
-once a node's subtree reaches all three variables, its own aggregate mask can't
-tell you anything more specific. That's exactly the problem the bug exploits:
-despite every one of these nodes reporting the same aggregate mask, the *individual
-paths* passing through them reach different, smaller subsets of variables — which
-is precisely what the next section's masks (computed per-path, not per-node) make
-visible.
+Notice that both edges into node 6 — `7→6` and `8→6` — carry the identical mask
+`r:1 v:1,v2,v3`, and so do most of the other edges in the upper half of the
+graph. That's simply because no factoring has happened yet: every edge still
+carries the full union of whatever its bottom vertex can reach. The next
+section's first factoring step is what makes `7→6` and `8→6` diverge, and
+because masks live on edges here, that divergence will be something you can
+just read off the picture, not something you have to compute.
 
 ### 2.5 Why the *old* algorithm broke here — concretely
 
@@ -235,15 +240,14 @@ new edge, in purple:
 
 ![The same graph, same node positions, with one new purple edge added directly from node 7 to node 2.](img/fig-step1-after.svg)
 
-Every node box is unchanged from the first picture in this section —
-`reachable_variables`/`reachable_roots` are per-node aggregates, and node 7
-reaches the same three variables either way, just through a different edge for
-`v2` now. The change that matters for `[12, 6]` is invisible at the node level
-and only shows up on the edge itself: `7→6`'s own `reachable_variables` goes from
-`[1,1,1]` to `[1,0,1]`, because the new `7→2` edge carries the `v2` contribution
-that used to be folded into it. This is the real output of `factor_subgraph!`,
-not an illustration: the next section's computed node numbers, edge values, and
-masks are all taken from running exactly this example.
+Compare the edge labels at `7→3` and `7→6` between this picture and the one
+above: both dropped `v2` (`7→3` went from `v:1,v2` to `v:1`; `7→6` went from
+`v:1,v2,v3` to `v:1,v3`), because the new `7→2` edge now carries the `v2`
+contribution that used to be folded into them. Nothing else changed — every
+other edge label is identical to the picture above it. This is the real output
+of `factor_subgraph!`, not an illustration: the next section's computed node
+numbers, edge values, and masks are all taken from running exactly this
+example.
 
 By the time `[12, 6]` itself is processed (step 2 of 14), edge `7→6` has already
 lost its `v2` bit to that one earlier step and carries only `v1` and `v3` —
@@ -265,63 +269,17 @@ mask (`[1,1,1]`) instead of against what that specific path actually carries.
 #### Diagram: the two real paths through the subgraph
 
 This zooms into the "region" between `c = 6` and `b = 12` — the nodes
-`subgraph_region` actually finds by walking parent edges upward from node 6. The
-**blue, thick** edge is the short path (node `7`, mask `[1,0,1]`); the **red,
-thick** edges are the long path (`8→9→10→11`, mask `[1,1,1]`). The **dashed**
-edges are the *other* operand at each operation — e.g. node 9 is `n12 * p`, and
-only the `n12` side is on a path back to node 6; `p` is a sibling input that never
-touches node 6 at all, so it sits outside the region entirely, exactly like the
-grayed-out nodes above.
+`subgraph_region` actually finds by walking parent edges upward from node 6,
+reusing the same node positions as every picture above. The **blue, thick**
+edges are the short path (through node `7`); the **red, thick** edges are the
+long path (`8→9→10→11`). The **dashed gray** edges are the *other* operand at
+each operation — e.g. node 9 is `n12 * p`, and only the `n12` side is on a path
+back to node 6; `p` is a sibling input that never touches node 6 at all, so it
+sits outside the region. Each edge carries its own mask, state B (after the
+`[2,7]` step above, before `[12,6]` runs) — note that `7→6` already reads
+`r:1 v:1,3`, not `v:1,2,3`:
 
-(Those `[1,0,1]`/`[1,1,1]` figures are the *path groups'* masks — a property of
-each specific route through the subgraph, computed below. They're different from
-the per-node boxes in the diagram, which — same as the previous diagram — all
-read the identical `r:1 v:1,v:2,v:3`, since every node in this region still has
-the same aggregate reachability. The whole point of this section is that the
-per-node view and the per-path view disagree, and the old algorithm only ever
-looked at the per-node one.)
-
-```mermaid
-graph TD
-    subgraph SG["region: nodes between c=6 and b=12"]
-        direction TB
-        n12z["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-        n7z["7<br/>r:1 v:1,v:2,v:3"]
-        n8z["8<br/>r:1 v:1,v:2,v:3"]
-        n9z["9<br/>r:1 v:1,v:2,v:3"]
-        n10z["10<br/>r:1 v:1,v:2,v:3"]
-        n11z["11<br/>r:1 v:1,v:2,v:3"]
-    end
-    n6z["6<br/>r:1 v:1,v:2,v:3"]:::shared
-    n3z["3<br/>r:1 v:1,v:2"]:::outside
-    n2z(["2<br/>r:1 v:2"]):::var
-    n1z(["1<br/>r:1 v:1"]):::var
-
-    n12z ==>|"short path"| n7z
-    n7z ==>|"short path"| n6z
-    n7z -.-> n3z
-    n12z ==>|"long path"| n11z
-    n11z ==>|"long path"| n10z
-    n11z -.-> n1z
-    n10z ==>|"long path"| n9z
-    n10z -.-> n2z
-    n9z ==>|"long path"| n8z
-    n9z -.-> n3z
-    n8z ==>|"long path"| n6z
-    n8z -.-> n2z
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef outside fill:#eeeeee,stroke:#999999,stroke-dasharray: 3 3,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-    linkStyle 0 stroke:#0055aa,stroke-width:3px
-    linkStyle 1 stroke:#0055aa,stroke-width:3px
-    linkStyle 3 stroke:#cc2222,stroke-width:3px
-    linkStyle 4 stroke:#cc2222,stroke-width:3px
-    linkStyle 6 stroke:#cc2222,stroke-width:3px
-    linkStyle 8 stroke:#cc2222,stroke-width:3px
-    linkStyle 10 stroke:#cc2222,stroke-width:3px
-```
+![The region between nodes 6 and 12, short path through node 7 in blue and long path through 8-9-10-11 in red, both solid and thick; dashed gray bypass edges lead out to nodes 1, 2 and 3. Every edge is labeled with its own mask.](img/fig-region.svg)
 
 It's tempting to read the dashed edges at nodes 8 and 10 above (both landing on
 `v2`) as "each node on the long path needs its own extra route to `v2`." That's
@@ -385,33 +343,13 @@ doesn't know how to resolve.
 
 This is the state after the *entire* `factor!` pass (not just the one step on
 `[12, 6]` — several other subgraphs also fire and further consolidate edges before
-the graph settles). Nodes `3` and `7` through `11` — seven nodes — are no longer
-referenced by any edge and are pruned; the chain of sums and products that used to
-connect node 12 to the variables is gone, replaced by three direct edges:
+the graph settles), queried the same way as every other state in this document —
+this is not hand-derived. Nodes `3` and `7` through `11` — seven nodes — are no
+longer referenced by any edge and are pruned; the chain of sums and products that
+used to connect node 12 to the variables is gone, replaced by three direct edges,
+and only six edges remain in total:
 
-```mermaid
-graph TD
-    n13y["13<br/>r:1 v:1,v:2,v:3"]
-    n12y["12<br/>r:1 v:1,v:2,v:3"]:::reconverge
-    n6y["6<br/>r:1 v:3"]:::shared
-    n5y["5<br/>r:1 v:3"]
-    n1y(["1<br/>r:1 v:1"]):::var
-    n2y(["2<br/>r:1 v:2"]):::var
-    n4y(["4<br/>r:1 v:3"]):::var
-
-    n13y --> n12y
-    n12y -->|"v3 (through s)"| n6y
-    n12y -->|"v2 (direct)"| n2y
-    n12y -->|"v1 (direct)"| n1y
-    n6y --> n1y
-    n6y --> n5y
-    n5y --> n2y
-    n5y --> n4y
-
-    classDef shared fill:#ffd27f,stroke:#9a5b00,stroke-width:2px,color:#000000
-    classDef reconverge fill:#9fd3ff,stroke:#00488f,stroke-width:2px,color:#000000
-    classDef var fill:#c8f0c8,stroke:#1f7a1f,stroke-width:2px,color:#000000
-```
+![The graph after the entire factor! pass: node 12 has three direct children (6, 2, 1), node 6 has one child (5), node 5 has one child (4). Each edge is labeled with its mask.](img/fig-after-factor.svg)
 
 Node 12 now has exactly one edge per variable — the single-path structure that
 `follow_path` needs — and `s` is still computed once and shared, carrying only the
@@ -419,16 +357,19 @@ Node 12 now has exactly one edge per variable — the single-path structure that
 same three numbers in the Jacobian, far fewer operations to get them, and (unlike
 `main`) no crash.
 
-One thing worth not glossing over: node 6 (`s`) and node 5 (`d`) are labeled
-`v:3` here, down from `v:1,v:2,v:3` before factoring — even though `s` still
-*literally equals* `v1 * (v2 - v3)` and mathematically depends on all three
-variables just as much as it ever did. The mask isn't describing what `s`
-depends on; it's describing which variables still route *through this specific
-edge structure* to reach the output. Once the `v1` and `v2` contributions were
-relocated onto their own direct edges (`12→1`, `12→2`), the `v1`/`v2` bits on
-`s`'s own edges became dead weight — nothing above them would ever read them
+One thing worth not glossing over: edges `6→5` and `5→4` are labeled `v:3`
+here, down from `v:1,v2,v3` before factoring (visible on `6→5` in the very
+first diagram) — and edges `6→1` and `5→2`, which existed before factoring,
+are gone entirely, not just masked down to nothing. This is true even though
+`s` still *literally equals* `v1 * (v2 - v3)` and mathematically depends on all
+three variables just as much as it ever did. The mask was never describing what
+`s` depends on; it describes which variables still route *through this specific
+edge* to reach the output. Once the `v1` and `v2` contributions were relocated
+onto their own direct edges (`12→1`, `12→2`), the `v1`/`v2` bits on `6→1`,
+`6→5`, `5→2` became dead weight — nothing above them would ever read them
 again — so `prune_stale_masks!` (acting on the *other*, later-processed
-subgraphs for nodes 1, 2 and 3, not `[12,6]` itself) cleared them. This is the
+subgraphs for nodes 1, 2 and 3, not `[12,6]` itself) cleared them, and `6→1`
+and `5→2` were deleted once nothing was left on them at all. This is the
 same invariant argued in [§3.5](#35-claim-c--no-stale-bits-poison-a-later-step):
 a bit is only ever dropped once nothing above it still needs it, and here, after
 the direct edges took over, nothing did.
