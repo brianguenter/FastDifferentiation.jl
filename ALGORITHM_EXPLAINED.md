@@ -11,9 +11,20 @@ bottom node. *Roots* are the outputs `fᵢ` (top); *variables* are the inputs `x
 **Masks.** Every edge carries two bit vectors: a root mask
 (`reachable_roots`) and a variable mask (`reachable_variables`). An edge
 *carries* `(i, j)` if bit `i` is set in its root mask and bit `j` in its variable
-mask. When the graph is built, `initialize_edge_masks!` sets the root mask of
-`e` to the roots above its top vertex and the variable mask to the variables
-below its bottom vertex.
+mask. When the graph is built, `initialize_edge_masks!` first computes, for
+every node `u`,
+
+```
+roots(u)     = {i : u is root i}     ∪  ⋃ over parent edges p of u:  roots(top_vertex(p))
+variables(u) = {j : u is variable j} ∪  ⋃ over child edges q of u:   variables(bott_vertex(q))
+```
+
+i.e. `roots(u)` is the set of roots with a directed path down to `u`, and
+`variables(u)` the set of variables with a directed path up from them to `u`.
+`variables` is computed in postorder and `roots` in reverse postorder. Then
+every edge `e` gets root mask `roots(top_vertex(e))` and variable mask
+`variables(bott_vertex(e))`. Factoring later edits edge masks directly; node
+masks are not kept.
 
 **Live path, path sum.** A path from root `i` down to variable `j` is *live*
 for `(i, j)` if every one of its edges carries `(i, j)`. The *path sum*
