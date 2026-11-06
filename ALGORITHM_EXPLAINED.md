@@ -1,59 +1,86 @@
 # How the Factorization Fix Works
 
-## 1. Background
+## 1. Definitions
 
-The derivative graph has one edge per local partial derivative. For root (output)
-`i` and variable (input) `j`,
+**Derivative graph.** A DAG whose nodes are numbered in postorder: every edge
+`e` has a *top vertex* (the larger number) and a *bottom vertex* (the smaller),
+and a *value*, the partial derivative of the top node with respect to the
+bottom node. *Roots* are the outputs `fᵢ` (top); *variables* are the inputs `xⱼ`
+(bottom). A *pair* is a root–variable pair `(i, j)`.
+
+**Masks.** Every edge carries two bit vectors: a root mask
+(`reachable_roots`) and a variable mask (`reachable_variables`). An edge
+*carries* `(i, j)` if bit `i` is set in its root mask and bit `j` in its variable
+mask. When the graph is built, `initialize_edge_masks!` sets the root mask of
+`e` to the roots above its top vertex and the variable mask to the variables
+below its bottom vertex.
+
+**Live path, path sum.** A path from root `i` down to variable `j` is *live*
+for `(i, j)` if every one of its edges carries `(i, j)`. The *path sum*
 
 ```
-∂fᵢ/∂xⱼ = Σ over paths π from root i to variable j of  ∏_{e ∈ π} value(e)
+PathSum(i, j) = Σ over live paths π for (i, j) of  ∏_{e ∈ π} value(e)
 ```
 
-Every edge carries two bit masks: `reachable_roots` (the roots above it) and
-`reachable_variables` (the variables below it). A root–variable pair `(i, j)`
-can use edge `e` only if bit `i` is set in `e`'s root mask and bit `j` in its
-variable mask. In the diagrams below each edge is labeled with its masks, e.g.
-`r:1 v:1,3`.
+is `∂fᵢ/∂xⱼ`. Initially every path is live. `follow_path` and `sum_all_paths`
+compute exactly this sum: they only follow edges that carry `(i, j)`.
 
-**Factoring** a subgraph `[b, c]` — `b` dominates `c` (every path from `c` up to
-the roots in the subgraph's mask passes through `b`), or postdominates it (the
-mirror image, toward the variables) — replaces the paths from `c` to `b` with
-direct edges `b → c` whose values are the sums of those paths' products.
-`factor!` does this for every factorable subgraph, smallest first, until each
-pair `(i, j)` has a single path, which `follow_path` then reads off.
+**Factorable subgraph.** `S = [b, c]` with `b` the *dominating node* and `c` the
+*dominated node*, discovered by `compute_factorable_subgraphs` before any
+factoring. It is one of two kinds:
 
-Factoring is correct only if every pair `(i, j)` gets the same path sum after
-the step as before it. In a graph with several roots or variables, different
-paths through `[b, c]` can serve different pairs, so the step must know, for
-every pair, exactly which paths through `[b, c]` it lies on.
+| | dominator subgraph | postdominator subgraph |
+|:--|:--|:--|
+| position | `b` above `c` | `b` below `c` |
+| discovered for | root `i`: `b` is the immediate dominator of `c` (every path from `c` up to root `i` passes through `b`), and `c` has ≥ 2 parent edges carrying root `i` | variable `j`: mirror image (toward the variables) |
+| *dominance bits* | roots | variables |
+| *non-dominance bits* | variables | roots |
+| *forward edges* of a node | its parent edges | its child edges |
+
+`dom(x)` and `nondom(x)` denote the dominance and non-dominance mask of `x`,
+where `x` is an edge or a subgraph. `dom(S)` is the set of roots (or variables)
+for which `S` was discovered. `nondom(S)` is the set of variables below `c`
+(or roots above `c`) at discovery.
+
+**Segment.** A path `π = e₁ … eₖ` from `c` to `b` along forward edges. Its masks
+are
+
+```
+D(π) = dom(S)    ∩ dom(e₁)    ∩ … ∩ dom(eₖ)
+N(π) = nondom(S) ∩ nondom(e₁) ∩ … ∩ nondom(eₖ)
+```
+
+`D(π) × N(π)` is the set of pairs within `S`'s masks for which every edge of
+`π` is live. Different segments of the same subgraph generally have different
+`D` and `N`.
+
+**Factoring** `S` (`factor_subgraph!`) replaces the segments of `S` with edges
+between `b` and `c`. It is correct if every path sum is unchanged. `factor!`
+factors each discovered subgraph once, in the order of a heap keyed on
+`|b − c|` (smallest first) and then on `times_used` (largest first).
 
 ## 2. The bug
 
-On `main`, `factor_subgraph!` replaces `[b, c]` with **one** edge. Its value is
-the sum over all paths from `c` to `b`, and its masks are the masks recorded for
-the subgraph when it was *discovered* — before any factoring took place.
+On `main`, factoring `S` adds **one** edge `b → c`. Its value is the sum over
+all segments, and its masks are `S`'s masks from discovery.
 
-Every factoring step rewrites edge masks. So by the time a subgraph is
-factored, earlier steps may have changed the edges inside it, and the recorded
-masks no longer describe them. Two things then go wrong:
+Every factoring step changes edge masks. When `S` is factored, earlier steps
+may already have changed the edges of its segments, so:
 
-1. **Paths with different masks are merged.** If an earlier step removed pair
-   `(i, j)` from some path through `[b, c]`, that path's product is still added
-   into the single replacement edge, and the edge still carries `(i, j)`. The
-   pair is counted twice: once on the edge where the earlier step moved it, and
-   once here.
-2. **The recorded mask may name pairs the subgraph no longer serves.** The
-   replacement edge then claims a pair that nothing below `c` carries any more —
-   a dead end.
+1. **Segments that are live for different pairs are summed into one edge.** A
+   segment from which an earlier step removed pair `(i, j)` still contributes
+   its product to the new edge, and the new edge carries `(i, j)`. That pair's
+   contribution through the segment is counted twice: on the edge where the
+   earlier step moved it, and on the new edge.
+2. **The new edge can carry a pair that nothing below `c` carries.** This
+   creates a dead end.
 
-Either way the replacement edge's masks are wrong, and later steps read those
-masks as fact. The read-out finds two edges for some pair at one node and fails
-the assertion `Should only be one path from root i to variable j`, or the
-duplicate is summed and the Jacobian is silently wrong. The regression tests
-for issues #23, #65 and #108 in `test/test-complex-expressions.jl` fail on
-`main`.
+Later steps read the wrong masks as fact. The read-out then either fails
+`Should only be one path from root i to variable j`, or sums the duplicate and
+returns a wrong Jacobian. The regression tests for issues #23, #65 and #108 in
+`test/test-complex-expressions.jl` fail on `main`.
 
-## 3. A worked example
+## 3. Worked example
 
 ```julia
 @variables v1 v2 v3
@@ -63,248 +90,251 @@ n16 = v2 + n15; n18 = n16 * v1; r1  = n10 + n18
 
 jacobian([r1], [v1, v2, v3])
 # main:   AssertionError: Should only be one path from root 1 to variable 2.
-# branch: matches central finite differences at every test point
+# branch: matches central finite differences
 ```
 
-The postorder numbers are `v1 = 1`, `v2 = 2`, `p = 3`, `v3 = 4`, `d = 5`,
-`s = 6`, `n10 = 7`, `n12 = 8`, `n15 = 9`, `n16 = 10`, `n18 = 11`, `r1 = 12`, and
-13 is the wrapper above the root. Node 6 (`s`, orange) has two parents, and both
-of their paths reconverge at node 12 (blue): `[12, 6]` is a dominator subgraph.
+Postorder: `v1 = 1`, `v2 = 2`, `p = 3`, `v3 = 4`, `d = 5`, `s = 6`, `n10 = 7`,
+`n12 = 8`, `n15 = 9`, `n16 = 10`, `n18 = 11`, `r1 = 12`. Node 13 is a no-op
+wrapper above the root. Each edge is labeled with its masks: `r:1 v:1,3` means
+root 1 and variables 1 and 3.
 
-![The derivative graph before factoring, every edge labeled with its masks.](img/fig-graph-before.svg)
+![The derivative graph before factoring.](img/fig-graph-before.svg)
 
-### Step 1 (`[2, 7]`) makes the paths through `[12, 6]` differ
+`factor!` runs 14 steps. Step 1 factors the postdominator subgraph
+`S₁ = [2, 7]`: node 7 reaches `v2` by two segments, `7 → 3 → 2` and
+`7 → 6 → 5 → 2`.
 
-`factor!` runs 14 steps on this graph. The first factors the postdominator
-subgraph `[2, 7]`: node 7 reaches `v2` both through `3` and through `6 → 5`.
+![The two segments of [2, 7].](img/fig-step1-highlight.svg)
 
-![The same graph with the two paths from node 7 to node 2 highlighted.](img/fig-step1-highlight.svg)
+Both main and this branch replace them with one edge `7 → 2` of value
+`1 + v1`, and remove `v2` from `7 → 3` and `7 → 6`:
 
-The two paths become one new edge `7 → 2` (value `1 + v1`), and `v2` is removed
-from `7 → 3` and `7 → 6`, which no longer lead to `v2` for this pair:
+![After step 1.](img/fig-step1-after.svg)
 
-![The same graph after step 1: new edge 7→2; 7→3 and 7→6 have lost v2.](img/fig-step1-after.svg)
-
-This step is correct, on `main` and on this branch alike. But now the two paths
-through `[12, 6]` carry different variables — `v1, v3` on the path through 7,
-`v1, v2, v3` on the path through 8 — while the subgraph's recorded mask is still
+Step 2 factors the dominator subgraph `S₂ = [12, 6]`. It has two segments, and
+they now carry different variables. The segment through 7 carries `v1, v3`. The
+segment through 8–11 carries `v1, v2, v3`. `nondom(S₂)` still says
 `v1, v2, v3`:
 
-![The region of [12,6] after step 1: short path through 7 (blue) carries v1,v3; long path through 8–11 (red) carries v1,v2,v3.](img/fig-region.svg)
+![The segments of [12, 6] after step 1.](img/fig-region.svg)
 
-### Step 2 (`[12, 6]`) on `main`: one edge, wrong for `v2`
-
-`main` sums both paths into one edge and gives it the recorded mask:
-
-```
-12 → 6   v:1,2,3   value = 1 + v1·(v1 + v2)
-```
-
-The `1` is the product along the path through 7. That path no longer carries
-`v2` — its `v2` contribution moved to `7 → 2` in step 1 — but the new edge
-claims `v2` with the `1` included, so the pair `(r1, v2)` is counted twice.
-
-### Step 9 (`[12, 3]`) on `main`: a dead end, then the crash
-
-Step 6 removes the edge `3 → 2`, so node 3 now reaches only `v1`. Step 9 factors
-`[12, 3]`, whose mask was recorded at discovery as `v1, v2`, and writes
-`12 → 3` with `v:1,2`. Nothing below node 3 carries `v2`; the edge is a dead
-end. After the remaining steps, node 12 has two children that carry `v2` —
-`12 → 3` and `12 → 2` — and the read-out fails the assertion.
+**On `main`**, step 2 writes one edge `12 → 6` with value `1 + v1·(v1+v2)` and
+mask `v:1,2,3`. The `1` comes from the segment through 7, which no longer
+carries `v2`: its `v2` contribution is on `7 → 2`. So `(r1, v2)` is counted
+twice. Later, step 6 deletes `3 → 2`, and then step 9 factors `[12, 3]`. It
+writes `12 → 3` with the discovery mask `v:1,2`, although node 3 no longer
+reaches `v2`. At the end, node 12 has two children carrying `v2`, `12 → 3` and
+`12 → 2`, and the read-out fails.
 
 ## 4. The new algorithm
 
-Each step recomputes everything from the graph's **current** edge masks, and
-replaces `[b, c]` with as many edges as it takes for every pair to get exactly
-the sum of its own paths.
+`factor_subgraph!(S)` has five parts. Each one reads the current masks; none
+uses `S`'s masks except to restrict which pairs it handles.
 
-### 4.1 Path groups — `subgraph_path_groups`
+### 4.1 Region — `subgraph_region`
 
-For a dominator subgraph the *dominance* bits are roots and the
-*non-dominance* bits are variables; for a postdominator subgraph it is the
-other way round. Write `dom(x)` and `nondom(x)` for those two masks of `x`,
-where `x` is either an edge or the factorable subgraph `S = [b, c]` itself.
-`dom(S)` is the mask stored on `S` when it was discovered: for a dominator
-subgraph, the roots for which `b` dominates `c`. `nondom(S)` is the
-non-dominance mask stored with it.
+The **region** of `S` is the set of nodes reachable from `c` along forward
+edges `e` with `dom(e) ∩ dom(S) ≠ ∅` and `nondom(e) ∩ nondom(S) ≠ ∅`
+(`on_subgraph_path`), stopping at `b`. It includes `b` but not `c`. It is
+computed before anything is changed, because part 4.3 edits edges at `c`.
 
-Each path `π = e₁ e₂ … eₖ` from `c` to `b` gets its own pair of masks:
+### 4.2 Groups — `subgraph_path_groups`
 
-```
-D(π) = dom(S)    ∩ dom(e₁)    ∩ dom(e₂)    ∩ … ∩ dom(eₖ)
-N(π) = nondom(S) ∩ nondom(e₁) ∩ nondom(e₂) ∩ … ∩ nondom(eₖ)
-```
+A **group** is the set of segments sharing one value of `(D(π), N(π))` with
+both masks nonempty. For each group `k` the code stores `D_k`, `N_k`, the sum of
+its segments' products `V_k`, and its number of segments `n_k`.
 
-Say `π` **serves** the pair `(i, j)` if the sum for `∂fᵢ/∂xⱼ` includes paths
-that run from root `i` down to `b`, along `π` to `c`, and from `c` down to
-variable `j` (for a dominator subgraph; for a postdominator subgraph `b` is
-below `c` and the roles of the two ends swap). `i ∈ dom(S)` guarantees that
-every path from `c` up to root `i` passes through `b`; whether `π` itself is
-used for `(i, j)` is decided by whether every edge of `π` carries bit `i` and
-bit `j`. So `π` serves exactly the pairs in `D(π) × N(π)`, and different
-paths through the same subgraph generally have different `D(π)` and `N(π)`.
+Groups are computed by dynamic programming over the region. Each node stores
+the groups of its partial segments, so no segment is enumerated. For a dominator
+subgraph this is a memoized recursion from `c`. For a postdominator subgraph it
+is a pass over the region in topological order. In both cases each product is
+formed from the upper end of the segment downward.
 
-"Serves" is about the current masks, not about topology. In the example below,
-after step 1 node 6 still reaches `v2`, but edge `7 → 6` no longer carries
-`v2` — node 7's `v2` contribution has been moved to a new edge `7 → 2` — so the
-path through node 7 does not serve `(r1, v2)`. Paths with the same `(D, N)` form
-a **group**; each group stores the sum of its path products and its number of
-paths. Groups are computed by dynamic programming over the subgraph (memoized
-from `c` toward `b`), so no path is enumerated twice. An edge is followed if it
-*overlaps* both of the subgraph's masks (`on_subgraph_path`); the intersections
-above then discard whatever it doesn't carry.
+For `S₂` after step 1:
 
-For `[12, 6]` after step 1:
+| group | segments | `D` | `N` | `V` | `n` |
+|:--:|:--|:--|:--|:--|:--:|
+| G1 | 6 → 7 → 12 | `{r1}` | `{v1, v3}` | `1` | 1 |
+| G2 | 6 → 8 → 9 → 10 → 11 → 12 | `{r1}` | `{v1, v2, v3}` | `v1·(v1+v2)` | 1 |
 
-| group | path        | D      | N          | value          | paths |
-|:-----:|:------------|:-------|:-----------|:---------------|:-----:|
-| G1    | 6 → 7 → 12  | `{r1}` | `{v1, v3}` | `1`            | 1     |
-| G2    | 6 → 8 → … → 12 | `{r1}` | `{v1, v2, v3}` | `v1·(v1+v2)` | 1 |
+Pair `(i, j)` lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`. So group `k`
+covers the **rectangle** `D_k × N_k`, and the correct replacement value for a
+pair is the sum of `V_k` over the groups that contain it. Rectangles may
+overlap: `(r1, v1)` is in G1 and G2.
 
-### 4.2 Partitioning the pairs — `index_classes`, `factored_edges`
+### 4.3 Partition — `index_classes`, `factored_edges`
 
-Each group covers a rectangle of pairs, `D × N`. Rectangles overlap — here
-`(r1, v1)` lies in both — so one replacement edge per group would give a pair
-two parallel edges. Instead, the pairs are partitioned into blocks such that
-**every pair in a block lies in exactly the same set of groups**; each block
-becomes one edge.
+The pairs are partitioned into **blocks** so that all pairs in a block lie in
+exactly the same groups. Each block then gets one edge. One edge per group
+would not work, because a pair in two groups would get two parallel edges.
 
-The partition is computed separately for the two dimensions.
-`index_classes(masks, n)` takes one mask per group and splits the indices that
-appear in any of them by which masks contain them:
+Blocks are built from two independent partitions, one of the dominance indices
+and one of the non-dominance indices. Let the groups be numbered `1 … g`.
 
-```
-classes = [ (signature = all false, indices = union of all masks) ]
-for each group k with mask m:
-    replace each class (sig, idx) by
-        (sig with bit k set, idx ∩ m)    if nonempty
-        (sig,                idx \ m)    if nonempty
-```
+- An **index class** of a list of masks `m₁ … m_g` is a maximal set of indices
+  contained in exactly the same masks. Its **signature** is the length-`g` bit
+  vector `σ` with `σ[k] = 1` iff the class is contained in `m_k`. Indices
+  contained in no mask belong to no class.
+- **Row classes** are the index classes of `D₁ … D_g`. **Column classes** are
+  the index classes of `N₁ … N_g`.
+- A **block** is `R × C` for a row class `R` (signature `ρ`) and a column class
+  `C` (signature `γ`). Its **cover** is `ρ .& γ`.
 
-At the end, `signature[k]` is true exactly when group `k`'s mask contains the
-class's indices. This is run once on the groups' `D` masks (giving row classes)
-and once on their `N` masks (giving column classes).
+A pair `(i, j) ∈ R × C` lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`, i.e. iff
+`ρ[k] = γ[k] = 1`. So every pair in a block lies in exactly the groups in the
+block's cover. That is the property the partition needs.
 
-A pair `(i, j)` lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`. So for a row class
-with signature `rs` and a column class with signature `cs`, every pair in the
-block lies in exactly the groups `cover = rs .& cs`. `factored_edges` emits, for
-each block with a nonempty `cover`, one edge `b → c` with
-
-- value = sum of the covered groups' values,
-- dominance mask = the row class, non-dominance mask = the column class,
-- path count = sum of the covered groups' path counts.
-
-Blocks with empty `cover` contain no paths and get no edge.
-
-For `[12, 6]`, with groups `G1, G2`:
+`index_classes(masks, n)` computes the classes by successive refinement:
 
 ```
-rows:     {r1}                              signature (1,1)
-
-columns:  start      {v1,v2,v3}             (0,0)
-          split G1:  {v1,v3}  (1,0)   {v2}  (0,0)
-          split G2:  {v1,v3}  (1,1)   {v2}  (0,1)
-
-blocks:   {r1} × {v1,v3}   cover (1,1) → 12 → 6   v:1,3   value 1 + v1·(v1+v2)   2 paths
-          {r1} × {v2}      cover (0,1) → 12 → 6   v:2     value v1·(v1+v2)       1 path
+classes = [(σ = 0…0, I = m₁ ∪ … ∪ m_g)]          # one class: every index in some mask
+for k in 1:g
+    replace each (σ, I) in classes by
+        (σ with σ[k] = 1,  I ∩ m_k)    if nonempty
+        (σ,                I \ m_k)    if nonempty
 ```
 
-`(r1, v2)` now gets only the long path's product, which is correct.
+After step `k`, two indices are in the same class iff they agree on membership in
+`m₁ … m_k`. At the end, the classes are exactly the index classes. The work is
+proportional to `g` times the number of classes, counted in whole-mask
+operations. It never loops over individual roots or variables.
 
-`factored_edges` also returns the largest path count over all blocks. If it is
-below 2, every pair already has at most one path through `[b, c]` — typically
-because earlier steps already factored it — and the subgraph is left alone.
+`factored_edges` then emits, for every block whose cover is nonempty, one
+**replacement edge** between `b` and `c` with
 
-The cost of the partition depends on the numbers of groups and classes, not on
-the number of roots or variables: no step loops over individual indices except
-through word-level mask operations.
+- value `Σ_{k ∈ cover} V_k`,
+- dominance mask `R`, non-dominance mask `C`,
+- segment count `Σ_{k ∈ cover} n_k`.
 
-### 4.3 Detaching the old paths — `add_non_dom_edges!`, `reset_edge_masks!`
+A block with an empty cover contains no pair with a live segment, so it gets no
+edge. `factored_edges` also returns the largest segment count over all blocks.
+If that is below 2, no pair has more than one live segment, and
+`factor_subgraph!` changes nothing.
 
-For each new edge, the pairs it now carries must be removed from the old paths
-through `[b, c]`. Let the new edge's block have dominance bits `R` (its row
-class) and non-dominance bits `C` (its column class). A **boundary edge** of
-the block is an edge `e` such that
+For `S₂`:
 
-- `e` is incident to `c` on the side facing `b`: for a dominator subgraph `c`
-  is `e`'s bottom vertex (`e` is a parent edge of `c`); for a postdominator
-  subgraph `c` is `e`'s top vertex (`e` is a child edge of `c`);
-- `e`'s dominance mask contains **all** of `R`; and
-- `e`'s non-dominance mask contains **at least one** bit of `C`.
+```
+row classes      R = {r1}                               ρ = (1, 1)
 
-(This is `test_edge` applied to a subgraph whose masks are `R` and `C`.)
-Requiring all of `R` misses nothing: the bits of `R` lie in exactly the same
-path groups, so an edge on a live path through `[b, c]` carries either all of
-`R` or none of it. Every old path that serves a pair in `R × C` starts at `c`
-with a boundary edge, so editing the boundary edges suffices:
+column classes   start           {v1, v2, v3}           (0, 0)
+                 refine by N_1   {v1, v3} (1, 0)   {v2} (0, 0)
+                 refine by N_2   {v1, v3} (1, 1)   {v2} (0, 1)
 
-- `add_non_dom_edges!` splits a boundary edge whose dominance mask has bits
-  outside the block's row class, so that the copy carrying the block's rows can
-  be edited alone.
-- `reset_edge_masks!` clears the block's column bits from that copy, and the
-  edge is deleted if nothing is left.
+blocks           {r1} × {v1, v3}  cover (1, 1)  →  12 → 6  v:1,3  value 1 + v1·(v1+v2)  2 segments
+                 {r1} × {v2}      cover (0, 1)  →  12 → 6  v:2    value v1·(v1+v2)      1 segment
+```
 
-Interior edges are not touched: paths that enter the subgraph somewhere other
-than `c` still need them. In the example, `7 → 6` (`v:1,3`) is emptied by the
-first block and deleted; `8 → 6` (`v:1,2,3`) loses `v1, v3` to the first block
-and `v2` to the second, and is deleted. `12 → 7` stays, because `12 → 7 → 3` and
-`12 → 7 → 2` still use it.
+`(r1, v2)` now gets only G2's value.
 
-### 4.4 Removing stale bits — `prune_stale_masks!`
+### 4.4 Detaching the old segments — `add_non_dom_edges!`, `reset_edge_masks!`
 
-After detaching, interior edges still carry bits for pairs that were only
-reachable through the deleted boundary edges. Since every later step reads
-current masks, these must go. `prune_stale_masks!` visits the subgraph's nodes
-starting next to `c`, and for each edge keeps only the non-dominance bits that
-some continuing edge still carries (for the same dominance bits), splitting the
-edge if different dominance bits continue differently and deleting it if
-nothing remains. A bit is removed only if no continuing edge carries it, so no
-live path loses an edge.
+Each replacement edge with block `R × C` must take its pairs off the old
+segments. A **boundary edge** of the block is an edge `e` that
 
-In the example `v3` was reachable only through node 6, so it is removed from
-`12 → 7`, `12 → 11`, `11 → 10` and `10 → 9`; `9 → 8` keeps only `v2`, the
-variable `8 → 2` still reaches.
+- is a forward edge of `c`,
+- has `R ⊆ dom(e)`, and
+- has `nondom(e) ∩ C ≠ ∅`.
 
-### 4.5 Reading out — `follow_path`
+(This is `test_edge` on a subgraph whose masks are `R` and `C`.) Every live
+segment `π` for a pair in the block starts with a boundary edge. Its first edge
+`e` has `D(π) ⊆ dom(e)`, and `R ⊆ D(π)`, because all of `R` lies in the same
+groups as the pair's root.
 
-`follow_path` walks the single remaining path for `(i, j)` and multiplies its
-edges in decreasing order of use, so products shared by many derivatives are
-built once. If it meets a branch or a dead end, it falls back to
-`sum_all_paths`, a memoized sum over all paths, instead of asserting.
+For each replacement edge, in turn:
 
-### 4.6 Supporting changes
+1. `add_non_dom_edges!` splits every boundary edge `e` with `dom(e) ⊄ R` in two.
+   Both copies have the same value. One copy keeps dominance bits `R`; the other
+   keeps `dom(e) \ R` and all of `e`'s non-dominance bits. Pairs outside `R` are
+   unaffected.
+2. `reset_edge_masks!` removes `C` from the non-dominance mask of each copy with
+   dominance bits `R`. An edge left with an empty mask is deleted.
+3. The replacement edge is added. A later block's edits cannot match it: blocks
+   are disjoint, so either its row class differs from the later block's, which
+   fails `R ⊆ dom`, or its column class is disjoint, which fails
+   `nondom ∩ C ≠ ∅`.
 
-- `initialize_edge_masks!` sets every edge's masks from the graph's topology
-  when the `DerivativeGraph` is built (variables below, roots above).
-- The `DerivativeGraph` constructor unwraps a root that is already a `NoOp`
-  before wrapping it, so rebuilding a graph from existing roots does not change
-  its node numbering.
+Only edges at `c` are changed. Interior edges may still be used by paths that
+reach the region without passing through `c`.
 
-## 5. Why it is correct
+Step 1 (`S₁ = [2, 7]`, postdominator: dominance bits are variables) shows the
+split. There is one group, `D = {v2}`, `N = {r1}`, with 2 segments and value
+`1 + v1`, giving one block `{v2} × {r1}`. Its boundary edges are the child edges
+of 7 that carry `v2`: `7 → 3` (`v:1,2`) and `7 → 6` (`v:1,2,3`). Splitting
+leaves copies with `v:2` and copies with `v:1` and `v:1,3`. Clearing `r1` from
+the `v:2` copies empties them, and they are deleted. The result is the figure
+after step 1.
 
-Let `PathSum(i, j)` be the path-product sum for pair `(i, j)` in the current
-graph. Each call to `factor_subgraph!` preserves it for every pair:
+In step 2 there is one root, so nothing is split. `7 → 6` (`v:1,3`) is emptied by
+block `{r1} × {v1, v3}`. `8 → 6` (`v:1,2,3`) loses `v1, v3` to that block and
+`v2` to `{r1} × {v2}`. Both are deleted.
 
-- **New edges.** Groups are computed from current masks, so for each pair the
-  covered groups are exactly that pair's current paths through `[b, c]`, and the
-  block's edge carries exactly their sum (§4.1–4.2). Blocks are disjoint, so no
-  pair gets two new edges.
-- **Old paths.** Clearing a block's bits on the boundary edges at `c` removes
-  that block's pairs from every old path through `[b, c]` and from no other
-  path (§4.3).
-- **Pruning** removes a bit only when no continuing edge carries it, so it
-  deletes no live path (§4.4).
+### 4.5 Pruning — `prune_stale_masks!`
 
-By induction over the steps, the final graph has the original path sums, in
-any processing order. The masks a step reads are always the current ones,
-which is what `main` got wrong.
+After part 4.4, interior edges can still carry pairs whose only continuation was
+a deleted boundary edge. Later steps read these masks, so they must be exact.
+
+For an edge `e`, let `w` be its endpoint nearer `c`. A **continuation** of `e`
+is an edge leaving `w` away from `b` with a nonempty non-dominance mask. For
+every edge `e` with both endpoints in the region and `w ≠ c`,
+`prune_stale_masks!`:
+
+1. splits `dom(e)` into groups of bits that are contained in the same
+   continuations;
+2. for each such group, keeps the bits of `nondom(e)` that some continuation
+   containing the group carries;
+3. merges groups that keep the same bits. If more than one remains, it splits
+   `e` into one edge per group. If none remains, it deletes `e`.
+
+Nodes are visited in topological order from the `c` side, so every
+continuation has already been pruned. A bit is removed only if no continuation
+carries it with the same dominance bit, so no live path is broken.
+
+In step 2, `v3` was carried only through node 6. It is removed from `12 → 7`,
+`12 → 11`, `11 → 10` and `10 → 9`. `9 → 8` keeps only `v2`, which `8 → 2`
+carries.
+
+### 4.6 Other changes
+
+- **Read-out.** `follow_path` walks the unique live path for `(i, j)` and
+  multiplies its edges in decreasing order of `num_uses` (root bits × variable
+  bits), so shared products are built once. If it finds two candidate edges, or
+  a dead end, it calls `sum_all_paths`, a memoized sum over all live paths,
+  instead of asserting.
+- **Mask initialization.** `initialize_edge_masks!`, described in §1.
+- **Idempotent construction.** The `DerivativeGraph` constructor unwraps a root
+  that is already a no-op wrapper before wrapping it. Rebuilding a graph from
+  existing roots therefore keeps the same numbering.
+
+## 5. Correctness
+
+Fix one step, factoring `S`, and a pair `(i, j)`. The argument uses the property
+`S` was discovered with: for a dominator subgraph every path from `c` up to a
+root in `dom(S)` passes through `b`, and mirror-image for postdominator
+subgraphs.
+
+- **The pair has a live segment.** Then it lies in some group, so it is in a
+  block `R × C` with a nonempty cover. Every live path through `c` for the pair
+  splits uniquely into an upper part, a live segment, and a lower part. Summing
+  over these paths gives the upper sum × `Σ_{k ∈ cover} V_k` × the lower sum.
+  This equals the sum over upper part, replacement edge, and lower part,
+  because the replacement edge has exactly that value and carries the pair
+  (§4.3). Every live segment for the pair starts with a boundary edge of the
+  block, which loses the pair (§4.4), so none of the old paths stays live.
+- **The pair has no live segment.** No block with a nonempty cover contains it.
+  So no replacement edge carries it, and §4.4 removes no bit of it: the copies it
+  edits carry only `R`, and only `C` is cleared from them.
+- **Paths not through `c`** are touched only by pruning, which breaks no live
+  path (§4.5).
+
+So each step preserves every `PathSum(i, j)`, and so does `factor!`. `main`
+violates the first point: its replacement edge has the sum of all segments and
+the discovery masks.
 
 After all 14 steps the example graph is:
 
-![The graph after factor!: 12→6 (v3), 12→2 (v2), 12→1 (v1), 6→5 (v3), 5→4 (v3).](img/fig-after-factor.svg)
+![After factor!: 12→6 (v3), 12→2 (v2), 12→1 (v1), 6→5 (v3), 5→4 (v3).](img/fig-after-factor.svg)
 
-Each pair has one path, node 6 (`s`) is still shared, and the edges `6 → 1`
-and `5 → 2` are gone: once `12 → 1` and `12 → 2` carried the `v1` and `v2`
-contributions, pruning left nothing on them.
+Each pair has one live path, and node 6 (`s`) is still shared. `6 → 1` and
+`5 → 2` were deleted once `12 → 1` and `12 → 2` carried their contributions.
 
-The diagrams are generated by [`img/generate_figures.jl`](img/generate_figures.jl).
+The figures are generated by [`img/generate_figures.jl`](img/generate_figures.jl).
