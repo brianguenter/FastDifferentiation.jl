@@ -80,7 +80,8 @@ generally have different `D` and `N`.
 **Factoring** `S` (`factor_subgraph!`) replaces the segments of `S` with edges
 between `b` and `c`. It is correct if every path sum is unchanged. `factor!`
 factors each discovered subgraph once, in the order of a heap keyed on
-`|b − c|` (smallest first) and then on `times_used` (largest first).
+`|b − c|` (smallest first) and then on `times_used = |dom(S)| · |nondom(S)|`
+(largest first).
 
 ## 2. The bug
 
@@ -90,7 +91,7 @@ all segments, and its masks are `S`'s masks from discovery.
 Every factoring step changes edge masks. When `S` is factored, earlier steps
 may already have changed the edges of its segments, so:
 
-1. **Segments that are live for different pairs are summed into one edge.** A
+1. **Segments carrying different pairs are summed into one edge.** A
    segment from which an earlier step removed pair `(i, j)` still contributes
    its product to the new edge, and the new edge carries `(i, j)`. That pair's
    contribution through the segment is counted twice: on the edge where the
@@ -159,7 +160,7 @@ uses `S`'s masks except to restrict which pairs it handles.
 The **region** of `S` is the set of nodes reachable from `c` along forward
 edges `e` with `dom(e) ∩ dom(S) ≠ ∅` and `nondom(e) ∩ nondom(S) ≠ ∅`
 (`on_subgraph_path`), stopping at `b`. It includes `b` but not `c`. It is
-computed before anything is changed, because part 4.3 edits edges at `c`.
+computed before anything is changed, because §4.4 edits edges at `c`.
 
 ### 4.2 Groups — `subgraph_path_groups`
 
@@ -167,11 +168,13 @@ A **group** is the set of segments sharing one value of `(D(π), N(π))` with
 both masks nonempty. For each group `k` the code stores `D_k`, `N_k`, the sum of
 its segments' products `V_k`, and its number of segments `n_k`.
 
-Groups are computed by dynamic programming over the region. Each node stores
-the groups of its partial segments, so no segment is enumerated. For a dominator
-subgraph this is a memoized recursion from `c`. For a postdominator subgraph it
-is a pass over the region in topological order. In both cases each product is
-formed from the upper end of the segment downward.
+Groups are computed by dynamic programming, so no segment is enumerated. Each
+node `u` stores the groups of the directed paths between `u` and the upper end
+of the subgraph, with masks defined as for segments. For a dominator subgraph
+the upper end is `b`, and the code memoizes a recursion that starts at `c`. For
+a postdominator subgraph the upper end is `c`, and the code makes one pass over
+the region in topological order. In both cases each product is formed from the
+upper end downward.
 
 For `S₂` after step 1:
 
@@ -187,25 +190,23 @@ overlap: `(r1, v1)` is in G1 and G2.
 
 ### 4.3 Partition — `index_classes`, `factored_edges`
 
-The pairs are partitioned into **blocks** so that all pairs in a block lie in
-exactly the same groups. Each block then gets one edge. One edge per group
-would not work, because a pair in two groups would get two parallel edges.
+Number the groups `1 … g`.
 
-Blocks are built from two independent partitions, one of the dominance indices
-and one of the non-dominance indices. Let the groups be numbered `1 … g`.
-
-- An **index class** of a list of masks `m₁ … m_g` is a maximal set of indices
+- An **index class** of a list of masks `m₁ … m_g` is a maximal set of bits
   contained in exactly the same masks. Its **signature** is the length-`g` bit
-  vector `σ` with `σ[k] = 1` iff the class is contained in `m_k`. Indices
+  vector `σ` with `σ[k] = 1` iff the class is contained in `m_k`. Bits
   contained in no mask belong to no class.
-- **Row classes** are the index classes of `D₁ … D_g`. **Column classes** are
-  the index classes of `N₁ … N_g`.
+- **Row classes** are the index classes of `D₁ … D_g` (sets of dominance bits).
+  **Column classes** are the index classes of `N₁ … N_g` (sets of
+  non-dominance bits).
 - A **block** is `R × C` for a row class `R` (signature `ρ`) and a column class
   `C` (signature `γ`). Its **cover** is `ρ .& γ`.
 
-A pair `(i, j) ∈ R × C` lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`, i.e. iff
-`ρ[k] = γ[k] = 1`. So every pair in a block lies in exactly the groups in the
-block's cover. That is the property the partition needs.
+The blocks partition all pairs that lie in some group. A pair `(i, j) ∈ R × C`
+lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`, i.e. iff `ρ[k] = γ[k] = 1`. So
+every pair in a block lies in exactly the groups in the block's cover, and the
+block can be given one edge whose value is the sum over its cover. One edge per
+group would not work: a pair in two groups would get two parallel edges.
 
 `index_classes(masks, n)` computes the classes by successive refinement:
 
@@ -229,9 +230,9 @@ operations. It never loops over individual roots or variables.
 - dominance mask `R`, non-dominance mask `C`,
 - segment count `Σ_{k ∈ cover} n_k`.
 
-A block with an empty cover contains no pair with a live segment, so it gets no
-edge. `factored_edges` also returns the largest segment count over all blocks.
-If that is below 2, no pair has more than one live segment, and
+A block with an empty cover contains no pair carried by a segment, so it gets
+no edge. `factored_edges` also returns the largest segment count over all
+blocks. If that is below 2, no pair is carried by more than one segment, and
 `factor_subgraph!` changes nothing.
 
 For `S₂`:
@@ -258,10 +259,10 @@ segments. A **boundary edge** of the block is an edge `e` that
 - has `R ⊆ dom(e)`, and
 - has `nondom(e) ∩ C ≠ ∅`.
 
-(This is `test_edge` on a subgraph whose masks are `R` and `C`.) Every live
-segment `π` for a pair in the block starts with a boundary edge. Its first edge
-`e` has `D(π) ⊆ dom(e)`, and `R ⊆ D(π)`, because all of `R` lies in the same
-groups as the pair's root.
+(This is `test_edge` on a subgraph whose masks are `R` and `C`.) Every segment
+`π` carrying a pair in the block starts with a boundary edge: its edge `e` at
+`c` has `D(π) ⊆ dom(e)`, and `R ⊆ D(π)` because all bits of `R` lie in the
+same groups.
 
 For each replacement edge, in turn:
 
@@ -276,8 +277,8 @@ For each replacement edge, in turn:
    fails `R ⊆ dom`, or its column class is disjoint, which fails
    `nondom ∩ C ≠ ∅`.
 
-Only edges at `c` are changed. Interior edges may still be used by paths that
-reach the region without passing through `c`.
+Only edges at `c` are changed. Edges between region nodes may still be used by
+paths that reach the region without passing through `c`.
 
 Step 1 (`S₁ = [2, 7]`, postdominator: dominance bits are variables) shows the
 split. There is one group, `D = {v2}`, `N = {r1}`, with 2 segments and value
@@ -293,20 +294,21 @@ block `{r1} × {v1, v3}`. `8 → 6` (`v:1,2,3`) loses `v1, v3` to that block and
 
 ### 4.5 Pruning — `prune_stale_masks!`
 
-After part 4.4, interior edges can still carry pairs whose only continuation was
-a deleted boundary edge. Later steps read these masks, so they must be exact.
+After §4.4, an edge between region nodes can still carry pairs whose only
+continuation was a deleted boundary edge. Later steps read these masks, so they
+must be exact.
 
 For an edge `e`, let `w` be its endpoint nearer `c`. A **continuation** of `e`
 is an edge leaving `w` away from `b` with a nonempty non-dominance mask. For
 every edge `e` with both endpoints in the region and `w ≠ c`,
 `prune_stale_masks!`:
 
-1. splits `dom(e)` into groups of bits that are contained in the same
-   continuations;
-2. for each such group, keeps the bits of `nondom(e)` that some continuation
-   containing the group carries;
-3. merges groups that keep the same bits. If more than one remains, it splits
-   `e` into one edge per group. If none remains, it deletes `e`.
+1. partitions `dom(e)` into **parts**, maximal sets of bits contained in the
+   dominance masks of exactly the same continuations;
+2. for each part, keeps the bits of `nondom(e)` carried by some continuation
+   whose dominance mask contains the part;
+3. merges parts that keep the same bits. If more than one remains, it splits
+   `e` into one edge per part. If none remains, it deletes `e`.
 
 Nodes are visited in topological order from the `c` side, so every
 continuation has already been pruned. A bit is removed only if no continuation
@@ -336,15 +338,17 @@ Fix one step, factoring `S`, and a pair `(i, j)`. The argument uses the property
 root in `dom(S)` passes through `b`, and mirror-image for postdominator
 subgraphs.
 
-- **The pair has a live segment.** Then it lies in some group, so it is in a
-  block `R × C` with a nonempty cover. Every live path through `c` for the pair
-  splits uniquely into an upper part, a live segment, and a lower part. Summing
-  over these paths gives the upper sum × `Σ_{k ∈ cover} V_k` × the lower sum.
-  This equals the sum over upper part, replacement edge, and lower part,
-  because the replacement edge has exactly that value and carries the pair
-  (§4.3). Every live segment for the pair starts with a boundary edge of the
-  block, which loses the pair (§4.4), so none of the old paths stays live.
-- **The pair has no live segment.** No block with a nonempty cover contains it.
+- **`(i, j) ∈ D(π) × N(π)` for some segment `π`.** Then the pair lies in some
+  group, so it is in a block `R × C` with a nonempty cover. Every live path through `c` for the
+  pair splits uniquely into an upper path, a segment carrying the pair, and a
+  lower path. Summing over these paths gives (sum over upper paths) ×
+  `Σ_{k ∈ cover} V_k` × (sum over lower paths). The replacement edge has value
+  `Σ_{k ∈ cover} V_k` and carries the pair (§4.3), so the new paths through it
+  have the same sum. Every segment carrying the pair starts with a boundary
+  edge of the block, which loses the pair (§4.4), so none of the old paths
+  stays live.
+- **`(i, j) ∉ D(π) × N(π)` for every segment `π`.** No block with a nonempty
+  cover contains it.
   So no replacement edge carries it, and §4.4 removes no bit of it: the copies it
   edits carry only `R`, and only `C` is cleared from them.
 - **Paths not through `c`** are touched only by pruning, which breaks no live
