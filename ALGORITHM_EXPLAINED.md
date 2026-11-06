@@ -57,11 +57,14 @@ for which `S` was discovered. `nondom(S)` is the set of variables below `c`
 **Segment.** A *segment* `π` of `S` is a directed path in the derivative graph
 between `b` and `c`: from `b` down to `c` in a dominator subgraph, from `c`
 down to `b` in a postdominator subgraph. *Directed* means the path goes
-downward through every edge (in at the top vertex, out at the bottom), so that
-it can be part of a root-to-variable path. This determines which edge sets are
-segments, not the order in which their products are formed. For `[12, 6]`, the
-edges `12 → 11`, `11 → 1` and `6 → 1` connect 12 and 6 only by going down to 1
-and back up, so they form no segment, and their product appears in no
+downward through every edge, entering at its top vertex and leaving at its
+bottom vertex. A root-to-variable path that passes through both `b` and `c`
+therefore consists of a path from the root to the upper of the two nodes, then a
+whole segment, then a path from the lower node to the variable. Direction
+decides which edge sets are segments, not the order in which products are
+formed. For `[12, 6]`, the edges `12 → 11`, `11 → 1` and `6 → 1` connect 12 and
+6 only by going down to 1 and back up. They are not a segment, and no
+root-to-variable path contains them, so their product appears in no
 derivative. Each segment has two masks:
 
 ```
