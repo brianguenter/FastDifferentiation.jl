@@ -85,9 +85,9 @@ dominance masks of the edges along `π`. `NonDomMask(π)` is the intersection of
 the subgraph's non-dominance mask and the non-dominance masks of the edges
 along `π`.
 
-A pair is carried by `π` and lies within `S`'s masks exactly when its
-dominance bit is in `DomMask(π)` and its non-dominance bit is in `NonDomMask(π)`; this set of
-pairs is written `DomMask(π) × NonDomMask(π)`. Different segments of the same subgraph
+If bit `i` is 1 in `DomMask(π)` and bit `j` is 1 in `NonDomMask(π)`, then `π`
+carries `(i, j)`. The set of all pairs carried by `π` is written
+`DomMask(π) × NonDomMask(π)`. Different segments of the same subgraph
 generally have different `DomMask` and `NonDomMask`.
 
 **Factoring** `S` (`factor_subgraph!`) replaces the segments of `S` with edges
