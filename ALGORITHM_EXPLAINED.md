@@ -363,6 +363,38 @@ carries.
   that is already a no-op wrapper before wrapping it. Rebuilding a graph from
   existing roots therefore keeps the same numbering.
 
+### 4.7 Cost
+
+Let `n = |dom(S)|` and `m = |nondom(S)|`. A *mask operation* is an AND,
+comparison or hash of one mask, which takes time proportional to the number of
+roots or variables divided by the word size.
+
+- **Groups.** Each key of `G(u)` is a pair of nonempty subsets of the `n`
+  dominance and `m` non-dominance bits, and each path from `u` to the upper end
+  contributes one key. So `|G(u)| ≤ min(P(u), (2ⁿ − 1)(2ᵐ − 1))`, where `P(u)` is
+  the number of those paths, and computing all tables takes at most
+  `Σ_{region edges (u, w)} |G(w)|` mask operations. For arbitrary masks the
+  exponential bound is attained, e.g. by `n + m` diamonds in series, each
+  dropping one bit on one of its two branches.
+- **Masks from `initialize_edge_masks!`** make every table have one entry. Every
+  region node `u` lies on a path between `c` and `b`, so every edge's
+  dominance mask contains `dom(S)` and its non-dominance mask contains
+  `nondom(S)`. Different mask pairs arise only from edges that earlier
+  factoring steps edited. No polynomial bound in `n` and `m` is known for
+  those.
+- **Partition.** Row classes are disjoint nonempty subsets of the `n`
+  dominance bits, so there are at most `n` of them, and at most `m` column
+  classes. With `g` groups, `index_classes` takes `O(g·(n + m))` mask
+  operations, and there are at most `n·m` blocks, hence at most `n·m`
+  replacement edges.
+
+Measured over every step of `factor!`, the largest number of groups was 1 for
+the gradients of Rosenbrock (60 variables) and of
+`Σ sin(xᵢxᵢ₊₁)·exp(xᵢ)` (40 variables) and for a dense 20 × 20 map, 2 for the
+example in §3, and at most 6 for random expression graphs with 8 inputs,
+8 outputs and 70 shared operations. One of those had 4 groups with
+`n = 1, m = 3`, so the number of groups is not bounded by `n·m`.
+
 ## 5. Correctness
 
 Fix one step, factoring `S`, and a pair `(i, j)`. The argument uses the property
