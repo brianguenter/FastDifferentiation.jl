@@ -185,13 +185,28 @@ belong to no group. For each group `k` the code stores the shared masks
 `DomMask_k` and `NonDomMask_k`, the sum `V_k` of its segments' products, and its
 number of segments `n_k`.
 
-Groups are computed by dynamic programming, so no segment is enumerated. Each
-node `u` stores the groups of the directed paths between `u` and the upper end
-of the subgraph, with masks defined as for segments. For a dominator subgraph
-the upper end is `b`, and the code memoizes a recursion that starts at `c`. For
-a postdominator subgraph the upper end is `c`, and the code makes one pass over
-the region in topological order. In both cases each product is formed from the
-upper end downward.
+The number of segments can grow exponentially with the number of branching
+nodes, so the code never lists segments. Instead each node `u` gets a table
+`G(u)` that maps a mask pair `(Dm, Nm)` to the sum `V` of the products and the
+number `n` of the directed paths between `u` and the upper end of the subgraph
+that have those masks (computed as for segments). For a dominator subgraph the
+upper end is `b`:
+
+```
+G(b) = { (dom(S), nondom(S)) ↦ (V = 1, n = 1) }
+
+G(u) = for each forward edge e of u, with w its top vertex,
+         for each entry (Dm, Nm) ↦ (V, n) of G(w):
+           key = (dom(e) ∩ Dm, nondom(e) ∩ Nm)      -- skipped if either set is empty
+           add V · value(e) and n to G(u)[key]
+```
+
+The groups of `S` are the entries of `G(c)`. Each `G(u)` is computed once
+(memoized), so the work is proportional to the number of region edges times
+the number of distinct mask pairs, not to the number of segments. For a
+postdominator subgraph the upper end is `c`, and the same tables are pushed
+downward from `c` to `b`, one region node at a time in topological order. In
+both cases each product is formed from the upper end downward.
 
 For `S₂` after step 1:
 
