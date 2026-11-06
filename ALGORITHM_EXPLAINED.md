@@ -178,9 +178,12 @@ computed before anything is changed, because §4.4 edits edges at `c`.
 
 ### 4.2 Groups — `subgraph_path_groups`
 
-A **group** is the set of segments sharing one value of `(DomMask(π), NonDomMask(π))` with
-both masks nonempty. For each group `k` the code stores `DomMask_k`, `NonDomMask_k`, the sum of
-its segments' products `V_k`, and its number of segments `n_k`.
+A **group** is a maximal set of segments that all have exactly the same
+`DomMask(π)` and exactly the same `NonDomMask(π)`, both nonempty. Segments with
+an empty `DomMask(π)` or `NonDomMask(π)` carry no pair within `S`'s masks and
+belong to no group. For each group `k` the code stores the shared masks
+`DomMask_k` and `NonDomMask_k`, the sum `V_k` of its segments' products, and its
+number of segments `n_k`.
 
 Groups are computed by dynamic programming, so no segment is enumerated. Each
 node `u` stores the groups of the directed paths between `u` and the upper end
