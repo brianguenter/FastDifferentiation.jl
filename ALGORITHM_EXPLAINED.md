@@ -80,6 +80,15 @@ D(π) = dom(S)    ∩  ⋂_{e ∈ π} dom(e)
 N(π) = nondom(S) ∩  ⋂_{e ∈ π} nondom(e)
 ```
 
+Here, as everywhere below, a mask is treated as the set of indices at which it
+has a 1, so `∩` is bitwise AND, and `⋂_{e ∈ π}` is the AND over all edges of
+`π`. `D(π)` is the set of dominance bits that are 1 in `dom(S)` and in the
+dominance mask of every edge of `π`. For example, in §3 the segment
+`12 → 7 → 6` of `[12, 6]` has, after step 1,
+`D = {r1} ∩ {r1} ∩ {r1} = {r1}` and
+`N = {v1,v2,v3} ∩ {v1,v2,v3} ∩ {v1,v3} = {v1,v3}`
+(`dom(S)`, then the masks of `12 → 7` and `7 → 6`).
+
 A pair is carried by `π` and lies within `S`'s masks exactly when its
 dominance bit is in `D(π)` and its non-dominance bit is in `N(π)`; this set of
 pairs is written `D(π) × N(π)`. Different segments of the same subgraph
