@@ -80,10 +80,14 @@ DomMask(π)    = dom(S)    ∩  ⋂_{e ∈ π} dom(e)
 NonDomMask(π) = nondom(S) ∩  ⋂_{e ∈ π} nondom(e)
 ```
 
+`DomMask(π)` is the intersection of the subgraph's dominance mask and the
+dominance masks of the edges along `π`. `NonDomMask(π)` is the intersection of
+the subgraph's non-dominance mask and the non-dominance masks of the edges
+along `π`.
+
 Here, as everywhere below, a mask is treated as the set of indices at which it
 has a 1, so `∩` is bitwise AND, and `⋂_{e ∈ π}` is the AND over all edges of
-`π`. `DomMask(π)` is the set of dominance bits that are 1 in `dom(S)` and in the
-dominance mask of every edge of `π`. For example, in §3 the segment
+`π`. For example, in §3 the segment
 `12 → 7 → 6` of `[12, 6]` has, after step 1,
 `DomMask = {r1} ∩ {r1} ∩ {r1} = {r1}` and
 `NonDomMask = {v1,v2,v3} ∩ {v1,v2,v3} ∩ {v1,v3} = {v1,v3}`
