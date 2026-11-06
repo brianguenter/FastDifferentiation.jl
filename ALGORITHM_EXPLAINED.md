@@ -388,7 +388,8 @@ roots or variables divided by the word size.
   operations, and there are at most `n·m` blocks, hence at most `n·m`
   replacement edges.
 
-Measured just before each step of `factor!`:
+Measured just before each step of `factor!` by
+[`scripts/measure_groups.jl`](scripts/measure_groups.jl):
 
 | problem | steps | max groups at `c` | max `\|G(u)\|` | `(n, m)` where max occurs |
 |:--|--:|--:|--:|:--|
