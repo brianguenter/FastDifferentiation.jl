@@ -8,12 +8,20 @@ and a *value*, the partial derivative of the top node with respect to the
 bottom node. *Roots* are the outputs `fᵢ` (top); *variables* are the inputs `xⱼ`
 (bottom). A *pair* is a root–variable pair `(i, j)`.
 
-**Masks.** Every edge has two bit vectors: a root mask
-(`reachable_roots`) and a variable mask (`reachable_variables`). An edge *carries* root `i` if bit `i` is set in its
-root mask, variable `j` if bit `j` is set in its variable mask, and the pair
-`(i, j)` if it carries both. A path carries a root, variable or pair if every
-one of its edges does. When the graph is built, `initialize_edge_masks!` first computes, for
-every node `u`,
+**Masks.** Every edge has two bit vectors: a *root mask* (`reachable_roots`),
+with one bit per root, and a *variable mask* (`reachable_variables`), with one
+bit per variable.
+
+**Carries.** An edge *carries*
+
+- root `i` if its root mask has a 1 at index `i`;
+- variable `j` if its variable mask has a 1 at index `j`;
+- pair `(i, j)` if it carries both root `i` and variable `j`.
+
+A path carries a root, variable or pair if every one of its edges does.
+
+When the graph is built, `initialize_edge_masks!` first computes, for every
+node `u`,
 
 ```
 roots(u)     = {i : u is root i}     ∪  ⋃ over parent edges p of u:  roots(top_vertex(p))
