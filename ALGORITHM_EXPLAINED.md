@@ -54,22 +54,15 @@ where `x` is an edge or a subgraph. `dom(S)` is the set of roots (or variables)
 for which `S` was discovered. `nondom(S)` is the set of variables below `c`
 (or roots above `c`) at discovery.
 
-**Segment.** The *far endpoint* of an edge is its top vertex in a dominator
-subgraph and its bottom vertex in a postdominator subgraph. A *segment* of `S`
-is a sequence of edges `π = e₁ … eₖ` (`k ≥ 1`) such that
-
-- `e₁` is a forward edge of `c`,
-- `e_{m+1}` is a forward edge of the far endpoint of `e_m`, and
-- the far endpoint of `eₖ` is `b`.
-
-That is, a segment is a directed path in the derivative graph between `c`
-and `b`: it runs upward from `c` to `b` in a dominator subgraph and downward
-in a postdominator subgraph. Every path through both `b` and `c` contains
-exactly one segment, the part between them. Each segment has two masks:
+**Segment.** A *segment* `π` of `S` is a directed path in the derivative graph
+between `b` and `c`: from `b` down to `c` in a dominator subgraph, from `c`
+down to `b` in a postdominator subgraph. Direction matters: derivatives are
+sums over directed paths, so only directed paths between `b` and `c` occur as
+factors of their terms. Each segment has two masks:
 
 ```
-D(π) = dom(S)    ∩ dom(e₁)    ∩ … ∩ dom(eₖ)
-N(π) = nondom(S) ∩ nondom(e₁) ∩ … ∩ nondom(eₖ)
+D(π) = dom(S)    ∩  ⋂_{e ∈ π} dom(e)
+N(π) = nondom(S) ∩  ⋂_{e ∈ π} nondom(e)
 ```
 
 A pair is carried by `π` and lies within `S`'s masks exactly when its
