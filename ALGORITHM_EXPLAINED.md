@@ -120,16 +120,25 @@ the sum of its own paths.
 
 ### 4.1 Path groups — `subgraph_path_groups`
 
-Call a subgraph's roots (for a dominator subgraph) or variables (for a
-postdominator subgraph) its *dominance* bits, and the other kind its
-*non-dominance* bits. For a path `π` from `c` to `b`, let
+For a dominator subgraph the *dominance* bits are roots and the
+*non-dominance* bits are variables; for a postdominator subgraph it is the
+other way round. Write `dom(x)` and `nondom(x)` for those two masks of `x`,
+where `x` is either an edge or the factorable subgraph `S = [b, c]` itself.
+`dom(S)` is the mask stored on `S` when it was discovered: for a dominator
+subgraph, the roots for which `b` dominates `c`. `nondom(S)` is the
+non-dominance mask stored with it.
+
+Each path `π = e₁ e₂ … eₖ` from `c` to `b` gets its own pair of masks:
 
 ```
-D(π) = subgraph's dominance mask      ∩ dominance masks of every edge of π
-N(π) = subgraph's non-dominance mask  ∩ non-dominance masks of every edge of π
+D(π) = dom(S)    ∩ dom(e₁)    ∩ dom(e₂)    ∩ … ∩ dom(eₖ)
+N(π) = nondom(S) ∩ nondom(e₁) ∩ nondom(e₂) ∩ … ∩ nondom(eₖ)
 ```
 
-`π` serves exactly the pairs in `D(π) × N(π)`. Paths with the same `(D, N)` form
+A pair `(i, j)` can use `π` only if every edge of `π` carries both its bits,
+and only pairs within `S`'s own masks are being factored. So `π` serves
+exactly the pairs in `D(π) × N(π)`, and different paths through the same
+subgraph generally have different `D(π)` and `N(π)`. Paths with the same `(D, N)` form
 a **group**; each group stores the sum of its path products and its number of
 paths. Groups are computed by dynamic programming over the subgraph (memoized
 from `c` toward `b`), so no path is enumerated twice. An edge is followed if it
