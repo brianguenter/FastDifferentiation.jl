@@ -388,12 +388,21 @@ roots or variables divided by the word size.
   operations, and there are at most `n·m` blocks, hence at most `n·m`
   replacement edges.
 
-Measured over every step of `factor!`, the largest number of groups was 1 for
-the gradients of Rosenbrock (60 variables) and of
-`Σ sin(xᵢxᵢ₊₁)·exp(xᵢ)` (40 variables) and for a dense 20 × 20 map, 2 for the
-example in §3, and at most 6 for random expression graphs with 8 inputs,
-8 outputs and 70 shared operations. One of those had 4 groups with
-`n = 1, m = 3`, so the number of groups is not bounded by `n·m`.
+Measured just before each step of `factor!`:
+
+| problem | steps | max groups at `c` | max `\|G(u)\|` | `(n, m)` where max occurs |
+|:--|--:|--:|--:|:--|
+| worked example (§3) | 14 | 2 | 2 | (1, 3) |
+| gradient of Rosenbrock, 60 variables | 235 | 1 | 1 | (1, 1) |
+| gradient of `Σ sin(xᵢxᵢ₊₁)·exp(xᵢ)`, 40 variables | 467 | 1 | 1 | (1, 1) |
+| dense map `xᵢ·sin(Σⱼ xⱼ(i+j)/20)`, 20 in, 20 out | 40 | 1 | 1 | (1, 1) |
+| random graph 1 (8 in, 8 out, 70 shared ops) | 128 | 4 | 4 | (1, 3) |
+| random graph 2 | 94 | 6 | 6 | (1, 6) |
+| random graph 3 | 155 | 6 | 6 | (3, 3) |
+| random graph 4 | 198 | 4 | 4 | (1, 8) |
+
+Random graph 1 has 4 groups with `n = 1, m = 3`, so the number of groups is not
+bounded by `n·m`.
 
 ## 5. Correctness
 
