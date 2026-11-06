@@ -135,10 +135,19 @@ D(π) = dom(S)    ∩ dom(e₁)    ∩ dom(e₂)    ∩ … ∩ dom(eₖ)
 N(π) = nondom(S) ∩ nondom(e₁) ∩ nondom(e₂) ∩ … ∩ nondom(eₖ)
 ```
 
-A pair `(i, j)` can use `π` only if every edge of `π` carries both its bits,
-and only pairs within `S`'s own masks are being factored. So `π` serves
-exactly the pairs in `D(π) × N(π)`, and different paths through the same
-subgraph generally have different `D(π)` and `N(π)`. Paths with the same `(D, N)` form
+Say `π` **serves** the pair `(i, j)` if the sum for `∂fᵢ/∂xⱼ` includes paths
+that run from root `i` down to `b`, along `π` to `c`, and from `c` down to
+variable `j` (for a dominator subgraph; for a postdominator subgraph `b` is
+below `c` and the roles of the two ends swap). `i ∈ dom(S)` guarantees that
+every path from `c` up to root `i` passes through `b`; whether `π` itself is
+used for `(i, j)` is decided by whether every edge of `π` carries bit `i` and
+bit `j`. So `π` serves exactly the pairs in `D(π) × N(π)`, and different
+paths through the same subgraph generally have different `D(π)` and `N(π)`.
+
+"Serves" is about the current masks, not about topology. In the example below,
+after step 1 node 6 still reaches `v2`, but edge `7 → 6` no longer carries
+`v2` — node 7's `v2` contribution has been moved to a new edge `7 → 2` — so the
+path through node 7 does not serve `(r1, v2)`. Paths with the same `(D, N)` form
 a **group**; each group stores the sum of its path products and its number of
 paths. Groups are computed by dynamic programming over the subgraph (memoized
 from `c` toward `b`), so no path is enumerated twice. An edge is followed if it
