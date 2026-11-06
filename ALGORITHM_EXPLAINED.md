@@ -54,17 +54,28 @@ where `x` is an edge or a subgraph. `dom(S)` is the set of roots (or variables)
 for which `S` was discovered. `nondom(S)` is the set of variables below `c`
 (or roots above `c`) at discovery.
 
-**Segment.** A path `π = e₁ … eₖ` from `c` to `b` along forward edges. Its masks
-are
+**Segment.** The *far endpoint* of an edge is its top vertex in a dominator
+subgraph and its bottom vertex in a postdominator subgraph. A *segment* of `S`
+is a sequence of edges `π = e₁ … eₖ` (`k ≥ 1`) such that
+
+- `e₁` is a forward edge of `c`,
+- `e_{m+1}` is a forward edge of the far endpoint of `e_m`, and
+- the far endpoint of `eₖ` is `b`.
+
+That is, a segment is a directed path in the derivative graph between `c`
+and `b`: it runs upward from `c` to `b` in a dominator subgraph and downward
+in a postdominator subgraph. Every path through both `b` and `c` contains
+exactly one segment, the part between them. Each segment has two masks:
 
 ```
 D(π) = dom(S)    ∩ dom(e₁)    ∩ … ∩ dom(eₖ)
 N(π) = nondom(S) ∩ nondom(e₁) ∩ … ∩ nondom(eₖ)
 ```
 
-`D(π) × N(π)` is the set of pairs within `S`'s masks for which every edge of
-`π` is live. Different segments of the same subgraph generally have different
-`D` and `N`.
+A pair is carried by `π` and lies within `S`'s masks exactly when its
+dominance bit is in `D(π)` and its non-dominance bit is in `N(π)`; this set of
+pairs is written `D(π) × N(π)`. Different segments of the same subgraph
+generally have different `D` and `N`.
 
 **Factoring** `S` (`factor_subgraph!`) replaces the segments of `S` with edges
 between `b` and `c`. It is correct if every path sum is unchanged. `factor!`
