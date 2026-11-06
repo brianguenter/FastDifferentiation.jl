@@ -76,23 +76,23 @@ root-to-variable path contains them, so their product appears in no
 derivative. Each segment has two masks:
 
 ```
-D(π) = dom(S)    ∩  ⋂_{e ∈ π} dom(e)
-N(π) = nondom(S) ∩  ⋂_{e ∈ π} nondom(e)
+DomMask(π)    = dom(S)    ∩  ⋂_{e ∈ π} dom(e)
+NonDomMask(π) = nondom(S) ∩  ⋂_{e ∈ π} nondom(e)
 ```
 
 Here, as everywhere below, a mask is treated as the set of indices at which it
 has a 1, so `∩` is bitwise AND, and `⋂_{e ∈ π}` is the AND over all edges of
-`π`. `D(π)` is the set of dominance bits that are 1 in `dom(S)` and in the
+`π`. `DomMask(π)` is the set of dominance bits that are 1 in `dom(S)` and in the
 dominance mask of every edge of `π`. For example, in §3 the segment
 `12 → 7 → 6` of `[12, 6]` has, after step 1,
-`D = {r1} ∩ {r1} ∩ {r1} = {r1}` and
-`N = {v1,v2,v3} ∩ {v1,v2,v3} ∩ {v1,v3} = {v1,v3}`
+`DomMask = {r1} ∩ {r1} ∩ {r1} = {r1}` and
+`NonDomMask = {v1,v2,v3} ∩ {v1,v2,v3} ∩ {v1,v3} = {v1,v3}`
 (`dom(S)`, then the masks of `12 → 7` and `7 → 6`).
 
 A pair is carried by `π` and lies within `S`'s masks exactly when its
-dominance bit is in `D(π)` and its non-dominance bit is in `N(π)`; this set of
-pairs is written `D(π) × N(π)`. Different segments of the same subgraph
-generally have different `D` and `N`.
+dominance bit is in `DomMask(π)` and its non-dominance bit is in `NonDomMask(π)`; this set of
+pairs is written `DomMask(π) × NonDomMask(π)`. Different segments of the same subgraph
+generally have different `DomMask` and `NonDomMask`.
 
 **Factoring** `S` (`factor_subgraph!`) replaces the segments of `S` with edges
 between `b` and `c`. It is correct if every path sum is unchanged. `factor!`
@@ -181,8 +181,8 @@ computed before anything is changed, because §4.4 edits edges at `c`.
 
 ### 4.2 Groups — `subgraph_path_groups`
 
-A **group** is the set of segments sharing one value of `(D(π), N(π))` with
-both masks nonempty. For each group `k` the code stores `D_k`, `N_k`, the sum of
+A **group** is the set of segments sharing one value of `(DomMask(π), NonDomMask(π))` with
+both masks nonempty. For each group `k` the code stores `DomMask_k`, `NonDomMask_k`, the sum of
 its segments' products `V_k`, and its number of segments `n_k`.
 
 Groups are computed by dynamic programming, so no segment is enumerated. Each
@@ -195,13 +195,13 @@ upper end downward.
 
 For `S₂` after step 1:
 
-| group | segments | `D` | `N` | `V` | `n` |
+| group | segments | `DomMask` | `NonDomMask` | `V` | `n` |
 |:--:|:--|:--|:--|:--|:--:|
 | G1 | 6 → 7 → 12 | `{r1}` | `{v1, v3}` | `1` | 1 |
 | G2 | 6 → 8 → 9 → 10 → 11 → 12 | `{r1}` | `{v1, v2, v3}` | `v1·(v1+v2)` | 1 |
 
-Pair `(i, j)` lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`. So group `k`
-covers the **rectangle** `D_k × N_k`, and the correct replacement value for a
+Pair `(i, j)` lies in group `k` iff `i ∈ DomMask_k` and `j ∈ NonDomMask_k`. So group `k`
+covers the **rectangle** `DomMask_k × NonDomMask_k`, and the correct replacement value for a
 pair is the sum of `V_k` over the groups that contain it. Rectangles may
 overlap: `(r1, v1)` is in G1 and G2.
 
@@ -213,14 +213,14 @@ Number the groups `1 … g`.
   contained in exactly the same masks. Its **signature** is the length-`g` bit
   vector `σ` with `σ[k] = 1` iff the class is contained in `m_k`. Bits
   contained in no mask belong to no class.
-- **Row classes** are the index classes of `D₁ … D_g` (sets of dominance bits).
-  **Column classes** are the index classes of `N₁ … N_g` (sets of
+- **Row classes** are the index classes of `DomMask_1 … DomMask_g` (sets of dominance bits).
+  **Column classes** are the index classes of `NonDomMask_1 … NonDomMask_g` (sets of
   non-dominance bits).
 - A **block** is `R × C` for a row class `R` (signature `ρ`) and a column class
   `C` (signature `γ`). Its **cover** is `ρ .& γ`.
 
 The blocks partition all pairs that lie in some group. A pair `(i, j) ∈ R × C`
-lies in group `k` iff `i ∈ D_k` and `j ∈ N_k`, i.e. iff `ρ[k] = γ[k] = 1`. So
+lies in group `k` iff `i ∈ DomMask_k` and `j ∈ NonDomMask_k`, i.e. iff `ρ[k] = γ[k] = 1`. So
 every pair in a block lies in exactly the groups in the block's cover, and the
 block can be given one edge whose value is the sum over its cover. One edge per
 group would not work: a pair in two groups would get two parallel edges.
@@ -255,11 +255,11 @@ blocks. If that is below 2, no pair is carried by more than one segment, and
 For `S₂`:
 
 ```
-row classes      R = {r1}                               ρ = (1, 1)
+row classes      R = {r1}                                     ρ = (1, 1)
 
-column classes   start           {v1, v2, v3}           (0, 0)
-                 refine by N_1   {v1, v3} (1, 0)   {v2} (0, 0)
-                 refine by N_2   {v1, v3} (1, 1)   {v2} (0, 1)
+column classes   start                  {v1, v2, v3}          (0, 0)
+                 refine by NonDomMask_1 {v1, v3} (1, 0)   {v2} (0, 0)
+                 refine by NonDomMask_2 {v1, v3} (1, 1)   {v2} (0, 1)
 
 blocks           {r1} × {v1, v3}  cover (1, 1)  →  12 → 6  v:1,3  value 1 + v1·(v1+v2)  2 segments
                  {r1} × {v2}      cover (0, 1)  →  12 → 6  v:2    value v1·(v1+v2)      1 segment
@@ -278,7 +278,7 @@ segments. A **boundary edge** of the block is an edge `e` that
 
 (This is `test_edge` on a subgraph whose masks are `R` and `C`.) Every segment
 `π` carrying a pair in the block starts with a boundary edge: its edge `e` at
-`c` has `D(π) ⊆ dom(e)`, and `R ⊆ D(π)` because all bits of `R` lie in the
+`c` has `DomMask(π) ⊆ dom(e)`, and `R ⊆ DomMask(π)` because all bits of `R` lie in the
 same groups.
 
 For each replacement edge, in turn:
@@ -298,7 +298,7 @@ Only edges at `c` are changed. Edges between region nodes may still be used by
 paths that reach the region without passing through `c`.
 
 Step 1 (`S₁ = [2, 7]`, postdominator: dominance bits are variables) shows the
-split. There is one group, `D = {v2}`, `N = {r1}`, with 2 segments and value
+split. There is one group, `DomMask = {v2}`, `NonDomMask = {r1}`, with 2 segments and value
 `1 + v1`, giving one block `{v2} × {r1}`. Its boundary edges are the child edges
 of 7 that carry `v2`: `7 → 3` (`v:1,2`) and `7 → 6` (`v:1,2,3`). Splitting
 leaves copies with `v:2` and copies with `v:1` and `v:1,3`. Clearing `r1` from
@@ -355,7 +355,7 @@ Fix one step, factoring `S`, and a pair `(i, j)`. The argument uses the property
 root in `dom(S)` passes through `b`, and mirror-image for postdominator
 subgraphs.
 
-- **`(i, j) ∈ D(π) × N(π)` for some segment `π`.** Then the pair lies in some
+- **`(i, j) ∈ DomMask(π) × NonDomMask(π)` for some segment `π`.** Then the pair lies in some
   group, so it is in a block `R × C` with a nonempty cover. Every live path through `c` for the
   pair splits uniquely into an upper path, a segment carrying the pair, and a
   lower path. Summing over these paths gives (sum over upper paths) ×
@@ -364,7 +364,7 @@ subgraphs.
   have the same sum. Every segment carrying the pair starts with a boundary
   edge of the block, which loses the pair (§4.4), so none of the old paths
   stays live.
-- **`(i, j) ∉ D(π) × N(π)` for every segment `π`.** No block with a nonempty
+- **`(i, j) ∉ DomMask(π) × NonDomMask(π)` for every segment `π`.** No block with a nonempty
   cover contains it.
   So no replacement edge carries it, and §4.4 removes no bit of it: the copies it
   edits carry only `R`, and only `C` is cleared from them.
