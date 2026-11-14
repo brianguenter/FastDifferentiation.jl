@@ -471,7 +471,8 @@ divided by the machine word size.
   where P(u) is the number of those chains, and computing all tables takes at
   most the sum of |G(w)| over the region edges (u, w) in mask operations. For
   arbitrary masks the exponential bound is reached, for example by *n* + *m*
-  diamonds in series, each dropping one name on one of its two branches.
+  diamond shaped graphs in a row (Figure 10), each dropping one name on one
+  of its two sides.
 - **Masks as built by `initialize_edge_masks!`** make every table have one
   entry. Every region node lies on a path between A and B, so every edge's
   masks contain S's masks. Different mask pairs arise only from edges that
