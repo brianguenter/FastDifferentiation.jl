@@ -841,35 +841,87 @@ constructor also runs an older reachability routine, `compute_edge_paths!`,
 whose results `initialize_edge_masks!` overwrites; an implementation can omit
 it.)
 
-**Dominator tables on the test examples.** A single table can take quadratic
-time (section 6), because the `intersect` walks can be long. On the scalable
-examples used in the tests the walks stay short, as measured by
-[`scripts/measure_dominators.jl`](scripts/measure_dominators.jl) over all the
-tables `compute_factorable_subgraphs` builds for each example:
+**Dominator tables in practice.** A single table can take quadratic time
+(section 6), because the `intersect` walks can be long. The charts below show
+how the walks actually grow on scalable examples: spherical harmonics,
+Chebyshev polynomials and the heat equation of issue #60 from the tests; the
+Rosenbrock function, a chain of sin(xᵢxᵢ₊₁)·exp(xᵢ) terms and a dense map from
+[`scripts/measure_groups.jl`](scripts/measure_groups.jl); and the linear
+model-predictive-control rollout of issue #26. Each point counts the
+`intersect` steps over all the tables `compute_factorable_subgraphs` builds
+for one size of the example, measured by
+[`scripts/measure_dominators.jl`](scripts/measure_dominators.jl). The dashed
+line grows in proportion to the size of the graph and passes through the
+largest example, so points that sag below it show faster than linear growth.
 
-| example | nodes | edges | tables (roots + variables) | intersect steps | steps per edge per table | time (ms) |
-|:--|--:|--:|--:|--:|--:|--:|
-| spherical harmonics, order 5 | 82 | 102 | 28 | 129 | 0.05 | 0.1 |
-| spherical harmonics, order 10 | 391 | 541 | 103 | 3434 | 0.06 | 0.6 |
-| spherical harmonics, order 15 | 920 | 1300 | 228 | 15589 | 0.05 | 2.7 |
-| spherical harmonics, order 20 | 1671 | 2381 | 403 | 42344 | 0.04 | 6.7 |
-| Chebyshev polynomial, degree 20 | 41 | 77 | 2 | 167 | 1.08 | 0.0 |
-| Chebyshev polynomial, degree 40 | 81 | 157 | 2 | 347 | 1.11 | 0.0 |
-| Chebyshev polynomial, degree 80 | 161 | 317 | 2 | 707 | 1.12 | 0.1 |
-| Chebyshev polynomial, degree 160 | 321 | 637 | 2 | 1427 | 1.12 | 0.1 |
-| heat equation, 5 points | 36 | 45 | 11 | 0 | 0.0 | 0.0 |
-| heat equation, 20 points | 141 | 180 | 41 | 0 | 0.0 | 0.1 |
-| heat equation, 80 points | 561 | 720 | 161 | 0 | 0.0 | 0.3 |
-| heat equation, 320 points | 2241 | 2880 | 641 | 0 | 0.0 | 2.6 |
+<p>
+<img src="img/fig-dom-spherical-harmonics.svg" width="49%" alt="Spherical harmonics: intersect steps grow faster than linearly, to 78,124 steps at order 24 (5,902 nodes and edges, 579 tables).">
+<img src="img/fig-dom-chebyshev.svg" width="49%" alt="Chebyshev polynomial: intersect steps grow linearly, to 2,687 steps at degree 300 (1,798 nodes and edges).">
+<img src="img/fig-dom-heat.svg" width="49%" alt="Heat equation: no intersect steps at any size up to 240 points.">
+<img src="img/fig-dom-rosenbrock.svg" width="49%" alt="Rosenbrock function: intersect steps grow linearly, to 2,960 steps at 120 variables.">
+<img src="img/fig-dom-sin-exp-chain.svg" width="49%" alt="Chain of sin times exp terms: intersect steps grow linearly, to 2,010 steps at 120 variables.">
+<img src="img/fig-dom-dense-map.svg" width="49%" alt="Dense map: intersect steps grow slightly slower than linearly, to 1,108 steps at n = 30 (6,450 nodes and edges).">
+<img src="img/fig-dom-mpc.svg" width="49%" alt="Linear MPC rollout: intersect steps grow faster than linearly, to 390,144 steps at horizon 40 (5,388 nodes and edges, 412 tables).">
+</p>
 
-"Steps per edge per table" is the number of intersect steps divided by edges
-times tables. It stays roughly constant as each example grows, so on these
-examples the walks contribute work proportional to the size of the graph per
-table, not quadratic work. The total still grows with the number of tables:
-spherical harmonics of order 20 has 403 roots and variables, and each needs
-its own traversal. Reducing the asymptotic cost of this stage, both the
-quadratic worst case of the walks and the one traversal per root and
-variable, is left for a future change.
+Five of the seven examples grow linearly or slower. The two that grow faster
+than linearly, spherical harmonics and the MPC rollout, do so because the
+number of tables grows with the problem: each root and each variable needs
+its own traversal, and each traversal does work proportional to the part of
+the graph it reaches. The walks inside each traversal stay short in all seven.
+Reducing the asymptotic cost of this stage, both the quadratic worst case of
+the walks and the one traversal per root and variable, is left for a future
+change.
+
+<details>
+<summary>The measurements as a table</summary>
+
+| example | size | nodes + edges | tables (roots + variables) | intersect steps | steps per (node + edge) per table |
+|:--|--:|--:|--:|--:|--:|
+| spherical harmonics | order 4 | 100 | 19 | 21 | 0.011 |
+| spherical harmonics | order 8 | 568 | 67 | 1372 | 0.036 |
+| spherical harmonics | order 12 | 1382 | 147 | 6912 | 0.034 |
+| spherical harmonics | order 16 | 2546 | 259 | 19588 | 0.03 |
+| spherical harmonics | order 20 | 4052 | 403 | 42344 | 0.026 |
+| spherical harmonics | order 24 | 5902 | 579 | 78124 | 0.023 |
+| Chebyshev polynomial | degree 50 | 298 | 2 | 437 | 0.733 |
+| Chebyshev polynomial | degree 100 | 598 | 2 | 887 | 0.742 |
+| Chebyshev polynomial | degree 150 | 898 | 2 | 1337 | 0.744 |
+| Chebyshev polynomial | degree 200 | 1198 | 2 | 1787 | 0.746 |
+| Chebyshev polynomial | degree 250 | 1498 | 2 | 2237 | 0.747 |
+| Chebyshev polynomial | degree 300 | 1798 | 2 | 2687 | 0.747 |
+| heat equation (issue #60) | 40 points | 641 | 81 | 0 | 0.0 |
+| heat equation (issue #60) | 80 points | 1281 | 161 | 0 | 0.0 |
+| heat equation (issue #60) | 120 points | 1921 | 241 | 0 | 0.0 |
+| heat equation (issue #60) | 160 points | 2561 | 321 | 0 | 0.0 |
+| heat equation (issue #60) | 200 points | 3201 | 401 | 0 | 0.0 |
+| heat equation (issue #60) | 240 points | 3841 | 481 | 0 | 0.0 |
+| Rosenbrock function | 20 variables | 380 | 21 | 460 | 0.058 |
+| Rosenbrock function | 40 variables | 780 | 41 | 960 | 0.03 |
+| Rosenbrock function | 60 variables | 1180 | 61 | 1460 | 0.02 |
+| Rosenbrock function | 80 variables | 1580 | 81 | 1960 | 0.015 |
+| Rosenbrock function | 100 variables | 1980 | 101 | 2460 | 0.012 |
+| Rosenbrock function | 120 variables | 2380 | 121 | 2960 | 0.01 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 20 variables | 266 | 21 | 310 | 0.055 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 40 variables | 546 | 41 | 650 | 0.029 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 60 variables | 826 | 61 | 990 | 0.02 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 80 variables | 1106 | 81 | 1330 | 0.015 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 100 variables | 1386 | 101 | 1670 | 0.012 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 120 variables | 1666 | 121 | 2010 | 0.01 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 5 | 200 | 10 | 58 | 0.029 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 10 | 750 | 20 | 168 | 0.011 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 15 | 1650 | 30 | 328 | 0.007 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 20 | 2900 | 40 | 538 | 0.005 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 25 | 4500 | 50 | 798 | 0.004 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 30 | 6450 | 60 | 1108 | 0.003 |
+| linear MPC rollout (issue #26) | horizon 5 | 698 | 62 | 6544 | 0.151 |
+| linear MPC rollout (issue #26) | horizon 12 | 1636 | 132 | 36224 | 0.168 |
+| linear MPC rollout (issue #26) | horizon 19 | 2574 | 202 | 89424 | 0.172 |
+| linear MPC rollout (issue #26) | horizon 26 | 3512 | 272 | 166144 | 0.174 |
+| linear MPC rollout (issue #26) | horizon 33 | 4450 | 342 | 266384 | 0.175 |
+| linear MPC rollout (issue #26) | horizon 40 | 5388 | 412 | 390144 | 0.176 |
+
+</details>
 
 Factoring the subgraphs in order of node difference (section 7) is what keeps
 the factoring stage, and the size of the result, from growing with the number

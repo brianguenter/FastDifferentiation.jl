@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" width="480" height="300" role="img" aria-label="dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n): intersect steps against graph size">
+  <rect width="480" height="300" rx="12" fill="#ffffff"/>
+  <text x="16" y="26" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16202b">dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n)</text>
+  <circle cx="22" cy="44" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <text x="32" y="48" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#586473">intersect steps</text>
+  <line x1="140" y1="44" x2="162" y2="44" stroke="#9aa4b0" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="168" y="48" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#586473">proportional to size, through the largest example</text>
+  <line x1="66" y1="254.0" x2="458" y2="254.0" stroke="#e3e7ec" stroke-width="1"/>
+  <text x="58" y="258.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#586473">0</text>
+  <line x1="66" y1="190.0" x2="458" y2="190.0" stroke="#e3e7ec" stroke-width="1"/>
+  <text x="58" y="194.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#586473">500</text>
+  <line x1="66" y1="126.0" x2="458" y2="126.0" stroke="#e3e7ec" stroke-width="1"/>
+  <text x="58" y="130.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#586473">1,000</text>
+  <line x1="66" y1="62.0" x2="458" y2="62.0" stroke="#e3e7ec" stroke-width="1"/>
+  <text x="58" y="66.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#586473">1,500</text>
+  <line x1="66.0" y1="254" x2="66.0" y2="258" stroke="#586473" stroke-width="1"/>
+  <text x="66.0" y="271" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="middle" fill="#586473">0</text>
+  <line x1="164.0" y1="254" x2="164.0" y2="258" stroke="#586473" stroke-width="1"/>
+  <text x="164.0" y="271" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="middle" fill="#586473">2,000</text>
+  <line x1="262.0" y1="254" x2="262.0" y2="258" stroke="#586473" stroke-width="1"/>
+  <text x="262.0" y="271" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="middle" fill="#586473">4,000</text>
+  <line x1="360.0" y1="254" x2="360.0" y2="258" stroke="#586473" stroke-width="1"/>
+  <text x="360.0" y="271" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="middle" fill="#586473">6,000</text>
+  <line x1="458.0" y1="254" x2="458.0" y2="258" stroke="#586473" stroke-width="1"/>
+  <text x="458.0" y="271" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="middle" fill="#586473">8,000</text>
+  <line x1="66" y1="254" x2="458" y2="254" stroke="#586473" stroke-width="1"/>
+  <text x="262.0" y="292" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#586473">size of the derivative graph (nodes + edges)</text>
+  <line x1="66.0" y1="254.0" x2="382.0" y2="112.2" stroke="#9aa4b0" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <polyline points="75.8,246.6 102.8,232.5 146.8,212.0 208.1,185.1 286.5,151.9 382.0,112.2" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="75.8" cy="246.6" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="102.8" cy="232.5" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="146.8" cy="212.0" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="208.1" cy="185.1" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="286.5" cy="151.9" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="382.0" cy="112.2" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
+  <text x="374.0" y="102.2" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#16202b">1,108 steps at n = 30</text>
+</svg>
