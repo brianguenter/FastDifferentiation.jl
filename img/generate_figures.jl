@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
-# Regenerates the fig-*.svg diagrams in ALGORITHM_EXPLAINED.md, which walk
-# through factoring the example
+# Regenerates the fig-*.svg diagrams in HOW_FASTDIFFERENTIATION_WORKS.md, which
+# walk through differentiating the example
 #
 #     @variables x y
 #     p = x + y; q = x + p; r = p + q
@@ -13,10 +13,11 @@
 # Every diagram uses the same node positions (POS), so a node sits at the same
 # place in every picture. The edge states below are written out by hand, but
 # before writing anything the script rebuilds the graph with FastDifferentiation,
-# runs the factoring steps one at a time, and checks that the states drawn for
-# this branch (initial, after step 1, after step 2, after step 5) match the
-# code's edges, values and masks exactly. The two `main` states (MAIN_AFTER_2,
-# MAIN_FINAL) were read off a run of the main branch and cannot be checked here.
+# runs the factoring steps one at a time, and checks that the drawn postorder
+# numbers, edge states (initial, after step 1, after step 2, after step 5) and
+# group tables match the code exactly. The two states of the earlier,
+# one-edge-per-subgraph rule (MAIN_AFTER_2, MAIN_FINAL) were read off a run of
+# FastDifferentiation 0.4.5 and cannot be checked against the current code.
 
 import FastDifferentiation as FD
 
@@ -69,6 +70,9 @@ function code_states()
     p = x + y; q = x + p; r = p + q
     gr = FD.DerivativeGraph([q, r])
     name = Dict(FD.postorder_number(gr, n) => s for (n, s) in ((x, "x"), (y, "y"), (p, "p"), (q, "q"), (r, "r")))
+    # the postorder numbers drawn in fig-postorder.svg
+    name == Dict(1 => "x", 2 => "y", 3 => "p", 4 => "q", 6 => "r") || error("postorder numbers differ from fig-postorder.svg: $name")
+    (FD.is_NoOp(FD.node(gr, 5)) && FD.is_NoOp(FD.node(gr, 7))) || error("nodes 5 and 7 were expected to be the NoOp wrappers")
     function snapshot()
         out = Set{Tuple{String,String,Int,String,String}}()
         for i in keys(name)
@@ -291,6 +295,52 @@ function diamonds_svg(k=3)
 """
 end
 
+"""
+The example graph with the NoOp wrapper nodes the code puts above each root, and
+every node's postorder number in a badge. The numbers are checked against the
+code before drawing (see the `let` block that calls `code_states`)."""
+function postorder_svg()
+    pos = Dict("w7" => (200, 45), "r" => (200, 150), "w5" => (480, 150), "q" => (400, 250),
+               "p" => (200, 340), "y" => (80, 450), "x" => (400, 450))
+    number = Dict("x" => 1, "y" => 2, "p" => 3, "q" => 4, "w5" => 5, "r" => 6, "w7" => 7)
+    edges = [("w7", "r"), ("w5", "q"), ("r", "p"), ("r", "q"), ("q", "p"), ("q", "x"), ("p", "x"), ("p", "y")]
+    parts = String[]
+    for (u, v) in edges
+        (ax, ay) = pos[u]; (bx, by) = pos[v]
+        dx, dy = bx - ax, by - ay; len = hypot(dx, dy)
+        r0 = startswith(u, "w") ? 17 : RAD; r1 = RAD + 2
+        push!(parts, """<path d="M$(f(ax + dx / len * r0)),$(f(ay + dy / len * r0)) L$(f(bx - dx / len * r1)),$(f(by - dy / len * r1))" stroke="$(C[:edge])" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>""")
+    end
+    for (n, (cx, cy)) in sort(collect(pos))
+        if startswith(n, "w")
+            push!(parts, """<rect x="$(cx - 34)" y="$(cy - 16)" width="68" height="32" rx="16" fill="$(C[:bg])" stroke="$(C[:muted])" stroke-width="1.6" stroke-dasharray="4 3"/>""")
+            push!(parts, """<text x="$cx" y="$(cy + 5)" font-family="$MONO" font-size="13" text-anchor="middle" fill="$(C[:muted])">NoOp</text>""")
+            bx, by = cx + 34, cy - 16
+        else
+            isvar = n in ("x", "y"); isroot = n in ("q", "r")
+            stroke = isroot ? C[Symbol(n)] : isvar ? C[:var] : C[:edge]
+            if isvar
+                push!(parts, """<rect x="$(cx - RAD)" y="$(cy - RAD)" width="$(2RAD)" height="$(2RAD)" rx="9" fill="$(C[:bg])" stroke="$stroke" stroke-width="2"/>""")
+            else
+                push!(parts, """<circle cx="$cx" cy="$cy" r="$RAD" fill="$(C[:bg])" stroke="$stroke" stroke-width="$(isroot ? 3 : 2)"/>""")
+            end
+            text_color = (isroot || isvar) ? stroke : C[:fg]
+            push!(parts, """<text x="$cx" y="$(cy + 7)" font-family="$SANS" font-size="19" font-weight="700" text-anchor="middle" fill="$text_color">$n</text>""")
+            # beside the node, on a side no edge touches
+            side = Dict("r" => -1, "p" => -1, "y" => -1, "q" => 1, "x" => 1)[n]
+            bx, by = cx + side * (RAD + 13), cy
+        end
+        push!(parts, """<circle cx="$bx" cy="$by" r="11" fill="$(C[:accent])"/>""")
+        push!(parts, """<text x="$bx" y="$(by + 4.5)" font-family="$MONO" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">$(number[n])</text>""")
+    end
+    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 490" width="640" height="490">
+  <defs><marker id="arrow-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="$(C[:edge])"/></marker></defs>
+  <rect x="0" y="0" width="640" height="490" rx="12" fill="$(C[:bg])"/>
+  $(join(parts, "\n  "))
+</svg>
+"""
+end
+
 outdir = isempty(ARGS) ? (@__DIR__) : ARGS[1]
 mkpath(outdir)
 seg(edges, styles) = [restyle(e, get(styles, (e.u, e.v, e.val, e.R), :faded)) for e in edges]
@@ -310,6 +360,7 @@ figures = [
     "fig-final.svg" => svg(FINAL),
     "fig-final-main.svg" => svg(MAIN_FINAL),
     "fig-diamonds.svg" => diamonds_svg(3),
+    "fig-postorder.svg" => postorder_svg(),
     "fig-dp-step1.svg" => svg(seg(INITIAL, Dict(("r", "p", 1, "r") => :normal, ("r", "q", 1, "r") => :normal, ("q", "p", 1, "qr") => :normal));
                               faded_labels=false,
                               tables=[("r", DP_STEP1["r"], :left), ("q", DP_STEP1["q"], :right), ("p", DP_STEP1["p"], :left)]),

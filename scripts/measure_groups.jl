@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-# Reproduces the measurements table in ALGORITHM_EXPLAINED.md, the "Cost" section.
+# Reproduces the measurements table in HOW_FASTDIFFERENTIATION_WORKS.md, section 14 (Cost).
 #
 # Usage (from the repository root):
 #     julia --project=. scripts/measure_groups.jl

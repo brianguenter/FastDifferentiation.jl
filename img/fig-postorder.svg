@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 490" width="640" height="490">
+  <defs><marker id="arrow-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3d4856"/></marker></defs>
+  <rect x="0" y="0" width="640" height="490" rx="12" fill="#ffffff"/>
+  <path d="M200.0,62.0 L200.0,125.0" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M469.4,163.3 L415.6,230.5" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M200.0,173.0 L200.0,315.0" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M220.6,160.3 L377.6,238.8" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M379.0,259.4 L222.8,329.7" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M400.0,273.0 L400.0,425.0" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M220.2,351.1 L378.1,438.0" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <path d="M183.0,355.5 L98.4,433.1" stroke="#3d4856" stroke-width="1.8" fill="none" marker-end="url(#arrow-normal)"/>
+  <circle cx="200" cy="340" r="23" fill="#ffffff" stroke="#3d4856" stroke-width="2"/>
+  <text x="200" y="347" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#16202b">p</text>
+  <circle cx="164" cy="340" r="11" fill="#0b7285"/>
+  <text x="164" y="344.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">3</text>
+  <circle cx="400" cy="250" r="23" fill="#ffffff" stroke="#1f4fd1" stroke-width="3"/>
+  <text x="400" y="257" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#1f4fd1">q</text>
+  <circle cx="436" cy="250" r="11" fill="#0b7285"/>
+  <text x="436" y="254.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">4</text>
+  <circle cx="200" cy="150" r="23" fill="#ffffff" stroke="#b4520a" stroke-width="3"/>
+  <text x="200" y="157" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#b4520a">r</text>
+  <circle cx="164" cy="150" r="11" fill="#0b7285"/>
+  <text x="164" y="154.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">6</text>
+  <rect x="446" y="134" width="68" height="32" rx="16" fill="#ffffff" stroke="#586473" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <text x="480" y="155" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" text-anchor="middle" fill="#586473">NoOp</text>
+  <circle cx="514" cy="134" r="11" fill="#0b7285"/>
+  <text x="514" y="138.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">5</text>
+  <rect x="166" y="29" width="68" height="32" rx="16" fill="#ffffff" stroke="#586473" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <text x="200" y="50" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" text-anchor="middle" fill="#586473">NoOp</text>
+  <circle cx="234" cy="29" r="11" fill="#0b7285"/>
+  <text x="234" y="33.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">7</text>
+  <rect x="377" y="427" width="46" height="46" rx="9" fill="#ffffff" stroke="#3f7a12" stroke-width="2"/>
+  <text x="400" y="457" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#3f7a12">x</text>
+  <circle cx="436" cy="450" r="11" fill="#0b7285"/>
+  <text x="436" y="454.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">1</text>
+  <rect x="57" y="427" width="46" height="46" rx="9" fill="#ffffff" stroke="#3f7a12" stroke-width="2"/>
+  <text x="80" y="457" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#3f7a12">y</text>
+  <circle cx="44" cy="450" r="11" fill="#0b7285"/>
+  <text x="44" y="454.5" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">2</text>
+</svg>
