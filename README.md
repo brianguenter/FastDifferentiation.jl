@@ -158,6 +158,11 @@ This can significantly improve performance for matrices that are somewhat sparse
 This argument is only active if rhe `in_place` argument is true. 
 </details>
 
+## Acknowledgments and AI use
+
+The factorization algorithm in version 0.4.6 fixes wrong or failing Jacobians for functions with several inputs and outputs (issues #23, #65, #108). It builds on [PR #128](https://github.com/brianguenter/FastDifferentiation.jl/pull/128) by Paul Schrimpf ([@schrimpf](https://github.com/schrimpf)), who wrote its test cases and the first fix, and Mike Boyle ([@moble](https://github.com/moble)), who wrote the grouping algorithm it uses.
+
+Substantial parts of that work were generated with AI tools, as their authors disclosed: the code changes in PR #128 were AI generated, and Mike Boyle's commits were written with Claude (Anthropic). The follow-up, [PR #129](https://github.com/brianguenter/FastDifferentiation.jl/pull/129), including its code, tests and [HOW_FASTDIFFERENTIATION_WORKS.md](HOW_FASTDIFFERENTIATION_WORKS.md), was written with Claude Code (Anthropic) and reviewed by the maintainer. Section 17 of that document gives the details.
 
 [^a]: See the [D* ](https://www.microsoft.com/en-us/research/publication/the-d-symbolic-differentiation-algorithm/) paper for an explanation of derivative graph factorization. 
 
