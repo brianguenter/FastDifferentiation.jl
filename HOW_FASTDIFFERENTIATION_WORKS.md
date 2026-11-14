@@ -771,10 +771,9 @@ same entries but stores only the ones that are not identically zero.
 
 ## 11. Generating code
 
-The derivative expressions share most of their nodes, with each other and
-with the original expression. `make_function(J, inputs)` turns an array of
-expressions into one straight-line Julia function that computes each shared
-node once:
+Derivative expressions may share many nodes internally and with the original
+expression. The function `make_function(J, inputs)` generates a straight line
+Julia function that computes shared expressions only once:
 
 1. One dictionary maps each node already emitted to the local variable that
    holds its value. It is shared by all entries of the array.
