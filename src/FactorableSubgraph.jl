@@ -123,6 +123,9 @@ non_dominance_mask(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge
 non_dominance_mask(a::FactorableSubgraph{T,DominatorSubgraph}) where {T} = reachable_variables(a)
 non_dominance_mask(a::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = reachable_roots(a)
 
+dominance_dimension(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T} = codomain_dimension(graph(subgraph))
+dominance_dimension(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = domain_dimension(graph(subgraph))
+
 non_dominance_dimension(subgraph::FactorableSubgraph{T,DominatorSubgraph}) where {T} = domain_dimension(graph(subgraph))
 non_dominance_dimension(subgraph::FactorableSubgraph{T,PostDominatorSubgraph}) where {T} = codomain_dimension(graph(subgraph))
 

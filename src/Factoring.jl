@@ -349,67 +349,136 @@ backward_vertex(::FactorableSubgraph{T,DominatorSubgraph}, edge::PathEdge) where
 backward_vertex(::FactorableSubgraph{T,PostDominatorSubgraph}, edge::PathEdge) where {T} = top_vertex(edge)
 
 """
-    prune_stale_masks!(subgraph, region)
+    continuation_classes(subgraph, continuations, dimension)
+
+Groups the dominance bits (roots for a dominator subgraph, variables for a postdominator subgraph) by the set of `continuations` whose dominance masks contain them.  Returns `class_of`, which maps each bit to its class (0 if no continuation contains it), and `reach`, which holds for each class the union of the non-dominance masks of the continuations that contain it.  Every edge leaving a node is pruned against the same continuations, so this is computed once per node rather than once per edge.
+
+The classes are the same as `index_classes` would give for the continuations' dominance masks, but are found in one pass over the set bits of those masks: each bit collects the indices of the continuations that contain it, and bits with equal lists form a class.  This costs one step per set bit instead of one bit-vector operation per (continuation, class), which matters at nodes with many continuations."""
+function continuation_classes(subgraph::FactorableSubgraph, continuations, dimension::Integer)
+    signature = Vector{Vector{Int}}(undef, dimension)   # bit => indices of the continuations containing it
+    seen = falses(dimension)
+    for (i, f) in enumerate(continuations)
+        mask = reachable_dominance(subgraph, f)
+        bit = findnext(mask, 1)
+        while bit !== nothing
+            seen[bit] || (seen[bit] = true; signature[bit] = Int[])
+            push!(signature[bit], i)
+            bit = findnext(mask, bit + 1)
+        end
+    end
+    class_of = zeros(Int, dimension)
+    reach = BitVector[]
+    class_index = Dict{Vector{Int},Int}()
+    bit = findnext(seen, 1)
+    while bit !== nothing
+        k = get(class_index, signature[bit], 0)
+        if k == 0
+            r = falses(non_dominance_dimension(subgraph))
+            for i in signature[bit]
+                r .|= non_dominance_mask(subgraph, continuations[i])
+            end
+            push!(reach, r)
+            k = class_index[signature[bit]] = length(reach)
+        end
+        class_of[bit] = k
+        bit = findnext(seen, bit + 1)
+    end
+    return class_of, reach
+end
+
+"""
+    prune_edge!(subgraph, e, class_of, reach, to_add, to_delete)
+
+Prunes one edge `e` against the edges that continue it away from `dominating_node(subgraph)`, summarized by `continuation_classes`, and returns `true` if `e` changed.
+
+The dominance bits of `e` are partitioned into groups that are continued by the same edges, which are the classes of `continuation_classes`.  Each group keeps only the non-dominance bits of `e` that are set on at least one of its continuing edges.  When the groups end up with different masks, `e` is split into one edge per group, as `add_non_dom_edges!` does for boundary edges, and the extra edges are pushed onto `to_add`; if no group keeps any bit, `e` is pushed onto `to_delete`.  No live path is removed, because every bit that survives is continued by an edge that is live for the same dominance bit."""
+function prune_edge!(subgraph::FactorableSubgraph{T,S}, e::PathEdge, class_of::Vector{Int}, reach::Vector{BitVector}, to_add::Vector{PathEdge{T}}, to_delete::Vector{PathEdge{T}}) where {T,S<:AbstractFactorableSubgraph}
+    dom_e = reachable_dominance(subgraph, e)
+
+    # Fast path, the common case: all dominance bits of e lie in one class, and the
+    # continuations of that class carry every non-dominance bit of e.  Then e has a
+    # single group that keeps all its bits, so it does not change.
+    first_bit = findnext(dom_e, 1)
+    if first_bit !== nothing && class_of[first_bit] != 0
+        k = class_of[first_bit]
+        one_class = true
+        bit = findnext(dom_e, first_bit + 1)
+        while bit !== nothing
+            if class_of[bit] != k
+                one_class = false
+                break
+            end
+            bit = findnext(dom_e, bit + 1)
+        end
+        nondom_e = non_dominance_mask(subgraph, e)
+        one_class && any(nondom_e) && is_subset_of(nondom_e, reach[k]) && return false
+    end
+
+    groups = Dict{Int,BitVector}()   # class => the bits of e in that class
+    for bit in findall(dom_e)
+        k = class_of[bit]
+        k == 0 && continue   # no continuation carries this bit
+        get!(() -> falses(length(dom_e)), groups, k)[bit] = true
+    end
+
+    # the surviving non-dominance bits of each group, merging groups whose bits agree
+    kept = Dict{Vector{UInt64},Pair{BitVector,BitVector}}()
+    for (k, g) in groups
+        reach_g = reach[k] .& non_dominance_mask(subgraph, e)
+        any(reach_g) || continue
+        existing = get(kept, mask_key(reach_g), nothing)
+        existing === nothing ? (kept[mask_key(reach_g)] = reach_g => g) : (existing.second .|= g)
+    end
+
+    if isempty(kept)
+        fill!(non_dominance_mask(subgraph, e), false)
+        push!(to_delete, e)
+        return true
+    end
+    changed = length(kept) > 1
+    first_pass = true
+    for (nondom, dom) in values(kept)
+        if first_pass
+            changed |= dom != reachable_dominance(subgraph, e) || nondom != non_dominance_mask(subgraph, e)
+            reachable_dominance(subgraph, e) .= dom
+            non_dominance_mask(subgraph, e) .= nondom
+            first_pass = false
+        elseif S === DominatorSubgraph
+            push!(to_add, PathEdge(top_vertex(e), bott_vertex(e), value(e), copy(nondom), copy(dom)))
+        else
+            push!(to_add, PathEdge(top_vertex(e), bott_vertex(e), value(e), copy(dom), copy(nondom)))
+        end
+    end
+    return changed
+end
+
+"""
+    prune_stale_masks!(subgraph, region, seeds)
 
 After `subgraph` has been factored, removes reachability that no longer leads anywhere from the edges inside `region`.
 
-Consider an edge `e` whose next vertex towards the dominated node is `w`.  The dominance bits of `e` (roots for a dominator subgraph, variables for a postdominator subgraph) are partitioned into groups that are continued by the same edges leaving `w`.  Each group keeps only the non-dominance bits that are set on at least one of its continuing edges.  When the groups end up with different masks, `e` is split into one edge per group, as `add_non_dom_edges!` does for boundary edges; a group left with no bits is dropped.  No live path is removed, because every bit that survives is continued by an edge that is live for the same dominance bit.  Nodes are visited starting next to the dominated node, so every edge is checked against continuations that have already been pruned."""
-function prune_stale_masks!(subgraph::FactorableSubgraph{T,S}, region::Vector{T}) where {T,S<:AbstractFactorableSubgraph}
+An edge can only become stale if one of its continuations changed, because the masks were exact before this step and factoring only changed edges at the dominated node.  So pruning starts from `seeds`, the nodes whose edges towards the dominated node were changed by detaching, and works outward with a worklist: at each node `w` it prunes the edges that leave `w` towards the dominating node (and stay in `region`) against the edges that continue them from `w`, and queues the far end of every edge that changed.  Nodes are taken in order from the dominated node outward, so every edge is pruned against continuations that are already final.  The cost is proportional to the edges near changed ones, not to the size of `region`."""
+function prune_stale_masks!(subgraph::FactorableSubgraph{T,S}, region::Vector{T}, seeds) where {T,S<:AbstractFactorableSubgraph}
     gr = graph(subgraph)
     b = dominated_node(subgraph)
     in_region = Set{T}(region)
-    order!(subgraph, region)
-    for u in region
-        to_delete = PathEdge{T}[]
-        to_add = PathEdge{T}[]
-        for e in collect(backward_edges(subgraph, u))
-            w = backward_vertex(subgraph, e)
-            (w == b || !in(w, in_region)) && continue
-            continuations = filter(f -> any(non_dominance_mask(subgraph, f)), backward_edges(subgraph, w))
-
-            groups = BitVector[copy(reachable_dominance(subgraph, e))]
-            for f in continuations
-                df = reachable_dominance(subgraph, f)
-                refined = BitVector[]
-                for g in groups
-                    inside = g .& df
-                    outside = g .& .!df
-                    any(inside) && push!(refined, inside)
-                    any(outside) && push!(refined, outside)
-                end
-                groups = refined
-            end
-
-            # the surviving non-dominance bits of each group, merging groups whose bits agree
-            kept = Dict{Vector{UInt64},Pair{BitVector,BitVector}}()
-            for g in groups
-                reach = falses(non_dominance_dimension(subgraph))
-                for f in continuations
-                    overlap(g, reachable_dominance(subgraph, f)) && (reach .|= non_dominance_mask(subgraph, f))
-                end
-                reach .&= non_dominance_mask(subgraph, e)
-                any(reach) || continue
-                existing = get(kept, mask_key(reach), nothing)
-                existing === nothing ? (kept[mask_key(reach)] = reach => copy(g)) : (existing.second .|= g)
-            end
-
-            if isempty(kept)
-                fill!(non_dominance_mask(subgraph, e), false)
-                push!(to_delete, e)
-            else
-                first_pass = true
-                for (nondom, dom) in values(kept)
-                    if first_pass
-                        reachable_dominance(subgraph, e) .= dom
-                        non_dominance_mask(subgraph, e) .= nondom
-                        first_pass = false
-                    elseif S === DominatorSubgraph
-                        push!(to_add, PathEdge(top_vertex(e), bott_vertex(e), value(e), copy(nondom), copy(dom)))
-                    else
-                        push!(to_add, PathEdge(top_vertex(e), bott_vertex(e), value(e), copy(dom), copy(nondom)))
-                    end
-                end
-            end
+    queued = Set{T}()
+    # outward from the dominated node: increasing postorder for a dominator subgraph, decreasing for a postdominator subgraph
+    worklist = S === DominatorSubgraph ? BinaryMinHeap{T}() : BinaryMaxHeap{T}()
+    enqueue!(w) = (w != b && in(w, in_region) && !in(w, queued)) && (push!(queued, w); push!(worklist, w))
+    foreach(enqueue!, seeds)
+    to_delete = PathEdge{T}[]
+    to_add = PathEdge{T}[]
+    while !isempty(worklist)
+        w = pop!(worklist)
+        continuations = filter(f -> any(non_dominance_mask(subgraph, f)), backward_edges(subgraph, w))
+        class_of, reach = continuation_classes(subgraph, continuations, dominance_dimension(subgraph))
+        empty!(to_delete)
+        empty!(to_add)
+        for e in collect(forward_edges(subgraph, w))
+            u = forward_vertex(subgraph, e)
+            in(u, in_region) || continue
+            prune_edge!(subgraph, e, class_of, reach, to_add, to_delete) && enqueue!(u)
         end
         foreach(e -> delete_edge!(gr, e), to_delete)
         foreach(e -> add_edge!(gr, e), to_add)
@@ -467,6 +536,8 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstrac
     new_edges, max_paths = factored_edges(subgraph, region)
     if max_paths ≥ 2 # otherwise every pair already has at most one path through the subgraph
         graph_value = graph(subgraph)
+        # the nodes whose edges to the dominated node detaching may change; pruning starts there
+        seeds = T[forward_vertex(subgraph, e) for e in forward_edges(subgraph, dominated_node(subgraph))]
 
         for new_edge in new_edges
             partition = if S === DominatorSubgraph
@@ -496,13 +567,10 @@ function factor_subgraph!(subgraph::FactorableSubgraph{T,S}) where {T,S<:Abstrac
             end
             add_edge!(graph_value, new_edge)
         end
-        prune_stale_masks!(subgraph, region)
+        prune_stale_masks!(subgraph, region, seeds)
     end
 end
 
-order!(::FactorableSubgraph{T,DominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes,
-) #largest node number last
-order!(::FactorableSubgraph{T,PostDominatorSubgraph}, nodes::Vector{T}) where {T<:Integer} = sort!(nodes, rev=true) #largest node number first
 
 function factor!(a::DerivativeGraph{T}) where {T}
     subgraph_list = compute_factorable_subgraphs(a)

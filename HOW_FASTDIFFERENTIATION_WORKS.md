@@ -576,6 +576,30 @@ the edge is split. It works outward from B, so each continuation has already
 been pruned before it is consulted. Later steps rely on these masks being
 exact.
 
+Three things keep pruning cheap:
+
+1. **A worklist.** The masks were exact before this step, and Part 4 changed
+   only edges at B, so an edge can only become stale if one of its
+   continuations changed. Pruning starts at the region nodes next to B whose
+   edges to B were changed, and visits them in postorder outward from B (a
+   heap). At each node it checks the edges leaving it toward A, and adds the
+   far end of an edge to the worklist only if that edge changed.
+2. **Classes per node, not per edge.** Every edge leaving a node w is checked
+   against the same continuations. So at w the code groups the dominance
+   names once by which continuations carry them (one pass over the set bits
+   of the continuations' masks), and records for each group the union of
+   those continuations' non-dominance masks. Checking an edge is then a
+   lookup per dominance name of the edge (`continuation_classes`).
+3. **A fast path.** Most checked edges do not change. If all of an edge's
+   dominance names fall in one group whose continuations carry every
+   non-dominance name of the edge, the edge is left as it is without
+   allocating anything.
+
+All three give exactly the same masks as checking every region edge against
+its continuations one by one. On a linear MPC rollout of horizon 40 (issue
+#26) they cut the time of `factor!` from 18.8 s to 3.2 s, and on a random
+graph with 60 roots and 60 variables from 7.0 s to 2.5 s.
+
 ## 9. The example, step by step
 
 In the figures below, teal and purple mark the first and second segment of
