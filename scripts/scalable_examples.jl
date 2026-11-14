@@ -4,7 +4,7 @@
 #
 # spherical harmonics, Chebyshev polynomials and the heat equation of issue #60
 # come from test/runtests.jl; the Rosenbrock function, the sin*exp chain and the
-# dense map from scripts/measure_groups.jl; the linear MPC rollout from issue
+# dense map are simple scalable functions; the linear MPC rollout is from issue
 # #26. `grid` is a k x k grid, used to show a graph with exponentially many paths.
 
 import FastDifferentiation as FD
@@ -55,7 +55,7 @@ function heat(Ns)
     return p[1] * (circshift(u, 1) .- 2 * u .+ circshift(u, -1)) / dx^2
 end
 
-# from scripts/measure_groups.jl
+# simple scalable functions
 function rosenbrock(n)
     x = FD.make_variables(:x, n)
     return [sum(100 * (x[i+1] - x[i]^2)^2 + (1 - x[i])^2 for i in 1:n-1)]

@@ -25,5 +25,4 @@
   <circle cx="317.0" cy="254.0" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
   <circle cx="379.7" cy="254.0" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
   <circle cx="442.4" cy="254.0" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
-  <text x="434.4" y="244.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#16202b">0 steps at 240 points</text>
 </svg>

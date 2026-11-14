@@ -869,9 +869,9 @@ it.)
 (section 6), because the `intersect` walks can be long. The charts below show
 how the walks actually grow on scalable examples: spherical harmonics,
 Chebyshev polynomials and the heat equation of issue #60 from the tests; the
-Rosenbrock function, a chain of sin(xᵢxᵢ₊₁)·exp(xᵢ) terms and a dense map from
-[`scripts/measure_groups.jl`](scripts/measure_groups.jl); and the linear
-model-predictive-control rollout of issue #26. Each point counts the
+Rosenbrock function, a chain of sin(xᵢxᵢ₊₁)·exp(xᵢ) terms and a dense map;
+and the linear model-predictive-control rollout of issue #26. All are defined
+in [`scripts/scalable_examples.jl`](scripts/scalable_examples.jl). Each point counts the
 `intersect` steps over all the tables `compute_factorable_subgraphs` builds
 for one size of the example, measured by
 [`scripts/measure_dominators.jl`](scripts/measure_dominators.jl). The dashed
@@ -977,23 +977,101 @@ of S's dominance mask and *m* the size of its non-dominance mask.
 
 While the worst case complexity for arbitrary masks is exponential, the
 maximum number of groups in real world and many synthetic graphs seems to be
-small. Measured just
-before each step of `factor!` by
-[`scripts/measure_groups.jl`](scripts/measure_groups.jl):
+small. The charts show, for each family of graphs, the most groups any single
+factoring step meets as the graph grows, measured just before each step of
+`factor!` by [`scripts/measure_segments.jl`](scripts/measure_segments.jl).
+The families are the k × k grid of Appendix A, the scalable examples used
+for the dominator charts above, and two kinds of random graph: with 3–8 roots
+and variables, and with k roots and k variables for k up to 80.
 
-| problem | steps | max groups at B | max \|G(u)\| | (*n*, *m*) where max occurs |
-|:--|--:|--:|--:|:--|
-| running example | 6 | 2 | 2 | (1, 2) |
-| gradient of Rosenbrock, 60 variables | 235 | 1 | 1 | (1, 1) |
-| gradient of Σ sin(xᵢxᵢ₊₁)·exp(xᵢ), 40 variables | 467 | 1 | 1 | (1, 1) |
-| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/20), 20 in, 20 out | 40 | 1 | 1 | (1, 1) |
-| random graph 1 (8 in, 8 out, 70 shared ops) | 128 | 4 | 4 | (1, 3) |
-| random graph 2 | 94 | 6 | 6 | (1, 6) |
-| random graph 3 | 155 | 6 | 6 | (3, 3) |
-| random graph 4 | 198 | 4 | 4 | (1, 8) |
+<p>
+<img src="img/fig-groups-grid.svg" width="49%" alt="k by k grid: 1 group at every size.">
+<img src="img/fig-groups-spherical-harmonics.svg" width="49%" alt="Spherical harmonics: groups grow slowly, to 14 at order 24 (5,902 nodes and edges).">
+<img src="img/fig-groups-chebyshev.svg" width="49%" alt="Chebyshev polynomial: 1 group at every size.">
+<img src="img/fig-groups-heat.svg" width="49%" alt="Heat equation: no factoring step has a group at any size.">
+<img src="img/fig-groups-rosenbrock.svg" width="49%" alt="Rosenbrock function: 1 group at every size.">
+<img src="img/fig-groups-sin-exp-chain.svg" width="49%" alt="Chain of sin times exp terms: 1 group at every size.">
+<img src="img/fig-groups-dense-map.svg" width="49%" alt="Dense map: 1 group at every size.">
+<img src="img/fig-groups-mpc.svg" width="49%" alt="Linear MPC rollout: 5 groups at every size.">
+<img src="img/fig-groups-random.svg" width="49%" alt="Random graphs with 3 to 8 roots and variables: groups grow slowly, to 10 at 2,560 operations.">
+<img src="img/fig-groups-random-wide.svg" width="49%" alt="Random graphs with k roots and k variables: groups grow faster than the graph, to 120 at k = 80 (3,167 nodes and edges).">
+</p>
 
-Random graph 1 has 4 groups with *n* = 1, *m* = 3, so the number of groups is
-not bounded by *n*·*m*.
+Six families never exceed one group per step, and the MPC rollout stays at
+five. Groups grow with size for spherical harmonics (to 14) and for random
+graphs with 3–8 roots and variables (to 10). They grow fastest for random
+graphs with k roots and k variables: 30 groups at k = 40, at a step with
+*n* + *m* = 31, and 120 groups at k = 80, at a step with *n* + *m* = 63. There
+they grow faster than the size of the graph and somewhat faster than
+*n* + *m*. That is the largest growth measured, and it is far below the
+exponential bound. The
+number of groups is not bounded by *n*·*m*: the largest random graph with 3–8
+roots and variables has 10 groups at a step with *n* = 1 and *m* = 8.
+
+<details>
+<summary>The measurements as a table, including the most segments per step</summary>
+
+| graphs | size | nodes + edges | most segments in one step | most groups in one step | (n, m) of that step | largest table |
+|:--|:--|--:|--:|--:|:--|--:|
+| k × k grid | k = 3 | 23 | 3 | 1 | (1, 1) | 1 |
+| k × k grid | k = 5 | 67 | 5 | 1 | (1, 1) | 1 |
+| k × k grid | k = 7 | 135 | 7 | 1 | (1, 1) | 1 |
+| k × k grid | k = 9 | 227 | 9 | 1 | (1, 1) | 1 |
+| k × k grid | k = 11 | 343 | 11 | 1 | (1, 1) | 1 |
+| k × k grid | k = 13 | 483 | 13 | 1 | (1, 1) | 1 |
+| spherical harmonics | order 4 | 100 | 2 | 1 | (1, 1) | 1 |
+| spherical harmonics | order 8 | 568 | 6 | 4 | (1, 4) | 4 |
+| spherical harmonics | order 12 | 1382 | 10 | 6 | (1, 25) | 6 |
+| spherical harmonics | order 16 | 2546 | 15 | 10 | (1, 25) | 10 |
+| spherical harmonics | order 20 | 4052 | 19 | 12 | (1, 49) | 12 |
+| spherical harmonics | order 24 | 5902 | 23 | 14 | (1, 64) | 14 |
+| Chebyshev polynomial | degree 50 | 298 | 21 | 1 | (1, 1) | 1 |
+| Chebyshev polynomial | degree 100 | 598 | 49 | 1 | (1, 1) | 1 |
+| Chebyshev polynomial | degree 150 | 898 | 71 | 1 | (1, 1) | 1 |
+| Chebyshev polynomial | degree 200 | 1198 | 98 | 1 | (1, 1) | 1 |
+| Chebyshev polynomial | degree 250 | 1498 | 122 | 1 | (1, 1) | 1 |
+| Chebyshev polynomial | degree 300 | 1798 | 149 | 1 | (1, 1) | 1 |
+| heat equation (issue #60) | 40 points | 641 | 0 | 0 | (0, 0) | 0 |
+| heat equation (issue #60) | 80 points | 1281 | 0 | 0 | (0, 0) | 0 |
+| heat equation (issue #60) | 120 points | 1921 | 0 | 0 | (0, 0) | 0 |
+| heat equation (issue #60) | 160 points | 2561 | 0 | 0 | (0, 0) | 0 |
+| heat equation (issue #60) | 200 points | 3201 | 0 | 0 | (0, 0) | 0 |
+| heat equation (issue #60) | 240 points | 3841 | 0 | 0 | (0, 0) | 0 |
+| Rosenbrock function | 20 variables | 380 | 2 | 1 | (1, 1) | 1 |
+| Rosenbrock function | 40 variables | 780 | 2 | 1 | (1, 1) | 1 |
+| Rosenbrock function | 60 variables | 1180 | 2 | 1 | (1, 1) | 1 |
+| Rosenbrock function | 80 variables | 1580 | 2 | 1 | (1, 1) | 1 |
+| Rosenbrock function | 100 variables | 1980 | 2 | 1 | (1, 1) | 1 |
+| Rosenbrock function | 120 variables | 2380 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 20 variables | 266 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 40 variables | 546 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 60 variables | 826 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 80 variables | 1106 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 100 variables | 1386 | 2 | 1 | (1, 1) | 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 120 variables | 1666 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 5 | 200 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 10 | 750 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 15 | 1650 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 20 | 2900 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 25 | 4500 | 2 | 1 | (1, 1) | 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 30 | 6450 | 2 | 1 | (1, 1) | 1 |
+| linear MPC rollout (issue #26) | horizon 5 | 698 | 9 | 5 | (1, 9) | 5 |
+| linear MPC rollout (issue #26) | horizon 12 | 1636 | 11 | 5 | (1, 37) | 5 |
+| linear MPC rollout (issue #26) | horizon 19 | 2574 | 11 | 5 | (1, 65) | 5 |
+| linear MPC rollout (issue #26) | horizon 26 | 3512 | 11 | 5 | (1, 93) | 5 |
+| linear MPC rollout (issue #26) | horizon 33 | 4450 | 11 | 5 | (1, 121) | 5 |
+| linear MPC rollout (issue #26) | horizon 40 | 5388 | 11 | 5 | (1, 149) | 5 |
+| random graphs, 3–8 roots and variables | 40 operations | 92 | 6 | 4 | (1, 4) | 4 |
+| random graphs, 3–8 roots and variables | 160 operations | 293 | 18 | 8 | (1, 7) | 8 |
+| random graphs, 3–8 roots and variables | 640 operations | 1129 | 47 | 9 | (1, 8) | 9 |
+| random graphs, 3–8 roots and variables | 2560 operations | 4496 | 172 | 10 | (1, 8) | 10 |
+| random graphs, k roots and k variables | k = 5 | 198 | 9 | 5 | (1, 5) | 5 |
+| random graphs, k roots and k variables | k = 10 | 382 | 20 | 7 | (2, 6) | 8 |
+| random graphs, k roots and k variables | k = 20 | 794 | 53 | 14 | (1, 15) | 15 |
+| random graphs, k roots and k variables | k = 40 | 1538 | 76 | 30 | (1, 30) | 30 |
+| random graphs, k roots and k variables | k = 80 | 3167 | 170 | 120 | (2, 61) | 120 |
+
+</details>
 
 ## 15. Appendix A: how the group tables are computed
 
@@ -1021,32 +1099,32 @@ Factoring never sees all of those paths at once. Factoring in order of node
 difference (section 7) starts at the corners and works inward, and each
 larger subgraph then finds the already-factored inner part as a single edge.
 In the grid, no step sees more than *k* segments. That pattern holds for every
-family measured: a step meets few segments and fewer groups, and both grow
-slowly. The table lists, for each family and each size from smallest to
-largest, the most segments any single factoring step meets, the most groups,
-and the largest table, as measured by
-[`scripts/measure_segments.jl`](scripts/measure_segments.jl):
+family measured: a step meets few segments, and their number grows at most
+about as fast as the graph. The table lists, for each family and each size
+from smallest to largest, the most segments any single factoring step meets,
+as measured by [`scripts/measure_segments.jl`](scripts/measure_segments.jl);
+the charts in section 14 show the groups for the same graphs.
 
-| graphs | sizes | nodes + edges | most segments in one step | most groups | largest table |
-|:--|:--|:--|:--|:--|:--|
-| k × k grid (paths: 6 → 70 → 924 → 12,870 → 184,756 → 2,704,156) | k 3–13 | 23–483 | 3 → 5 → 7 → 9 → 11 → 13 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
-| spherical harmonics | order 4–24 | 100–5902 | 2 → 6 → 10 → 15 → 19 → 23 | 1 → 4 → 6 → 10 → 12 → 14 | 1 → 4 → 6 → 10 → 12 → 14 |
-| Chebyshev polynomial | degree 50–300 | 298–1798 | 21 → 49 → 71 → 98 → 122 → 149 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
-| heat equation (issue #60) | points 40–240 | 641–3841 | 0 → 0 → 0 → 0 → 0 → 0 | 0 → 0 → 0 → 0 → 0 → 0 | 0 → 0 → 0 → 0 → 0 → 0 |
-| Rosenbrock function | variables 20–120 | 380–2380 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
-| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | variables 20–120 | 266–1666 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
-| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n 5–30 | 200–6450 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
-| linear MPC rollout (issue #26) | horizon 5–40 | 698–5388 | 9 → 11 → 11 → 11 → 11 → 11 | 5 → 5 → 5 → 5 → 5 → 5 | 5 → 5 → 5 → 5 → 5 → 5 |
-| random graphs, worst of 15 per size | operations 40–2560 | 109–4656 | 6 → 18 → 47 → 172 | 4 → 8 → 9 → 10 | 4 → 8 → 9 → 10 |
+| graphs | sizes | nodes + edges | most segments in one step, smallest size to largest |
+|:--|:--|:--|:--|
+| k × k grid (paths: 6 → 70 → 924 → 12,870 → 184,756 → 2,704,156) | k = 3 to k = 13 | 23–483 | 3 → 5 → 7 → 9 → 11 → 13 |
+| spherical harmonics | order 4 to order 24 | 100–5902 | 2 → 6 → 10 → 15 → 19 → 23 |
+| Chebyshev polynomial | degree 50 to degree 300 | 298–1798 | 21 → 49 → 71 → 98 → 122 → 149 |
+| heat equation (issue #60) | 40 points to 240 points | 641–3841 | 0 → 0 → 0 → 0 → 0 → 0 |
+| Rosenbrock function | 20 variables to 120 variables | 380–2380 | 2 → 2 → 2 → 2 → 2 → 2 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | 20 variables to 120 variables | 266–1666 | 2 → 2 → 2 → 2 → 2 → 2 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n = 5 to n = 30 | 200–6450 | 2 → 2 → 2 → 2 → 2 → 2 |
+| linear MPC rollout (issue #26) | horizon 5 to horizon 40 | 698–5388 | 9 → 11 → 11 → 11 → 11 → 11 |
+| random graphs, 3–8 roots and variables | 40 operations to 2560 operations | 92–4496 | 6 → 18 → 47 → 172 |
+| random graphs, k roots and k variables | k = 5 to k = 80 | 198–3167 | 9 → 20 → 53 → 76 → 170 |
 
 The number of segments per step grows at most roughly in proportion to the
-size of the graph: about linearly for Chebyshev polynomials and random
-graphs, and only as the square root of the size (as *k*) for the grid, whose
-number of paths grows exponentially. Groups stay at one for most families,
-and grow slowly for spherical harmonics (to 14 at order 24, with 579 roots and
-variables) and for random graphs (to 10). No family showed exponential growth
-in segments or groups, and no sequence of factoring steps is known that
-produces it.
+size of the graph: about linearly for Chebyshev polynomials and both kinds of
+random graph, and only as the square root of the size (as *k*) for the grid,
+whose number of paths grows exponentially. Groups (section 14) stay at one for
+most families and grow fastest for random graphs with many roots and
+variables, to 120 at k = 80. No family showed exponential growth in segments
+or groups, and no sequence of factoring steps is known that produces it.
 
 Even so, the code does not list segments. A list costs one pass per segment,
 while the tables of this appendix cost one pass per region edge and table

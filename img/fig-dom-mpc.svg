@@ -3,8 +3,8 @@
   <text x="16" y="26" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#16202b">linear MPC rollout (issue #26)</text>
   <circle cx="22" cy="44" r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2"/>
   <text x="32" y="48" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#586473">intersect steps</text>
-  <line x1="140" y1="44" x2="162" y2="44" stroke="#9aa4b0" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <text x="168" y="48" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#586473">proportional to size, through the largest example</text>
+  <line x1="151" y1="44" x2="173" y2="44" stroke="#9aa4b0" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="179" y="48" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#586473">proportional to size</text>
   <line x1="66" y1="254.0" x2="458" y2="254.0" stroke="#e3e7ec" stroke-width="1"/>
   <text x="58" y="258.0" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="11" text-anchor="end" fill="#586473">0</text>
   <line x1="66" y1="190.0" x2="458" y2="190.0" stroke="#e3e7ec" stroke-width="1"/>

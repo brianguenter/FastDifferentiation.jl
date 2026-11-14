@@ -1,21 +1,27 @@
 #!/usr/bin/env julia
-# Reproduces the segment and group growth table in
+# Reproduces the group growth charts and the segment table in
 # HOW_FASTDIFFERENTIATION_WORKS.md, Appendix A.
 #
 # Usage (from the repository root):
-#     julia --project=. scripts/measure_segments.jl
+#     julia --project=. scripts/measure_segments.jl          # writes img/fig-groups-*.svg
+#     julia --project=. scripts/measure_segments.jl outdir   # writes the charts elsewhere
 #
 # For each family of graphs and each size, it replays `factor!` and, just before
 # each call to `factor_subgraph!`, runs the group tables (`subgraph_path_groups`)
 # on the subgraph about to be factored. It records, over all steps of one graph:
 #   - segments: the most segments any single step sees (the sum of n over its
 #     groups, i.e. the chains a naive implementation would have to list),
-#   - groups: the most groups at the dominated node of any step,
+#   - groups: the most groups at the dominated node of any step, and the
+#     (n, m) of that step,
 #   - table: the largest table |G(u)| at any node of any step.
-# For random graphs it reports the worst graph out of a fixed-seed sample at
-# each size. Each row lists one value per size, smallest size first.
+# For random graphs it reports the worst graph of a fixed-seed sample at each
+# size. It writes one chart per family (most groups against nodes + edges) and
+# prints all measurements as a Markdown table.
+#
+# The largest random family (80 roots and 80 variables) takes several minutes.
 
 include(joinpath(@__DIR__, "scalable_examples.jl"))
+include(joinpath(@__DIR__, "growth_chart.jl"))
 include(joinpath(@__DIR__, "..", "test", "random_graphs.jl"))
 using .RandomGraphs, Random
 
@@ -23,7 +29,7 @@ function replay(roots)
     gr = FD.DerivativeGraph(roots)
     size = length(FD.nodes(gr)) + sum(length(FD.children(e)) for e in values(FD.edges(gr)))
     heap = FD.compute_factorable_subgraphs(gr)
-    segs = 0; groups = 0; table = 0
+    segs = 0; groups = 0; table = 0; nm = (0, 0)
     while !isempty(heap)
         sub = pop!(heap)
         region = FD.subgraph_region(sub)
@@ -36,47 +42,57 @@ function replay(roots)
             table = max(table, length(g))
         end
         segs = max(segs, sum((x[4] for x in values(g)); init=0))
-        groups = max(groups, length(g))
+        if length(g) > groups
+            groups = length(g)
+            nm = (count(FD.reachable_dominance(sub)), count(FD.non_dominance_mask(sub)))
+        end
         FD.factor_subgraph!(sub)
     end
-    return (size=size, segs=segs, groups=groups, table=table)
+    return (size=size, segs=segs, groups=groups, table=table, nm=nm)
 end
 
-function random_worst(rng, nops, trials)
-    worst = (size=0, segs=0, groups=0, table=0)
-    for _ in 1:trials
-        spec = random_spec(rng; nvars=rand(rng, 3:8), nops=nops, nroots=rand(rng, 3:8))
-        vars = FD.make_variables(:v, spec.nvars)
-        r = replay(RandomGraphs.build(spec, vars)[spec.roots])
-        worst = (size=max(worst.size, r.size), segs=max(worst.segs, r.segs),
-                 groups=max(worst.groups, r.groups), table=max(worst.table, r.table))
+"Worst of `trials` random graphs; `size` is the mean size of the graphs."
+function random_worst(rng, trials; nvars, nops, nroots)
+    rs = map(1:trials) do _
+        spec = random_spec(rng; nvars=nvars(), nops=nops, nroots=nroots())
+        replay(RandomGraphs.build(spec, FD.make_variables(:v, spec.nvars))[spec.roots])
     end
-    return worst
+    worst = rs[argmax([r.groups for r in rs])]
+    return (size=round(Int, sum(r.size for r in rs) / trials), segs=maximum(r.segs for r in rs),
+            groups=worst.groups, table=maximum(r.table for r in rs), nm=worst.nm)
 end
-
-arrow(v) = join(v, " → ")
 
 const FAMILIES = [
-    ("k × k grid (paths: 6 → 70 → 924 → 12,870 → 184,756 → 2,704,156)", "k", grid, 3:2:13),
-    ("spherical harmonics", "order", spherical_harmonics, 4:4:24),
-    ("Chebyshev polynomial", "degree", chebyshev, 50:50:300),
-    ("heat equation (issue #60)", "points", heat, 40:40:240),
-    ("Rosenbrock function", "variables", rosenbrock, 20:20:120),
-    ("Σ sin(xᵢxᵢ₊₁)·exp(xᵢ)", "variables", sin_exp_chain, 20:20:120),
-    ("dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n)", "n", dense_map, 5:5:30),
-    ("linear MPC rollout (issue #26)", "horizon", mpc, 5:7:40),
+    ("k × k grid", "fig-groups-grid.svg", k -> "k = $k", k -> replay(grid(k)), 3:2:13),
+    ("spherical harmonics", "fig-groups-spherical-harmonics.svg", s -> "order $s", s -> replay(spherical_harmonics(s)), 4:4:24),
+    ("Chebyshev polynomial", "fig-groups-chebyshev.svg", s -> "degree $s", s -> replay(chebyshev(s)), 50:50:300),
+    ("heat equation (issue #60)", "fig-groups-heat.svg", s -> "$s points", s -> replay(heat(s)), 40:40:240),
+    ("Rosenbrock function", "fig-groups-rosenbrock.svg", s -> "$s variables", s -> replay(rosenbrock(s)), 20:20:120),
+    ("Σ sin(xᵢxᵢ₊₁)·exp(xᵢ)", "fig-groups-sin-exp-chain.svg", s -> "$s variables", s -> replay(sin_exp_chain(s)), 20:20:120),
+    ("dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n)", "fig-groups-dense-map.svg", s -> "n = $s", s -> replay(dense_map(s)), 5:5:30),
+    ("linear MPC rollout (issue #26)", "fig-groups-mpc.svg", s -> "horizon $s", s -> replay(mpc(s)), 5:7:40),
+    ("random graphs, 3–8 roots and variables", "fig-groups-random.svg", s -> "$s operations",
+        let rng = MersenneTwister(11)
+            s -> random_worst(rng, 15; nvars=() -> rand(rng, 3:8), nops=s, nroots=() -> rand(rng, 3:8))
+        end, [40, 160, 640, 2560]),
+    ("random graphs, k roots and k variables", "fig-groups-random-wide.svg", k -> "k = $k",
+        let rng = MersenneTwister(21)
+            k -> random_worst(rng, k <= 40 ? 4 : 2; nvars=() -> k, nops=20k, nroots=() -> k)
+        end, [5, 10, 20, 40, 80]),
 ]
 
+outdir = isempty(ARGS) ? joinpath(@__DIR__, "..", "img") : ARGS[1]
+mkpath(outdir)
 replay(grid(3))   # compile before measuring
-println("| graphs | sizes | nodes + edges | most segments in one step | most groups | largest table |")
-println("|:--|:--|:--|:--|:--|:--|")
-for (label, word, f, sizes) in FAMILIES
-    rs = [replay(f(s)) for s in sizes]
-    println("| $label | $word $(first(sizes))–$(last(sizes)) | $(first(rs).size)–$(last(rs).size) | ",
-        arrow([r.segs for r in rs]), " | ", arrow([r.groups for r in rs]), " | ", arrow([r.table for r in rs]), " |")
+
+println("| graphs | size | nodes + edges | most segments in one step | most groups in one step | (n, m) of that step | largest table |")
+println("|:--|:--|--:|--:|--:|:--|--:|")
+for (title, file, sizephrase, measure, sizes) in FAMILIES
+    rs = [measure(s) for s in sizes]
+    for (s, r) in zip(sizes, rs)
+        println("| $title | $(sizephrase(s)) | $(r.size) | $(r.segs) | $(r.groups) | $(r.nm) | $(r.table) |")
+    end
+    write(joinpath(outdir, file), growth_chart(title, [r.size for r in rs], [r.groups for r in rs];
+        quantity="most groups in one step", end_label="$(last(rs).groups) group$(last(rs).groups == 1 ? "" : "s") at $(sizephrase(last(sizes)))", integer=true,
+        zero_message="no factoring step had a group"))
 end
-rng = MersenneTwister(11)
-nops = (40, 160, 640, 2560)
-rs = [random_worst(rng, n, 15) for n in nops]
-println("| random graphs, worst of 15 per size | operations $(first(nops))–$(last(nops)) | $(first(rs).size)–$(last(rs).size) | ",
-    arrow([r.segs for r in rs]), " | ", arrow([r.groups for r in rs]), " | ", arrow([r.table for r in rs]), " |")
