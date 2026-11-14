@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-# Reproduces the measurements table in ALGORITHM_EXPLAINED.md, section 4.7.
+# Reproduces the measurements table in ALGORITHM_EXPLAINED.md, the "Cost" section.
 #
 # Usage (from the repository root):
 #     julia --project=. scripts/measure_groups.jl
@@ -46,10 +46,9 @@ function measure(name, roots)
             "  max |G(u)|=", lpad(max_table, 3), "  (n, m) at max groups = ", worst[1:2])
 end
 
-FD.@variables v1 v2 v3
-d = v2 - v3; s = v1 * d; p = v1 + v2
-n12 = v2 + s; n10 = p + s; n15 = n12 * p; n16 = v2 + n15; n18 = n16 * v1
-measure("worked example", [n10 + n18])
+FD.@variables x y
+p = x + y; q = x + p; r = p + q
+measure("worked example", [q, r])
 
 # Rosenbrock Hessian (graph of the gradient)
 x = FD.make_variables(:x, 60)

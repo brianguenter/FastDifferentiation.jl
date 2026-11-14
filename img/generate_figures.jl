@@ -1,312 +1,209 @@
 #!/usr/bin/env julia
-# Regenerates the fig-*.svg diagrams used by ALGORITHM_EXPLAINED.md to illustrate
-# the derivative graph for the worked example in that document (@variables v1 v2
-# v3; r1 = (p+s) + (n16*v1), see ALGORITHM_EXPLAINED.md section 2.1).
+# Regenerates the fig-*.svg diagrams in ALGORITHM_EXPLAINED.md, which walk
+# through factoring the example
+#
+#     @variables x y
+#     p = x + y; q = x + p; r = p + q
+#     jacobian([q, r], [x, y])
 #
 # Usage (from the repository root):
-#     julia img/generate_figures.jl
-# or, to write somewhere other than img/:
-#     julia img/generate_figures.jl path/to/outdir
+#     julia --project=. img/generate_figures.jl            # writes into img/
+#     julia --project=. img/generate_figures.jl outdir     # writes elsewhere
 #
-# All five diagrams are generated from ONE shared table of node (x, y)
-# coordinates (POS, below), so a given node sits at the exact same pixel
-# position in every picture it appears in - nothing needs Mermaid's
-# auto-layout, which re-lays-out the whole graph on any change to the
-# source and makes before/after pictures hard to compare by eye.
-#
-# The edge masks in STATE_A/STATE_B_OVERRIDES/STATE_C below are not
-# hand-derived: they were read off FastDifferentiation's own DerivativeGraph
-# for this example at three points - before any factoring, after the first
-# factoring step ([b=2,c=7]), and after the complete `factor!` pass. If the
-# worked example in ALGORITHM_EXPLAINED.md section 2.1 ever changes, re-derive
-# these with a script such as:
-#
-#     import FastDifferentiation as FD
-#     FD.@variables v1 v2 v3
-#     d = v2 - v3; s = v1 * d; p = v1 + v2
-#     n12 = v2 + s; n10 = p + s; n15 = n12 * p; n16 = v2 + n15; n18 = n16 * v1
-#     r1 = n10 + n18
-#     gr = FD.DerivativeGraph([r1])
-#     # dump every edge's (reachable_roots, reachable_variables):
-#     for node in 1:13
-#         es = FD.node_edges(gr, node)
-#         es === nothing && continue
-#         for e in FD.children(es)
-#             println(FD.top_vertex(e), "->", FD.bott_vertex(e), "  r:", FD.reachable_roots(e), "  v:", FD.reachable_variables(e))
-#         end
-#     end
-#     # then pop one subgraph off FD.compute_factorable_subgraphs(gr) and call
-#     # FD.factor_subgraph! on it (state B), or call FD.factor!(gr) directly
-#     # (state C), and dump again.
+# Every diagram uses the same node positions (POS), so a node sits at the same
+# place in every picture. The edge states below are written out by hand, but
+# before writing anything the script rebuilds the graph with FastDifferentiation,
+# runs the factoring steps one at a time, and checks that the states drawn for
+# this branch (initial, after step 1, after step 2, after step 5) match the
+# code's edges, values and masks exactly. The two `main` states (MAIN_AFTER_2,
+# MAIN_FINAL) were read off a run of the main branch and cannot be checked here.
 
-const POS = Dict(
-    13 => (430, 30),
-    12 => (430, 120),
-    11 => (150, 210),
-    7  => (710, 210),
-    10 => (150, 300),
-    9  => (150, 390),
-    8  => (150, 480),
-    3  => (430, 480),
-    6  => (430, 570),
-    1  => (440, 660),
-    5  => (620, 660),
-    2  => (330, 750),
-    4  => (610, 750),
-)
+import FastDifferentiation as FD
 
-# fill, stroke  (role coloring only; no masks in the box)
-const STYLE = Dict(
-    12 => ("#9fd3ff", "#00488f"),
-    6  => ("#ffd27f", "#9a5b00"),
-    1  => ("#c8f0c8", "#1f7a1f"),
-    2  => ("#c8f0c8", "#1f7a1f"),
-    4  => ("#c8f0c8", "#1f7a1f"),
-)
-default_style() = ("#f0f0f0", "#333333")
-const LEAVES = (1, 2, 4)
-const BOXW, BOXH = 70, 40
+# ---------------------------------------------------------------- layout
+const POS = Dict("r" => (200, 50), "q" => (400, 160), "p" => (200, 270), "y" => (80, 390), "x" => (400, 390))
+const RAD = 23
+const LABEL_POS = Dict(
+    ("r", "p") => (140, 160), ("r", "q") => (318, 64), ("q", "p") => (322, 250), ("q", "x") => (462, 275),
+    ("p", "x") => (262, 364), ("p", "y") => (96, 302), ("r", "x") => (548, 214))
+const CAPTION_SIDE = Dict("r" => :left, "q" => :right, "p" => :left, "x" => :right, "y" => :left)
 
-# ---- real reachable_roots/reachable_variables per edge, from the actual code ----
-# STATE A: before any factoring
-const STATE_A = Dict(
-    (3,1)=>"v1", (3,2)=>"v2", (5,2)=>"v2", (5,4)=>"v3", (6,1)=>"v1", (6,5)=>"v2,v3",
-    (7,3)=>"v1,v2", (7,6)=>"v1,v2,v3", (8,2)=>"v2", (8,6)=>"v1,v2,v3", (9,8)=>"v1,v2,v3",
-    (9,3)=>"v1,v2", (10,2)=>"v2", (10,9)=>"v1,v2,v3", (11,10)=>"v1,v2,v3", (11,1)=>"v1",
-    (12,7)=>"v1,v2,v3", (12,11)=>"v1,v2,v3", (13,12)=>"v1,v2,v3",
-)
-# STATE B: after step 1 ([2,7] factored) -- only entries that differ from A, plus the new edge
-const STATE_B_OVERRIDES = Dict((7,3)=>"v1", (7,6)=>"v1,v3")
-const STATE_B_NEW_EDGE = ((7,2), "v2")
-# STATE C: after the entire factor! pass (verified against FD.factor!, not hand-derived)
-const STATE_C = Dict(
-    (6,5)=>"v3", (5,4)=>"v3", (13,12)=>"v1,v2,v3", (12,6)=>"v3", (12,2)=>"v2", (12,1)=>"v1",
-)
+# light palette; the figures carry their own white background so they also read on dark pages
+const C = Dict(
+    :bg => "#ffffff", :fg => "#16202b", :muted => "#586473", :line => "#d4dbe3", :edge => "#3d4856",
+    :faded => "#bcc4ce", :accent => "#0b7285", :q => "#1f4fd1", :r => "#b4520a", :var => "#3f7a12",
+    :a => "#0b7285", :b => "#8b2fc9", :new => "#0b7285", :bad => "#c0262d")
+const WIDTH = Dict(:normal => 1.8, :faded => 1.6, :a => 4.0, :b => 4.0, :new => 3.4, :bad => 3.4)
+const NAME_COLOR = Dict('q' => C[:q], 'r' => C[:r], 'x' => C[:var], 'y' => C[:var])
+const MONO = "'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace"
+const SANS = "'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif"
 
-const ALL_EDGES = [
-    (13, 12), (12, 7), (12, 11), (7, 3), (7, 6), (11, 10), (11, 1),
-    (10, 2), (10, 9), (9, 8), (9, 3), (8, 2), (8, 6), (6, 1), (6, 5),
-    (3, 1), (3, 2), (5, 2), (5, 4),
-]
+# ---------------------------------------------------------------- edge states
+# (upper, lower, value, root mask, variable mask, style; options)
+struct Edge
+    u::String; v::String; val::Int; R::String; V::String; style::Symbol
+    label::Union{Nothing,Tuple{Int,Int}}   # label position override
+    bend::Float64                          # perpendicular bow, pixels
+    ctrl::Union{Nothing,Tuple{Int,Int}}    # explicit quadratic control point
+end
+E(u, v, val, R, V, style=:normal; label=nothing, bend=0.0, ctrl=nothing) = Edge(u, v, val, R, V, style, label, bend, ctrl)
+restyle(e::Edge, s::Symbol) = Edge(e.u, e.v, e.val, e.R, e.V, s, e.label, e.bend, e.ctrl)
 
-r_label(varlabel) = "r:1 v:" * replace(varlabel, "v"=>"")
+const INITIAL = [E("r", "p", 1, "r", "xy"), E("r", "q", 1, "r", "xy"), E("q", "x", 1, "qr", "x"),
+                 E("q", "p", 1, "qr", "xy"), E("p", "x", 1, "qr", "x"), E("p", "y", 1, "qr", "y")]
+const AFTER_1 = [E("r", "p", 2, "r", "xy", :new), E("r", "q", 1, "r", "x", :new), E("q", "p", 1, "q", "xy", :new),
+                 E("q", "x", 1, "qr", "x"), E("p", "x", 1, "qr", "x"), E("p", "y", 1, "qr", "y")]
+const AFTER_2 = [E("r", "p", 2, "r", "xy"), E("r", "q", 1, "r", "x"),
+                 E("q", "x", 2, "q", "x", :new; label=(345, 300)), E("q", "x", 1, "r", "x", :new; bend=-62.0, label=(506, 272)),
+                 E("q", "p", 1, "q", "y", :new), E("p", "x", 1, "r", "x", :new), E("p", "y", 1, "qr", "y")]
+const FINAL = [E("r", "p", 2, "r", "y", :new), E("r", "x", 3, "r", "x", :new; ctrl=(620, 140)),
+               E("q", "x", 2, "q", "x"; label=(345, 300)), E("q", "p", 1, "q", "y"), E("p", "y", 1, "qr", "y")]
+const MAIN_AFTER_2 = [E("r", "p", 2, "r", "xy"), E("r", "q", 1, "r", "x"), E("q", "x", 2, "qr", "x", :bad),
+                      E("q", "p", 1, "q", "y", :new), E("p", "x", 1, "r", "x", :new), E("p", "y", 1, "qr", "y")]
+const MAIN_FINAL = [E("r", "p", 2, "r", "y"), E("r", "x", 4, "r", "x", :bad; ctrl=(620, 140)),
+                    E("q", "x", 2, "q", "x"; label=(345, 300)), E("q", "p", 1, "q", "y"), E("p", "y", 1, "qr", "y")]
 
-function node_svg(id)
-    x, y = POS[id]
-    fill, stroke = get(STYLE, id, default_style())
-    label = string(id)
-    if id in LEAVES
-        shape = """<ellipse cx="$x" cy="$y" rx="$(BOXW÷2)" ry="$(BOXH÷2)" fill="$fill" stroke="$stroke" stroke-width="2"/>"""
-    else
-        shape = """<rect x="$(x-BOXW÷2)" y="$(y-BOXH÷2)" width="$BOXW" height="$BOXH" rx="8" ry="8" fill="$fill" stroke="$stroke" stroke-width="2"/>"""
+# ---------------------------------------------------------------- check against the code
+function code_states()
+    FD.@variables x y
+    p = x + y; q = x + p; r = p + q
+    gr = FD.DerivativeGraph([q, r])
+    name = Dict(FD.postorder_number(gr, n) => s for (n, s) in ((x, "x"), (y, "y"), (p, "p"), (q, "q"), (r, "r")))
+    function snapshot()
+        out = Set{Tuple{String,String,Int,String,String}}()
+        for i in keys(name)
+            es = FD.node_edges(gr, i)
+            es === nothing && continue
+            for e in FD.children(es)
+                haskey(name, FD.top_vertex(e)) || continue   # skip the NoOp wrapper edges above the roots
+                R = join(["qr"[k] for k in 1:2 if FD.reachable_roots(e)[k]])
+                V = join(["xy"[k] for k in 1:2 if FD.reachable_variables(e)[k]])
+                push!(out, (name[FD.top_vertex(e)], name[FD.bott_vertex(e)], Int(FD.value(FD.value(e))), R, V))
+            end
+        end
+        out
     end
-    text = """<text x="$x" y="$(y+5)" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#000000">$label</text>"""
-    return shape * "\n    " * text
+    states = Dict(0 => snapshot())
+    heap = FD.compute_factorable_subgraphs(gr)
+    step = 0
+    while !isempty(heap)
+        FD.factor_subgraph!(pop!(heap))
+        states[step += 1] = snapshot()
+    end
+    return states
 end
 
-function edge_path(xa, ya, xb, yb; shorten_a=24, shorten_b=24)
-    dx, dy = xb - xa, yb - ya
-    len = sqrt(dx^2 + dy^2)
-    ux, uy = dx / len, dy / len
-    x1, y1 = xa + ux * shorten_a, ya + uy * shorten_a
-    x2, y2 = xb - ux * shorten_b, yb - uy * shorten_b
-    return x1, y1, x2, y2
+as_set(edges) = Set((e.u, e.v, e.val, e.R, e.V) for e in edges)
+
+let states = code_states()
+    for (step, drawn) in ((0, INITIAL), (1, AFTER_1), (2, AFTER_2), (5, FINAL), (6, FINAL))
+        states[step] == as_set(drawn) || error("figure state after step $step does not match the code:\n code:  $(sort(collect(states[step])))\n drawn: $(sort(collect(as_set(drawn))))")
+    end
+    states[3] == states[2] && states[4] == states[2] || error("steps 3 and 4 were expected to change nothing")
 end
 
-"""
-    edge_svg(a, b, posA, posB, label; color, width, label_frac, label_color, dashed, bow)
+# ---------------------------------------------------------------- drawing
+f(x) = string(round(x, digits=1))
 
-Returns `(line_svg, label_svg_or_nothing)` for one edge from node `a` at `posA`
-to node `b` at `posB`. `label_frac` places the label at that fraction of the
-way along the edge (0 = at `a`, 1 = at `b`); `bow` bows the edge into a
-quadratic Bezier curve (perpendicular offset in pixels) to route it around a
-node that would otherwise sit on the straight line between `a` and `b`.
-
-Callers must draw ALL returned lines before ANY returned labels (see the
-`diagram_*` functions below): if a label is drawn before every line, a later
-edge's line can be drawn on top of an earlier edge's label wherever they
-cross, obscuring it.
-"""
-function edge_svg(a, b, posA, posB, label; color="#333333", width=1.6, label_frac=0.5, label_color=nothing, dashed=false, bow=0.0)
-    xa, ya = posA
-    xb, yb = posB
-    x1, y1, x2, y2 = edge_path(xa, ya, xb, yb)
-    dash = dashed ? " stroke-dasharray=\"6,4\"" : ""
-    local mx, my
-    if bow == 0.0
-        line = """<line x1="$x1" y1="$y1" x2="$x2" y2="$y2" stroke="$color" stroke-width="$width"$dash marker-end="url(#arrow)"/>"""
-        mx, my = x1 + (x2 - x1) * label_frac, y1 + (y2 - y1) * label_frac
-    else
-        # quadratic bezier control point, offset perpendicular to the chord
-        cxm, cym = (x1 + x2) / 2, (y1 + y2) / 2
-        dx, dy = x2 - x1, y2 - y1
-        len = sqrt(dx^2 + dy^2)
-        px, py = -dy / len, dx / len   # unit perpendicular
-        cx, cy = cxm + px * bow, cym + py * bow
-        line = """<path d="M $x1,$y1 Q $cx,$cy $x2,$y2" fill="none" stroke="$color" stroke-width="$width"$dash marker-end="url(#arrow)"/>"""
-        # point on the quadratic curve at parameter t=label_frac
-        t = label_frac
-        mx = (1-t)^2*x1 + 2*(1-t)*t*cx + t^2*x2
-        my = (1-t)^2*y1 + 2*(1-t)*t*cy + t^2*y2
+function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=false)
+    lines = String[]; labels = String[]; nodes = String[]
+    for (n, role) in rings
+        (cx, cy) = POS[n]
+        dash = role == "dominating" ? " stroke-dasharray=\"5 4\"" : ""
+        push!(nodes, """<circle cx="$cx" cy="$cy" r="$(RAD + 9)" fill="none" stroke="$(C[:accent])" stroke-width="2"$dash/>""")
+        left = CAPTION_SIDE[n] == :left
+        tx = left ? cx - (RAD + 16) : cx + (RAD + 16)
+        push!(nodes, """<text x="$tx" y="$(cy + 4)" font-family="$MONO" font-size="12" letter-spacing="0.5" fill="$(C[:accent])" text-anchor="$(left ? "end" : "start")">$role</text>""")
     end
-    lbl = nothing
-    if label !== nothing
-        lc = label_color === nothing ? color : label_color
-        w = length(label) * 6.2 + 8
-        lbl = """<rect x="$(mx-w/2)" y="$(my-9)" width="$w" height="16" fill="#ffffff" opacity="0.92" stroke="$lc" stroke-width="0.6"/>
-    <text x="$mx" y="$(my+3)" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="$lc">$label</text>"""
-    end
-    return line, lbl
-end
+    for e in edges
+        (ax, ay) = POS[e.u]; (bx, by) = POS[e.v]
+        dx, dy = bx - ax, by - ay; len = hypot(dx, dy)
+        ctrl = e.ctrl !== nothing ? e.ctrl :
+               e.bend != 0 ? ((ax + bx) / 2 - dy / len * e.bend, (ay + by) / 2 + dx / len * e.bend) : nothing
+        if ctrl === nothing
+            s0 = (ax + dx / len * RAD, ay + dy / len * RAD)
+            s1 = (bx - dx / len * (RAD + 2), by - dy / len * (RAD + 2))
+            d = "M$(f(s0[1])),$(f(s0[2])) L$(f(s1[1])),$(f(s1[2]))"
+        else
+            u0 = (ctrl[1] - ax, ctrl[2] - ay); l0 = hypot(u0...)
+            u1 = (ctrl[1] - bx, ctrl[2] - by); l1 = hypot(u1...)
+            s0 = (ax + u0[1] / l0 * RAD, ay + u0[2] / l0 * RAD)
+            s1 = (bx + u1[1] / l1 * (RAD + 2), by + u1[2] / l1 * (RAD + 2))
+            d = "M$(f(s0[1])),$(f(s0[2])) Q$(f(ctrl[1])),$(f(ctrl[2])) $(f(s1[1])),$(f(s1[2]))"
+        end
+        col = e.style == :normal ? C[:edge] : C[e.style]
+        push!(lines, """<path d="$d" fill="none" stroke="$col" stroke-width="$(WIDTH[e.style])" stroke-linecap="round" marker-end="url(#arrow-$(e.style))"/>""")
 
-const DEFS = """
+        # label: value, then root mask | variable mask
+        parts = Tuple{String,String,Bool}[(string(e.val), e.style == :bad ? C[:bad] : C[:fg], true)]
+        if !values_only
+            push!(parts, ("  ", C[:fg], false))
+            for (i, ch) in enumerate(e.R)
+                push!(parts, ((i > 1 ? " " : "") * ch, NAME_COLOR[ch], true))
+            end
+            push!(parts, (" | ", C[:muted], false))
+            for (i, ch) in enumerate(e.V)
+                push!(parts, ((i > 1 ? " " : "") * ch, NAME_COLOR[ch], true))
+            end
+        end
+        nchar = sum(length(p[1]) for p in parts)
+        w, h = nchar * 7.9 + 16, 22
+        (lx, ly) = e.label !== nothing ? e.label : LABEL_POS[(e.u, e.v)]
+        if values_only # a small label: put it just beside the edge's midpoint, on the same side as the full label
+            mx, my = (ax + bx) / 2, (ay + by) / 2
+            dl = hypot(lx - mx, ly - my)
+            lx, ly = mx + (lx - mx) / dl * 18, round(Int, my + (ly - my) / dl * 18)
+        end
+        border = e.style in (:new, :bad, :a, :b) ? C[e.style] : C[:line]
+        opacity = e.style == :faded ? " opacity=\"0.55\"" : ""
+        spans = join(["""<tspan fill="$c"$(b ? " font-weight=\"700\"" : "")>$t</tspan>""" for (t, c, b) in parts])
+        push!(labels, """<g$opacity><rect x="$(f(lx - w / 2))" y="$(ly - h / 2)" width="$(f(w))" height="$h" rx="5" fill="$(C[:bg])" stroke="$border" stroke-width="$(border == C[:line] ? 1 : 1.8)"/>""" *
+                      """<text x="$(f(lx - w / 2 + 8))" y="$(ly + 5)" font-family="$MONO" font-size="13" xml:space="preserve">$spans</text></g>""")
+    end
+    for (n, (cx, cy)) in sort(collect(POS))
+        isvar = n in ("x", "y"); isroot = n in ("q", "r")
+        stroke = isroot ? C[Symbol(n)] : isvar ? C[:var] : C[:edge]
+        if isvar
+            push!(nodes, """<rect x="$(cx - RAD)" y="$(cy - RAD)" width="$(2RAD)" height="$(2RAD)" rx="9" fill="$(C[:bg])" stroke="$stroke" stroke-width="2"/>""")
+        else
+            push!(nodes, """<circle cx="$cx" cy="$cy" r="$RAD" fill="$(C[:bg])" stroke="$stroke" stroke-width="$(isroot ? 3 : 2)"/>""")
+        end
+        text_color = (isroot || isvar) ? stroke : C[:fg]
+        push!(nodes, """<text x="$cx" y="$(cy + 7)" font-family="$SANS" font-size="19" font-weight="700" text-anchor="middle" fill="$text_color">$n</text>""")
+    end
+    markers = join(["""<marker id="arrow-$s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="$(s == :normal ? C[:edge] : C[s])"/></marker>""" for s in keys(WIDTH)], "\n    ")
+    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430" width="640" height="430">
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#333333"/>
-    </marker>
+    $markers
   </defs>
-"""
-
-function wrap_svg(body; width=860, height=820)
-    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $width $height" width="$width" height="$height" font-family="Helvetica,Arial,sans-serif">
-  <rect x="0" y="0" width="$width" height="$height" fill="#ffffff"/>
-$DEFS
-  <g>
-$body
-  </g>
+  <rect x="0" y="0" width="640" height="430" rx="12" fill="$(C[:bg])"/>
+  $(join(lines, "\n  "))
+  $(join(nodes, "\n  "))
+  $(join(labels, "\n  "))
 </svg>
 """
 end
 
-allnodes() = sort(collect(keys(POS)))
-
-default_label_fracs() = Dict(
-    (11,1) => 0.3, (10,2) => 0.25, (9,3) => 0.65, (8,2) => 0.28,
-    (12,7) => 0.68, (12,11) => 0.68, (7,3) => 0.22, (7,6) => 0.68,
-)
-
-"""
-    diagram_plain(masks; extra_edge, highlight, focus, title)
-
-The full 13-node graph: used (with `masks = STATE_A`) for "the graph before
-factoring" and, with `focus`/`title` set, for the `[2,7]`-subgraph-highlighted
-picture; used (with `masks` merging in `STATE_B_OVERRIDES` and `extra_edge =
-STATE_B_NEW_EDGE`) for the picture after that step runs.
-"""
-function diagram_plain(masks; extra_edge=nothing, highlight=Set(), focus=nothing, title=nothing)
-    bg, lines, labels, nodes = String[], String[], String[], String[]
-    fracs = default_label_fracs()
-    if focus !== nothing
-        xs = [POS[n][1] for n in focus]
-        ys = [POS[n][2] for n in focus]
-        pad = 55; topPad = 40
-        bx1, by1 = minimum(xs) - pad, minimum(ys) - topPad
-        bx2, by2 = maximum(xs) + pad, maximum(ys) + pad
-        push!(bg, """    <rect x="$bx1" y="$by1" width="$(bx2-bx1)" height="$(by2-by1)" rx="18" ry="18" fill="#7a1fa2" opacity="0.07" stroke="#7a1fa2" stroke-width="2" stroke-dasharray="10,6"/>""")
-        if title !== nothing
-            push!(bg, """    <text x="$bx1" y="$(by1-10)" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700" fill="#7a1fa2">$title</text>""")
-        end
-    end
-    for (a, b) in ALL_EDGES
-        lbl = r_label(masks[(a,b)])
-        hl = (a,b) in highlight
-        line, label = edge_svg(a, b, POS[a], POS[b], lbl;
-            color = hl ? "#7a1fa2" : "#333333", width = hl ? 3.0 : 1.6,
-            label_frac = get(fracs, (a,b), 0.5), label_color = hl ? "#7a1fa2" : "#555555")
-        push!(lines, "    " * line)
-        label !== nothing && push!(labels, "    " * label)
-    end
-    if extra_edge !== nothing
-        (a, b), lbl = extra_edge
-        line, label = edge_svg(a, b, POS[a], POS[b], r_label(lbl); color="#7a1fa2", width=3.0, label_frac=0.6, label_color="#7a1fa2")
-        push!(lines, "    " * line)
-        label !== nothing && push!(labels, "    " * label)
-    end
-    for id in allnodes()
-        push!(nodes, "    " * node_svg(id))
-    end
-    return wrap_svg(join(vcat(bg, lines, labels, nodes), "\n"))
-end
-
-"""
-    diagram_region()
-
-The "region" between dominated node 6 and dominating node 12 that
-`subgraph_region` finds for the `[12,6]` subgraph, in state B (after the
-`[2,7]` step, before `[12,6]` runs): the short path through node 7 (blue),
-the long path through 8-9-10-11 (red), and the dashed gray bypass edges to
-the sibling operands (nodes 1, 2, 3) that sit outside the region.
-"""
-function diagram_region()
-    # nodes in the [12,6] region plus the bypass targets shown dashed/outside
-    spine = [(12,7),(7,6),(12,11),(11,10),(10,9),(9,8),(8,6)]
-    bypass = [(7,3),(11,1),(10,2),(9,3),(8,2)]
-    short_path = Set([(12,7),(7,6)])
-    node_ids = (12,7,6,11,10,9,8,3,1,2)
-    lines, labels, nodes = String[], String[], String[]
-    fracs = Dict((12,7)=>0.68, (12,11)=>0.68, (7,6)=>0.72, (7,3)=>0.15,
-                 (11,1)=>0.28, (10,2)=>0.24, (9,3)=>0.68, (8,2)=>0.26)
-    masks = merge(STATE_A, STATE_B_OVERRIDES)
-    for (a,b) in spine
-        color = (a,b) in short_path ? "#0055aa" : "#cc2222"
-        line, label = edge_svg(a, b, POS[a], POS[b], r_label(masks[(a,b)]);
-            color=color, width=3.0, label_frac=get(fracs,(a,b),0.5), label_color=color)
-        push!(lines, "    " * line)
-        label !== nothing && push!(labels, "    " * label)
-    end
-    for (a,b) in bypass
-        line, label = edge_svg(a, b, POS[a], POS[b], r_label(masks[(a,b)]);
-            color="#999999", width=1.3, dashed=true, label_frac=get(fracs,(a,b),0.5), label_color="#777777")
-        push!(lines, "    " * line)
-        label !== nothing && push!(labels, "    " * label)
-    end
-    for id in node_ids
-        push!(nodes, "    " * node_svg(id))
-    end
-    return wrap_svg(join(vcat(lines, labels, nodes), "\n"))
-end
-
-"""
-    diagram_after_factor()
-
-The graph after the complete `factor!` pass: only nodes 13, 12, 6, 5, 1, 2, 4
-and 6 edges survive. `12->1` is drawn as a curve (`bow`) so it doesn't pass
-directly through node 6's box, since both sit at nearly the same x coordinate.
-"""
-function diagram_after_factor()
-    edges = [(13,12),(12,6),(12,2),(12,1),(6,5),(5,4)]
-    node_ids = (13,12,6,5,1,2,4)
-    bows = Dict((12,1) => -90.0)
-    fracs = Dict((12,6) => 0.42, (12,1) => 0.55)
-    lines, labels, nodes = String[], String[], String[]
-    for (a,b) in edges
-        line, label = edge_svg(a, b, POS[a], POS[b], r_label(STATE_C[(a,b)]);
-            color="#333333", width=1.8, label_frac=get(fracs,(a,b),0.5), label_color="#555555",
-            bow=get(bows,(a,b),0.0))
-        push!(lines, "    " * line)
-        label !== nothing && push!(labels, "    " * label)
-    end
-    for id in node_ids
-        push!(nodes, "    " * node_svg(id))
-    end
-    return wrap_svg(join(vcat(lines, labels, nodes), "\n"))
-end
-
-outdir = isempty(ARGS) ? joinpath(@__DIR__) : ARGS[1]
+outdir = isempty(ARGS) ? (@__DIR__) : ARGS[1]
 mkpath(outdir)
+seg(edges, styles) = [restyle(e, get(styles, (e.u, e.v, e.val, e.R), :faded)) for e in edges]
 
-write(joinpath(outdir, "fig-graph-before.svg"), diagram_plain(STATE_A))
-
-focus = (7, 3, 6, 5, 2)
-highlighted = Set([(7,3),(3,2),(7,6),(6,5),(5,2)])
-write(joinpath(outdir, "fig-step1-highlight.svg"),
-      diagram_plain(STATE_A; highlight=highlighted, focus=focus, title="subgraph about to be factored: [b=2, c=7]"))
-
-masks_b = merge(STATE_A, STATE_B_OVERRIDES)
-write(joinpath(outdir, "fig-step1-after.svg"),
-      diagram_plain(masks_b; extra_edge=(STATE_B_NEW_EDGE[1], STATE_B_NEW_EDGE[2]), highlight=Set([(7,3),(7,6)])))
-
-write(joinpath(outdir, "fig-region.svg"), diagram_region())
-write(joinpath(outdir, "fig-after-factor.svg"), diagram_after_factor())
-
-println("wrote 5 SVGs to ", outdir)
+figures = [
+    "fig-graph.svg" => svg(INITIAL; values_only=true),
+    "fig-masks.svg" => svg(INITIAL),
+    "fig-step1.svg" => svg(seg(INITIAL, Dict(("r", "p", 1, "r") => :a, ("r", "q", 1, "r") => :b, ("q", "p", 1, "qr") => :b));
+                           rings=[("r", "dominating"), ("p", "dominated")]),
+    "fig-step1-after.svg" => svg(AFTER_1),
+    "fig-step2.svg" => svg(seg([restyle(e, :normal) for e in AFTER_1], Dict(("q", "x", 1, "qr") => :a, ("q", "p", 1, "q") => :b, ("p", "x", 1, "qr") => :b));
+                           rings=[("x", "dominating"), ("q", "dominated")]),
+    "fig-step2-main.svg" => svg(MAIN_AFTER_2),
+    "fig-step2-new.svg" => svg(AFTER_2),
+    "fig-step5.svg" => svg(seg(AFTER_2, Dict(("r", "q", 1, "r") => :a, ("q", "x", 1, "r") => :a, ("r", "p", 2, "r") => :b, ("p", "x", 1, "r") => :b));
+                           rings=[("r", "dominating"), ("x", "dominated")]),
+    "fig-final.svg" => svg(FINAL),
+    "fig-final-main.svg" => svg(MAIN_FINAL),
+]
+for (file, content) in figures
+    write(joinpath(outdir, file), content)
+end
+println("checked the drawn states against FastDifferentiation and wrote $(length(figures)) SVGs to ", outdir)
