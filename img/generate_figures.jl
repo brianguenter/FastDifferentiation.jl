@@ -83,29 +83,84 @@ function code_states()
         end
         out
     end
+    # The group tables G(u) of `subgraph_path_groups`, as (root mask, variable mask, V, n)
+    # entries. For a dominator subgraph the memo holds every node's table; for a
+    # postdominator subgraph only the final table, at the dominating node, is returned.
+    function group_tables(sub)
+        isdom = sub isa FD.FactorableSubgraph{Int64,FD.DominatorSubgraph}
+        function entry(g)
+            dm, nm, V, n = g
+            roots, vars = isdom ? (dm, nm) : (nm, dm)
+            (join(["qr"[k] for k in 1:2 if roots[k]]), join(["xy"[k] for k in 1:2 if vars[k]]), Int(FD.value(V)), n)
+        end
+        out = Dict{String,Set{Tuple{String,String,Int,Int}}}()
+        if isdom
+            memo = Dict{Int64,FD.PathGroups}()
+            FD.subgraph_path_groups(sub, FD.dominated_node(sub), memo)
+            for (u, groups) in memo
+                out[name[u]] = Set(entry(g) for g in values(groups))
+            end
+        else
+            groups = FD.subgraph_path_groups(sub, FD.subgraph_region(sub))
+            out[name[FD.dominating_node(sub)]] = Set(entry(g) for g in values(groups))
+        end
+        return out
+    end
+
     states = Dict(0 => snapshot())
+    tables = Dict{Int,Dict{String,Set{Tuple{String,String,Int,Int}}}}()
     heap = FD.compute_factorable_subgraphs(gr)
     step = 0
     while !isempty(heap)
-        FD.factor_subgraph!(pop!(heap))
-        states[step += 1] = snapshot()
+        sub = pop!(heap)
+        step += 1
+        step in (1, 2) && (tables[step] = group_tables(sub))
+        FD.factor_subgraph!(sub)
+        states[step] = snapshot()
     end
-    return states
+    return states, tables
 end
 
 as_set(edges) = Set((e.u, e.v, e.val, e.R, e.V) for e in edges)
 
-let states = code_states()
+# group tables drawn in fig-dp-step1.svg and fig-dp-step2.svg: node => [(root mask, variable mask, V, n)]
+const DP_STEP1 = Dict("r" => [("r", "xy", 1, 1)], "q" => [("r", "xy", 1, 1)], "p" => [("r", "xy", 2, 2)])
+const DP_STEP2 = Dict("q" => [("qr", "x", 1, 1)], "p" => [("q", "x", 1, 1)], "x" => [("qr", "x", 1, 1), ("q", "x", 1, 1)])
+
+let (states, tables) = code_states()
     for (step, drawn) in ((0, INITIAL), (1, AFTER_1), (2, AFTER_2), (5, FINAL), (6, FINAL))
         states[step] == as_set(drawn) || error("figure state after step $step does not match the code:\n code:  $(sort(collect(states[step])))\n drawn: $(sort(collect(as_set(drawn))))")
     end
     states[3] == states[2] && states[4] == states[2] || error("steps 3 and 4 were expected to change nothing")
+    # step 1 is a dominator subgraph, so every table can be checked; step 2 only at x
+    tables[1] == Dict(k => Set(v) for (k, v) in DP_STEP1) || error("step 1 group tables do not match the code: $(tables[1])")
+    tables[2] == Dict("x" => Set(DP_STEP2["x"])) || error("step 2 group table at x does not match the code: $(tables[2])")
 end
 
 # ---------------------------------------------------------------- drawing
 f(x) = string(round(x, digits=1))
 
-function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=false)
+"Text spans for `s`, with the names q, r, x, y in their colours."
+colored_spans(s) = join(c in keys(NAME_COLOR) ? """<tspan fill="$(NAME_COLOR[c])" font-weight="700">$c</tspan>""" :
+                        """<tspan fill="$(C[:fg])">$c</tspan>""" for c in s)
+
+"A box beside node `n` listing its group table: one line per entry, `roots | variables   V=…, n=…`."
+function table_box(n, entries, side)
+    (cx, cy) = POS[n]
+    rows = ["$(join(collect(R), " ")) | $(join(collect(V), " "))   V=$val, n=$cnt" for (R, V, val, cnt) in entries]
+    w = maximum(length, vcat(rows, ["G($n)"])) * 7.9 + 18
+    h = 20 * (length(rows) + 1) + 8
+    x0 = side == :left ? cx - RAD - 14 - w : cx + RAD + 14
+    y0 = clamp(cy - h / 2, 4, 426 - h)
+    parts = ["""<rect x="$(f(x0))" y="$(f(y0))" width="$(f(w))" height="$h" rx="6" fill="$(C[:bg])" stroke="$(C[:accent])" stroke-width="1.6"/>""",
+             """<text x="$(f(x0 + 9))" y="$(f(y0 + 19))" font-family="$MONO" font-size="13" font-weight="700" fill="$(C[:accent])">G($n)</text>"""]
+    for (i, row) in enumerate(rows)
+        push!(parts, """<text x="$(f(x0 + 9))" y="$(f(y0 + 19 + 20i))" font-family="$MONO" font-size="13" xml:space="preserve">$(colored_spans(row))</text>""")
+    end
+    return join(parts, "\n  ")
+end
+
+function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=false, tables=[], faded_labels=true)
     lines = String[]; labels = String[]; nodes = String[]
     for (n, role) in rings
         (cx, cy) = POS[n]
@@ -133,6 +188,7 @@ function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=fals
         end
         col = e.style == :normal ? C[:edge] : C[e.style]
         push!(lines, """<path d="$d" fill="none" stroke="$col" stroke-width="$(WIDTH[e.style])" stroke-linecap="round" marker-end="url(#arrow-$(e.style))"/>""")
+        (e.style == :faded && !faded_labels) && continue
 
         # label: value, then root mask | variable mask
         parts = Tuple{String,String,Bool}[(string(e.val), e.style == :bad ? C[:bad] : C[:fg], true)]
@@ -180,6 +236,7 @@ function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=fals
   $(join(lines, "\n  "))
   $(join(nodes, "\n  "))
   $(join(labels, "\n  "))
+  $(join([table_box(n, entries, side) for (n, entries, side) in tables], "\n  "))
 </svg>
 """
 end
@@ -202,6 +259,12 @@ figures = [
                            rings=[("r", "dominating"), ("x", "dominated")]),
     "fig-final.svg" => svg(FINAL),
     "fig-final-main.svg" => svg(MAIN_FINAL),
+    "fig-dp-step1.svg" => svg(seg(INITIAL, Dict(("r", "p", 1, "r") => :normal, ("r", "q", 1, "r") => :normal, ("q", "p", 1, "qr") => :normal));
+                              faded_labels=false,
+                              tables=[("r", DP_STEP1["r"], :left), ("q", DP_STEP1["q"], :right), ("p", DP_STEP1["p"], :left)]),
+    "fig-dp-step2.svg" => svg(seg([restyle(e, :normal) for e in AFTER_1], Dict(("q", "x", 1, "qr") => :normal, ("q", "p", 1, "q") => :normal, ("p", "x", 1, "qr") => :normal));
+                              faded_labels=false,
+                              tables=[("q", DP_STEP2["q"], :right), ("p", DP_STEP2["p"], :left), ("x", DP_STEP2["x"], :right)]),
 ]
 for (file, content) in figures
     write(joinpath(outdir, file), content)

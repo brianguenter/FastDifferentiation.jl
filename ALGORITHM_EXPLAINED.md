@@ -211,7 +211,8 @@ distinct mask pairs, not to the number of segments. For a postdominator
 subgraph the upper node is B, and the same tables are pushed downward from B
 to A, one region node at a time in topological order. In both cases every
 product is formed from the upper node downward, the same order `follow_path`
-uses, so that products can be shared.
+uses, so that products can be shared. [Section 11](#11-appendix-how-the-group-tables-are-computed)
+explains this dynamic program in detail.
 
 ### Part 3. Blocks and replacement edges (`index_classes`, `factored_edges`)
 
@@ -536,6 +537,182 @@ the same property on larger graphs.
 - **Idempotent construction.** The `DerivativeGraph` constructor unwraps a
   root that is already a `NoOp` wrapper before wrapping it, so rebuilding a
   graph from existing roots keeps the same numbering.
+
+## 11. Appendix: how the group tables are computed
+
+Part 2 of section 4 needs, for every distinct pair of segment masks, the sum
+*V* of the path products and the number *n* of the segments that have those
+masks. This appendix explains how `subgraph_path_groups` gets them without
+listing segments, using dynamic programming, and works through the two
+subgraphs of the example that need it.
+
+### Why the segments cannot simply be listed
+
+The number of segments can grow exponentially with the size of the subgraph.
+Put *k* diamonds in a row. Each diamond is a node with edges down to two
+different nodes, and both of those have an edge down to the same next node,
+where the next diamond starts. A segment through them picks one of two sides
+in every diamond, so there are 2ᵏ segments, although the region has only 4*k*
+edges. Listing them would make factoring exponential in the depth of the
+graph.
+
+### The fact that makes merging safe
+
+Within this appendix, a **chain** is a sequence of edges that starts at the
+upper of the subgraph's two nodes and goes downward one edge at a time,
+inside the region. A segment is a chain that ends at the lower of the two
+nodes. Every chain has the same three quantities a segment has: a pair of
+masks (the subgraph's masks intersected with the masks of all its edges), a
+product of edge values, and a count, which is 1 for a single chain.
+
+Extending a chain by one more edge *e* changes these quantities in a way that
+depends only on their current values and on *e*:
+
+```
+new masks = (Dm ∩ dominance mask of e,  Nm ∩ non-dominance mask of e)
+new value = V · value(e)
+```
+
+So two chains that end at the same node and have the same masks will have the
+same masks as each other after any further extension, whatever route each
+took to get there. Their values also stay combinable, because multiplication
+distributes over addition: V₁·value(e) + V₂·value(e) = (V₁ + V₂)·value(e).
+Two such chains can therefore be replaced by a single entry that holds the sum
+of their values and the sum of their counts, and every later result is the
+same as if they had been kept apart. This is what lets the code merge chains
+early instead of carrying each one separately.
+
+A chain whose masks have become empty can be dropped. Intersection only
+removes names, so its masks stay empty, and an empty mask means the chain
+carries no pair the subgraph handles.
+
+### The dynamic program
+
+The **upper end** of the subgraph is A for a dominator subgraph and B for a
+postdominator subgraph; the **lower end** is the other node. Chains start at
+the upper end, and segments end at the lower end.
+
+- **State.** For every node u, the table G(u) maps a pair of masks (Dm, Nm) to
+  the sum V of the products and the number n of the chains that end at u and
+  have exactly those masks.
+- **Base case.** G(upper end) = { (dominance mask of S, non-dominance mask of S)
+  ↦ (V = 1, n = 1) }. The single entry stands for the chain with no edges,
+  whose masks are the subgraph's own.
+- **Recurrence.** For every node u below the upper end, G(u) collects one
+  contribution for each edge *e* that enters u from above, from a node w:
+  every entry (Dm, Nm) ↦ (V, n) of G(w) is extended by *e* as shown above and
+  added into G(u). Entries that land on the same masks are summed. Entries with
+  an empty mask are dropped.
+- **Answer.** The entries of G(lower end) are the groups.
+
+Only edges that pass `on_subgraph_path` (Part 1) are followed. This is purely a
+shortcut: an edge that shares no name with one of the subgraph's masks would
+make that mask empty, and the entry would be dropped anyway.
+
+### Order of evaluation
+
+A table can be computed only after the tables of all nodes directly above it.
+The two kinds of subgraph meet this requirement in different ways.
+
+- **Dominator subgraph** (the method `subgraph_path_groups(subgraph, node, memo)`).
+  The upper end is A. The code starts at B and asks for G(B). To compute a
+  table it asks for the tables at the upper ends of its node's upward edges,
+  recursively, until it reaches A, which returns the base case. Each table is
+  stored in the dictionary `memo` the first time it is computed, so no table
+  is computed twice, however many chains pass through its node.
+- **Postdominator subgraph** (the method `subgraph_path_groups(subgraph, region)`).
+  The upper end is B. The code starts with the base case at B and visits B and
+  the region nodes in decreasing postorder number. Every edge goes from a
+  higher number to a lower one, so this visits each node only after every node
+  above it. At each node it pushes the node's table down along each downward
+  edge into the table of the node below.
+
+The postdominator case could also have been written as a recursion that
+starts at B. That recursion would describe chains from each node down to A,
+and would form each product starting from the bottom. Pushing tables downward
+instead forms every product in both kinds starting from the upper end, in the
+same order that `follow_path` uses. FastDifferentiation stores each distinct
+expression only once, so products built in the same order can be reused
+between the factoring step and the read-out.
+
+### Step 1, table by table
+
+![Group tables for step 1, the dominator subgraph [r, p]. G(r) = r | x y, V=1, n=1. G(q) = r | x y, V=1, n=1. G(p) = r | x y, V=2, n=2.](img/fig-dp-step1.svg)
+
+*Figure 10. The tables for step 1, the dominator subgraph [r, p]. For
+readability, every mask pair is written the same way as an edge label: root
+mask, then variable mask. In the code, the key of a dominator subgraph is
+(root mask, variable mask) and the key of a postdominator subgraph is
+(variable mask, root mask).*
+
+The upper end is r, so G(r) is the base case: the subgraph's masks {r} and
+{x, y}, with V = 1 and n = 1.
+
+G(q) has one upward edge to follow, r→q (`r | x y`). Extending the entry of
+G(r) by it gives masks {r} ∩ {r} = {r} and {x, y} ∩ {x, y} = {x, y}, and value
+1·1 = 1. q's other upward edge, from the wrapper node above the root q,
+carries only root q. Its root mask shares nothing with {r}, so it is not
+followed.
+
+G(p) has two upward edges. Through r→p (`r | x y`), the entry of G(r) becomes
+`r | x y` with V = 1·1 = 1. Through q→p (`q r | x y`), the entry of G(q) becomes
+{r} ∩ {q, r} = {r} and {x, y}, with V = 1·1 = 1. The two results have the same
+masks, so they merge into one entry with V = 1 + 1 = 2 and n = 2. This is the
+single group of step 1.
+
+### Step 2, table by table
+
+![Group tables for step 2, the postdominator subgraph [x, q]. G(q) = q r | x. G(p) = q | x. G(x) has two entries: q r | x and q | x, each with V=1, n=1.](img/fig-dp-step2.svg)
+
+*Figure 11. The tables for step 2, the postdominator subgraph [x, q], computed
+on the masks left by step 1.*
+
+The upper end is q, so G(q) is the base case: variables {x} and roots {q, r}.
+The code visits q (postorder number 4) and then p (number 3).
+
+Visiting q pushes along its two downward edges. Along q→x (`q r | x`), the
+entry keeps its masks, `q r | x`, and arrives in G(x) with V = 1. Along q→p
+(`q | x y`), the roots shrink to {q, r} ∩ {q} = {q} and the variables to
+{x} ∩ {x, y} = {x}, so G(p) receives `q | x` with V = 1.
+
+Visiting p pushes along p→x (`q r | x`): {q} ∩ {q, r} = {q} and {x} ∩ {x} = {x},
+so G(x) receives `q | x` with V = 1. This key differs from the entry already in
+G(x), so the two are not merged. The other downward edge of p, p→y, carries
+only variable y, which shares nothing with {x}, so it is not followed.
+
+G(x) ends with two entries, which are the two groups of step 2. Keeping them
+apart is the point of the new algorithm: the chain through p no longer carries
+root r, and `main`, which added both segments into one edge for both roots,
+lost exactly that information.
+
+### Cost
+
+Each entry of each table is extended once along each edge leaving its node,
+so computing all tables takes one mask operation per (table entry, edge)
+combination: the sum of |G(u)| over the region edges leaving u. When the masks
+are as `initialize_edge_masks!` built them, every table has one entry (section
+8), and the work grows linearly with the number of region edges. For the *k*
+diamonds above that is 4*k* extensions instead of 2ᵏ segments. Tables grow
+only when earlier factoring steps have given different edges different masks,
+as in step 2, and section 8 gives the worst-case bound.
+
+### In the code
+
+- `PathGroups` is the type of a table: a `Dict` from a pair of mask keys to a
+  tuple (dominance mask, non-dominance mask, V, n). V is a FastDifferentiation
+  expression, not a number, so the factored graph computes the sum symbolically.
+- `mask_key` uses a mask's `chunks`, its underlying `UInt64` words, as the
+  dictionary key. Hashing a `BitVector` directly goes element by element and
+  is much slower.
+- `factored_edges` calls the dominator method with B and an empty `memo`, or
+  the postdominator method with the region, and collects the entries of the
+  returned table as the groups.
+
+The read-out fallback `sum_all_paths` (section 6) uses the same idea in its
+simplest form. It stores, for each node, the sum of path products from that
+node down to the variable, over paths that carry the pair. Each node's sum is
+the sum, over its downward edges that carry the pair, of the edge value times
+the stored sum of the node below. Each node is computed once.
 
 The figures are generated, and checked against the code, by
 [`img/generate_figures.jl`](img/generate_figures.jl).
