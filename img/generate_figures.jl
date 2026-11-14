@@ -246,55 +246,64 @@ function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=fals
 end
 
 """
-k diamond-shaped graphs in a row, from A at the top to B at the bottom, with one
-segment highlighted (left side, right side, left side, ...). Used in section 11
-to show why the number of segments grows as 2^k."""
-function diamonds_svg(k=3)
-    cx, side, top, step = 230, 85, 40, 130
-    spine(i) = (cx, top + step * i)                       # node shared by diamonds i and i+1
-    sidenode(i, s) = (cx + s * side, top + step * i + step ÷ 2)
-    height = top + step * k + 40
+The k x k grid of scripts/scalable_examples.jl (g[i,j] = g[i-1,j] * g[i,j-1]),
+drawn as a diamond with the root g[k,k] at the top and x = g[1,1] at the bottom.
+One of its binomial(2k-2, k-1) paths is highlighted, and the two corner squares,
+the first subgraphs factored (both have the smallest node difference), are
+shaded. Used in Appendix A to show a graph with exponentially many paths that
+factoring still handles a few at a time."""
+function grid_svg(k=4)
+    dx, dy, top = 72, 52, 46
+    pos(i, j) = (300 + (j - i) * dx, top + ((k - i) + (k - j)) * dy)
+    height = top + 2 * (k - 1) * dy + 44
+    # highlighted path: alternate down-left and down-right from the root
+    path = [(k, k)]
+    while path[end] != (1, 1)
+        (i, j) = path[end]
+        step = (isodd(length(path)) && i > 1) || j == 1 ? (i - 1, j) : (i, j - 1)
+        push!(path, step)
+    end
+    on_path = Set(zip(path[1:end-1], path[2:end]))
     parts = String[]
-    chosen = [isodd(i) ? -1 : 1 for i in 1:k]
-    function arrow(p, q, hl)
-        dx, dy = q[1] - p[1], q[2] - p[2]; len = hypot(dx, dy)
-        r0 = 16; r1 = 18
-        a = (p[1] + dx / len * r0, p[2] + dy / len * r0); b = (q[1] - dx / len * r1, q[2] - dy / len * r1)
-        col = hl ? C[:a] : C[:edge]
-        push!(parts, """<path d="M$(f(a[1])),$(f(a[2])) L$(f(b[1])),$(f(b[2]))" stroke="$col" stroke-width="$(hl ? 4 : 1.8)" stroke-linecap="round" fill="none" marker-end="url(#arrow-$(hl ? "a" : "normal"))"/>""")
+    # the first subgraphs factored: the 2 x 2 corners [g[k,k], g[k-1,k-1]] and [x, g[2,2]]
+    for corner in ([pos(2, 2), pos(2, 1), pos(1, 1), pos(1, 2)], [pos(k, k), pos(k, k - 1), pos(k - 1, k - 1), pos(k - 1, k)])
+        push!(parts, """<polygon points="$(join(["$(a),$(b)" for (a, b) in corner], " "))" fill="$(C[:accent])" fill-opacity="0.10" stroke="$(C[:accent])" stroke-width="1.2" stroke-dasharray="4 3"/>""")
     end
-    for i in 1:k, s in (-1, 1)
-        hl = chosen[i] == s
-        arrow(spine(i - 1), sidenode(i - 1, s), hl)
-        arrow(sidenode(i - 1, s), spine(i), hl)
+    for i in 1:k, j in 1:k
+        for (ci, cj) in ((i - 1, j), (i, j - 1))
+            (ci < 1 || cj < 1) && continue
+            (ax, ay) = pos(i, j); (bx, by) = pos(ci, cj)
+            ddx, ddy = bx - ax, by - ay; len = hypot(ddx, ddy)
+            hl = ((i, j), (ci, cj)) in on_path
+            col = hl ? C[:a] : C[:edge]
+            push!(parts, """<path d="M$(f(ax + ddx / len * 15)),$(f(ay + ddy / len * 15)) L$(f(bx - ddx / len * 17)),$(f(by - ddy / len * 17))" stroke="$col" stroke-width="$(hl ? 3.5 : 1.6)" fill="none" stroke-linecap="round" marker-end="url(#arrow-$(hl ? "a" : "normal"))"/>""")
+        end
     end
-    for i in 0:k
-        (x, y) = spine(i)
-        lbl = i == 0 ? "A" : i == k ? "B" : ""
-        push!(parts, """<circle cx="$x" cy="$y" r="15" fill="$(C[:bg])" stroke="$(C[:edge])" stroke-width="2"/>""")
-        lbl == "" || push!(parts, """<text x="$x" y="$(y + 6)" font-family="$SANS" font-size="17" font-weight="700" text-anchor="middle" fill="$(C[:fg])">$lbl</text>""")
+    for i in 1:k, j in 1:k
+        (x, y) = pos(i, j)
+        if (i, j) == (1, 1)
+            push!(parts, """<rect x="$(x - 16)" y="$(y - 16)" width="32" height="32" rx="7" fill="$(C[:bg])" stroke="$(C[:var])" stroke-width="2"/>""")
+            push!(parts, """<text x="$x" y="$(y + 6)" font-family="$SANS" font-size="16" font-weight="700" text-anchor="middle" fill="$(C[:var])">x</text>""")
+        else
+            isroot = (i, j) == (k, k)
+            push!(parts, """<circle cx="$x" cy="$y" r="14" fill="$(C[:bg])" stroke="$(isroot ? C[:r] : C[:edge])" stroke-width="$(isroot ? 3 : 2)"/>""")
+        end
     end
-    for i in 0:k-1, s in (-1, 1)
-        (x, y) = sidenode(i, s)
-        push!(parts, """<circle cx="$x" cy="$y" r="15" fill="$(C[:bg])" stroke="$(C[:edge])" stroke-width="2"/>""")
+    (rx, ry) = pos(k, k)
+    push!(parts, """<text x="$(rx + 24)" y="$(ry + 5)" font-family="$MONO" font-size="13" fill="$(C[:fg])">root g[$k,$k]</text>""")
+    for (i, j) in ((2, 2), (k - 1, k - 1))
+        (sx, sy) = pos(i, j)
+        push!(parts, """<text x="$(sx + 24)" y="$(sy + 5)" font-family="$MONO" font-size="12" fill="$(C[:accent])">factored first</text>""")
     end
-    for i in 1:k   # bracket and label for each diamond-shaped graph
-        y0, y1 = spine(i - 1)[2] + 4, spine(i)[2] - 4
-        bx = cx + side + 45
-        push!(parts, """<path d="M$bx,$y0 h8 V$y1 h-8" fill="none" stroke="$(C[:muted])" stroke-width="1.4"/>""")
-        push!(parts, """<text x="$(bx + 18)" y="$((y0 + y1) ÷ 2 + 5)" font-family="$MONO" font-size="13" fill="$(C[:muted])">diamond $i: 2 choices</text>""")
-    end
-    push!(parts, """<text x="$(cx + side + 63)" y="$(height - 22)" font-family="$MONO" font-size="13" fill="$(C[:a])">highlighted: one of</text>""")
-    push!(parts, """<text x="$(cx + side + 63)" y="$(height - 4)" font-family="$MONO" font-size="13" fill="$(C[:a])">2 × 2 × 2 = 8 segments</text>""")
+    push!(parts, """<text x="20" y="$(height - 14)" font-family="$MONO" font-size="13" fill="$(C[:a])">highlighted: one of $(binomial(2k - 2, k - 1)) paths from the root to x</text>""")
     markers = join(["""<marker id="arrow-$s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="$(C[s == "a" ? :a : :edge])"/></marker>""" for s in ("a", "normal")], "")
-    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 $(height + 10)" width="640" height="$(height + 10)">
+    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 $height" width="640" height="$height">
   <defs>$markers</defs>
-  <rect x="0" y="0" width="640" height="$(height + 10)" rx="12" fill="$(C[:bg])"/>
+  <rect x="0" y="0" width="640" height="$height" rx="12" fill="$(C[:bg])"/>
   $(join(parts, "\n  "))
 </svg>
 """
 end
-
 """
 The example graph with the NoOp wrapper nodes the code puts above each root, and
 every node's postorder number in a badge. The numbers are checked against the
@@ -359,7 +368,7 @@ figures = [
                            rings=[("r", "dominating"), ("x", "dominated")]),
     "fig-final.svg" => svg(FINAL),
     "fig-final-main.svg" => svg(MAIN_FINAL),
-    "fig-diamonds.svg" => diamonds_svg(3),
+    "fig-grid.svg" => grid_svg(4),
     "fig-postorder.svg" => postorder_svg(),
     "fig-dp-step1.svg" => svg(seg(INITIAL, Dict(("r", "p", 1, "r") => :normal, ("r", "q", 1, "r") => :normal, ("q", "p", 1, "qr") => :normal));
                               faded_labels=false,

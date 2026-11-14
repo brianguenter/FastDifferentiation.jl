@@ -480,8 +480,9 @@ non-empty. For each group the code keeps the two masks, the sum *V* of its
 segments' path products, and the number *n* of its segments. Segments with an
 empty segment mask carry no pair the subgraph handles, and belong to no group.
 
-The number of segments can grow exponentially, so the code never lists them.
-Instead it gives each region node u a **table** G(u), which maps a pair of
+The code never lists segments one at a time, so its cost does not depend on
+how many segments there are (Appendix A measures how many there are in
+practice). Instead it gives each region node u a **table** G(u), which maps a pair of
 masks (Dm, Nm) to the sum V of the products and the number n of the chains of
 edges between u and the upper of the two nodes that have exactly those masks
 (computed as for segments). For a dominator subgraph the upper node is A:
@@ -935,10 +936,11 @@ of S's dominance mask and *m* the size of its non-dominance mask.
   *n* dominance and *m* non-dominance names, and each chain of edges from u to
   the upper node contributes one key. So |G(u)| ≤ min(P(u), (2ⁿ − 1)(2ᵐ − 1)),
   where P(u) is the number of those chains, and computing all tables takes at
-  most the sum of |G(w)| over the region edges (u, w) in mask operations. For
-  arbitrary masks the exponential bound is reached, for example by *n* + *m*
-  diamond shaped graphs in a row (Figure 12), each dropping one name on one
-  of its two sides.
+  most the sum of |G(w)| over the region edges (u, w) in mask operations. The
+  bound is exponential in *n* + *m*, and edges with arbitrary masks could
+  reach it, but no sequence of factoring steps is known to produce such
+  masks. Appendix A measures the segments and groups that factoring actually
+  meets.
 - **Masks as built by `initialize_edge_masks!`** make every table have one
   entry. Every region node lies on a path between A and B, so every edge's
   masks contain S's masks. Different mask pairs arise only from edges that
@@ -950,8 +952,9 @@ of S's dominance mask and *m* the size of its non-dominance mask.
   and there are at most *n*·*m* blocks, hence at most *n*·*m* replacement
   edges.
 
-While the worst case complexity is exponential, the maximum number of groups
-in real world and many synthetic graphs seems to be small. Measured just
+While the worst case complexity for arbitrary masks is exponential, the
+maximum number of groups in real world and many synthetic graphs seems to be
+small. Measured just
 before each step of `factor!` by
 [`scripts/measure_groups.jl`](scripts/measure_groups.jl):
 
@@ -977,20 +980,55 @@ masks. This appendix explains how `subgraph_path_groups` gets them without
 listing segments, using dynamic programming, and works through the two
 subgraphs of the example that need it.
 
-### Why the segments cannot simply be listed
+### How many segments factoring meets
 
-The number of segments can grow exponentially with the size of the subgraph.
-Put *k* diamond shaped graphs in a row. Each diamond shaped graph is a node
-with edges down to two different nodes, and both of those have an edge down to
-the same next node, where the next diamond shaped graph starts. A segment
-through them picks one of two sides in every diamond shaped graph, so there
-are 2ᵏ segments, although the region has only 4*k* edges.
+The number of paths in an expression can grow exponentially with its size.
+In a *k* × *k* grid, where every inner node is the product of the node below
+it on the left and the node below it on the right, there are
+C(2*k* − 2, *k* − 1) paths from the top corner to the bottom corner: 20 for
+*k* = 4, and 2,704,156 for *k* = 13.
 
-![Three diamond shaped graphs in a row from A down to B. One segment is highlighted: left side, right side, left side.](img/fig-diamonds.svg)
+![A 4 by 4 grid drawn as a diamond, the root at the top and x at the bottom. One of its 20 paths is highlighted. The 2 by 2 squares at the top and bottom corners are shaded and labelled "factored first".](img/fig-grid.svg)
 
-*Figure 12. Three diamond shaped graphs in a row. Each one offers two ways
-down, so there are 2 × 2 × 2 = 8 segments from A to B; one is highlighted.
-With k of them there are 2ᵏ segments.*
+*Figure 12. A 4 × 4 grid with one of its 20 paths from the root to x
+highlighted. The two shaded corner squares are the first subgraphs factored:
+both have node difference 5, the smallest in the graph.*
+
+Factoring never sees all of those paths at once. Factoring in order of node
+difference (section 7) starts at the corners and works inward, and each
+larger subgraph then finds the already-factored inner part as a single edge.
+In the grid, no step sees more than *k* segments. That pattern holds for every
+family measured: a step meets few segments and fewer groups, and both grow
+slowly. The table lists, for each family and each size from smallest to
+largest, the most segments any single factoring step meets, the most groups,
+and the largest table, as measured by
+[`scripts/measure_segments.jl`](scripts/measure_segments.jl):
+
+| graphs | sizes | nodes + edges | most segments in one step | most groups | largest table |
+|:--|:--|:--|:--|:--|:--|
+| k × k grid (paths: 6 → 70 → 924 → 12,870 → 184,756 → 2,704,156) | k 3–13 | 23–483 | 3 → 5 → 7 → 9 → 11 → 13 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
+| spherical harmonics | order 4–24 | 100–5902 | 2 → 6 → 10 → 15 → 19 → 23 | 1 → 4 → 6 → 10 → 12 → 14 | 1 → 4 → 6 → 10 → 12 → 14 |
+| Chebyshev polynomial | degree 50–300 | 298–1798 | 21 → 49 → 71 → 98 → 122 → 149 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
+| heat equation (issue #60) | points 40–240 | 641–3841 | 0 → 0 → 0 → 0 → 0 → 0 | 0 → 0 → 0 → 0 → 0 → 0 | 0 → 0 → 0 → 0 → 0 → 0 |
+| Rosenbrock function | variables 20–120 | 380–2380 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
+| Σ sin(xᵢxᵢ₊₁)·exp(xᵢ) | variables 20–120 | 266–1666 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
+| dense map xᵢ·sin(Σⱼ xⱼ(i+j)/n) | n 5–30 | 200–6450 | 2 → 2 → 2 → 2 → 2 → 2 | 1 → 1 → 1 → 1 → 1 → 1 | 1 → 1 → 1 → 1 → 1 → 1 |
+| linear MPC rollout (issue #26) | horizon 5–40 | 698–5388 | 9 → 11 → 11 → 11 → 11 → 11 | 5 → 5 → 5 → 5 → 5 → 5 | 5 → 5 → 5 → 5 → 5 → 5 |
+| random graphs, worst of 15 per size | operations 40–2560 | 109–4656 | 6 → 18 → 47 → 172 | 4 → 8 → 9 → 10 | 4 → 8 → 9 → 10 |
+
+The number of segments per step grows at most roughly in proportion to the
+size of the graph: about linearly for Chebyshev polynomials and random
+graphs, and only as the square root of the size (as *k*) for the grid, whose
+number of paths grows exponentially. Groups stay at one for most families,
+and grow slowly for spherical harmonics (to 14 at order 24, with 579 roots and
+variables) and for random graphs (to 10). No family showed exponential growth
+in segments or groups, and no sequence of factoring steps is known that
+produces it.
+
+Even so, the code does not list segments. A list costs one pass per segment,
+while the tables of this appendix cost one pass per region edge and table
+entry, so their cost does not depend on how the segments happen to be
+arranged.
 
 ### The fact that makes merging safe
 
@@ -1127,10 +1165,10 @@ Each entry of each table is extended once along each edge leaving its node,
 so computing all tables takes one mask operation per (table entry, edge)
 combination: the sum of |G(u)| over the region edges leaving u. When the masks
 are as `initialize_edge_masks!` built them, every table has one entry (section
-14), and the work grows linearly with the number of region edges. For the *k*
-diamond shaped graphs above that is 4*k* extensions instead of 2ᵏ segments.
-Tables grow only when earlier factoring steps have given different edges
-different masks, as in step 2, and section 14 gives the worst-case bound.
+14), and the work grows linearly with the number of region edges. Tables grow
+only when earlier factoring steps have given different edges different masks,
+as in step 2. Section 14 gives the worst-case bound for arbitrary masks, and
+the table above shows the sizes actually met.
 
 ### In the code
 
