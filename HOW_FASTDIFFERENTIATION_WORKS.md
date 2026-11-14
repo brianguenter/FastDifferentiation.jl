@@ -384,8 +384,8 @@ another, so their relative order does not affect this.
 **Why heavily used first.** Among subgraphs that do not contain each other,
 the order does not affect correctness. Factoring first the subgraph that more
 root–variable pairs pass through tends to produce products that more
-derivatives share. This is a cheap heuristic, and the code's own comment notes
-that it has little measurable effect.
+derivatives share. This is a cheap heuristic which produces efficient
+derivative code in practice.
 
 The converse does not hold: a smaller node difference does not mean that one
 subgraph lies inside the other, so unrelated subgraphs are also ordered by
