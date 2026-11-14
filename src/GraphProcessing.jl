@@ -169,6 +169,17 @@ function fill_idom_table!(next_vertices::Union{Nothing,AbstractVector{T}}, dom_t
 end
 
 """compute the idom or pidom table starting from root or variable corresponding to start_index."""
+# TODO(performance, deferred from PR #129): reduce the asymptotic cost of the
+# dominator tables. One table costs O(V log V + E·h): the log V comes from the
+# binary work_heap, and h, the length of the `intersection` walks, is not
+# bounded, so a single table can be quadratic in the size of the graph (shown
+# with graphs built for the purpose). compute_factorable_subgraphs also builds
+# one table per root and per variable. Options: visit nodes in decreasing
+# postorder without a heap; compute idom(u) as the LCA of u's parents in the
+# dominator tree built so far, using an LCA structure that supports adding
+# leaves; or a linear-time dominator algorithm. scripts/measure_dominators.jl
+# measures this stage on the test examples, and section 14 of
+# HOW_FASTDIFFERENTIATION_WORKS.md records the results.
 function compute_dom_table(graph::DerivativeGraph{T}, compute_dominators::Bool, start_index::T, node_postorder_number::T, current_dom::Union{Nothing,Dict{T,T}}=nothing) where {T}
     if compute_dominators
         next_vertices_relation = (gr, curr_node::T) -> children(gr, curr_node)

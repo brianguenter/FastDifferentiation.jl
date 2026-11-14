@@ -321,7 +321,11 @@ edge carries v, and in `intersect` move the higher-numbered walker down.
 
 Each table visits every node reachable from its root or variable once, so it
 takes O(V log V + E · h) time, where h is the length of the walks in
-`intersect`.
+`intersect`. The log V comes from the binary heap used to visit the nodes in
+order. The walks are not bounded by a constant: h can grow with the depth of
+the dominator tree, and on graphs built for the purpose a single table takes
+time quadratic in the size of the graph. Section 14 shows how the cost grows
+on the examples used in the tests.
 
 ### Discovering the subgraphs
 
@@ -825,7 +829,7 @@ divided by the machine word size (64).
 | building expressions | O(1) per operation, with the expression cache |
 | postorder numbering, derivative edges | O(V + E) |
 | initial masks | O(E) mask operations |
-| dominator tables | one traversal per root and per variable: O((m + n) · (V log V + E · h)), where h is the length of the walks in `intersect` |
+| dominator tables | one traversal per root and per variable: O((m + n) · (V log V + E · h)), where h is the length of the walks in `intersect`; a single table can be quadratic in the worst case |
 | subgraph discovery and ordering | O(S log S) for S subgraphs, plus the tables above |
 | factoring | per subgraph: proportional to the edges of its region times the sizes of its group tables (below) |
 | reading off | O(L log L) per pair for a path of L edges: O(m · n · L log L) in all |
@@ -836,6 +840,36 @@ the graph is traversed once for every root and every variable. (The
 constructor also runs an older reachability routine, `compute_edge_paths!`,
 whose results `initialize_edge_masks!` overwrites; an implementation can omit
 it.)
+
+**Dominator tables on the test examples.** A single table can take quadratic
+time (section 6), because the `intersect` walks can be long. On the scalable
+examples used in the tests the walks stay short, as measured by
+[`scripts/measure_dominators.jl`](scripts/measure_dominators.jl) over all the
+tables `compute_factorable_subgraphs` builds for each example:
+
+| example | nodes | edges | tables (roots + variables) | intersect steps | steps per edge per table | time (ms) |
+|:--|--:|--:|--:|--:|--:|--:|
+| spherical harmonics, order 5 | 82 | 102 | 28 | 129 | 0.05 | 0.1 |
+| spherical harmonics, order 10 | 391 | 541 | 103 | 3434 | 0.06 | 0.6 |
+| spherical harmonics, order 15 | 920 | 1300 | 228 | 15589 | 0.05 | 2.7 |
+| spherical harmonics, order 20 | 1671 | 2381 | 403 | 42344 | 0.04 | 6.7 |
+| Chebyshev polynomial, degree 20 | 41 | 77 | 2 | 167 | 1.08 | 0.0 |
+| Chebyshev polynomial, degree 40 | 81 | 157 | 2 | 347 | 1.11 | 0.0 |
+| Chebyshev polynomial, degree 80 | 161 | 317 | 2 | 707 | 1.12 | 0.1 |
+| Chebyshev polynomial, degree 160 | 321 | 637 | 2 | 1427 | 1.12 | 0.1 |
+| heat equation, 5 points | 36 | 45 | 11 | 0 | 0.0 | 0.0 |
+| heat equation, 20 points | 141 | 180 | 41 | 0 | 0.0 | 0.1 |
+| heat equation, 80 points | 561 | 720 | 161 | 0 | 0.0 | 0.3 |
+| heat equation, 320 points | 2241 | 2880 | 641 | 0 | 0.0 | 2.6 |
+
+"Steps per edge per table" is the number of intersect steps divided by edges
+times tables. It stays roughly constant as each example grows, so on these
+examples the walks contribute work proportional to the size of the graph per
+table, not quadratic work. The total still grows with the number of tables:
+spherical harmonics of order 20 has 403 roots and variables, and each needs
+its own traversal. Reducing the asymptotic cost of this stage, both the
+quadratic worst case of the walks and the one traversal per root and
+variable, is left for a future change.
 
 Factoring the subgraphs in order of node difference (section 7) is what keeps
 the factoring stage, and the size of the result, from growing with the number
