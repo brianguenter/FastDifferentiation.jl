@@ -364,37 +364,38 @@ to x ends at x, and q has two edges going down toward x: q→x and q→p.
 The subgraphs go into a binary heap (`factor_order`) and are factored one at a
 time. The ordering has two keys:
 
-1. **Smaller subgraphs first.** The **node difference** of a subgraph is
-   |number(A) − number(B)|. Smaller node differences go first.
-2. **More heavily used subgraphs first.** Among subgraphs with the same node
-   difference, the one with the larger times used goes first. Remaining ties
-   are broken arbitrarily.
+1. **Node difference, smallest first.** The **node difference** of a
+   subgraph is |number(A) − number(B)|, the difference between the postorder
+   numbers of its two nodes.
+2. **Times used, largest first.** Times used is compared only between
+   subgraphs with the same node difference. Remaining ties are broken
+   arbitrarily.
 
-**Why smaller first.** Postorder numbers increase along every path upward, so
-every node strictly inside a subgraph [A, B] has a number strictly between
-those of A and B. If one subgraph lies inside another, its node difference is
-therefore smaller, and it is factored first. This order is what makes
-factoring efficient. When the outer subgraph is factored, the inner bundle of
-paths has already become a single edge, so the outer subgraph sees one edge
-instead of all of the inner paths, and the sum computed for the inner
-subgraph is built once and reused inside every larger sum that contains it.
-Two subgraphs with the same node difference cannot lie strictly inside one
-another, so their relative order does not affect this.
+**Why node difference first.** Take two subgraphs, S with node difference 10
+and T with node difference 20. S may be, but is not necessarily, contained in
+T.
 
-**Why heavily used first.** Times used is compared only between subgraphs
-with the same node difference, which, as shown above, cannot lie strictly
-inside one another. For those, factoring first the subgraph that more
-root–variable pairs pass through tends to produce products that more
-derivatives share. This is a cheap heuristic which produces efficient
-derivative code in practice.
+- **If S is contained in T,** its node difference is necessarily smaller.
+  Postorder numbers increase along every path upward, so every node inside
+  T lies strictly between T's two nodes in number, and so do S's two nodes.
+  So S is factored first. This guarantees that by the time T is factored,
+  its internal subgraphs have already been converted into direct edges
+  between their two nodes (one edge per block of section 8, usually just
+  one). T then sees those edges instead of all the paths inside them, and
+  each inner sum is built once and reused inside every larger sum that
+  contains it. This is what keeps factoring efficient.
+- **If S is not contained in T,** factoring S before T does no harm:
+  factoring gives correct derivatives in any order (section 13).
 
-Node difference is the first key for every pair of subgraphs, not only for
-nested ones. A smaller node difference does not mean that one subgraph lies
-inside the other, so two unrelated subgraphs with different node differences
-are ordered by node difference, and times used is never consulted for them.
-That is harmless. The order only has to put inner subgraphs before outer
-ones, testing containment exactly would cost more than it saves, and
-factoring is correct in any order (section 13).
+Checking containment exactly would cost more than it saves, so the code uses
+node difference for every pair of subgraphs, whether or not one contains the
+other.
+
+**Why times used second.** Two subgraphs with the same node difference cannot
+be strictly contained in one another, so for them the order only matters for
+sharing. Factoring first the subgraph that more root–variable pairs pass
+through tends to produce products that more derivatives share. This is a
+cheap heuristic which produces efficient derivative code in practice.
 
 In the example, the subgraphs [r, p], [x, q], [p, r] and [q, x] all have node
 difference 3, and [r, x] and [x, r] have 5. The first two have times used 2,
