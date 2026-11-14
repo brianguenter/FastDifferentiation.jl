@@ -12,26 +12,31 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        version: ['1.9']
-         # - '1.0' using too many new features not compatible with 1.0
-         # - 'nightly' not interested in nightly for now
-        os: [ubuntu-latest, windows-latest]
-        arch: [x64]
+        # 'lts' is the current long-term-support release and '1' the latest
+        # 1.x release; setup-julia resolves both, so this list does not need
+        # editing when new versions come out.
+        version: ['lts', '1']
+        # macos-latest runs on Apple Silicon. No arch is given, so setup-julia
+        # installs the build native to each runner.
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v7
         with:
-          file: lcov.info
+          files: lcov.info
+          # Codecov rejects tokenless uploads for this repository. Add the
+          # repository upload token from codecov.io as the CODECOV_TOKEN
+          # Actions secret; until then the upload fails without failing CI.
+          token: ${{ secrets.CODECOV_TOKEN }}
