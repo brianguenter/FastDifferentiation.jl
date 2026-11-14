@@ -241,6 +241,56 @@ function svg(edges::Vector{Edge}; rings=Tuple{String,String}[], values_only=fals
 """
 end
 
+"""
+k diamond-shaped graphs in a row, from A at the top to B at the bottom, with one
+segment highlighted (left side, right side, left side, ...). Used in section 11
+to show why the number of segments grows as 2^k."""
+function diamonds_svg(k=3)
+    cx, side, top, step = 230, 85, 40, 130
+    spine(i) = (cx, top + step * i)                       # node shared by diamonds i and i+1
+    sidenode(i, s) = (cx + s * side, top + step * i + step ÷ 2)
+    height = top + step * k + 40
+    parts = String[]
+    chosen = [isodd(i) ? -1 : 1 for i in 1:k]
+    function arrow(p, q, hl)
+        dx, dy = q[1] - p[1], q[2] - p[2]; len = hypot(dx, dy)
+        r0 = 16; r1 = 18
+        a = (p[1] + dx / len * r0, p[2] + dy / len * r0); b = (q[1] - dx / len * r1, q[2] - dy / len * r1)
+        col = hl ? C[:a] : C[:edge]
+        push!(parts, """<path d="M$(f(a[1])),$(f(a[2])) L$(f(b[1])),$(f(b[2]))" stroke="$col" stroke-width="$(hl ? 4 : 1.8)" stroke-linecap="round" fill="none" marker-end="url(#arrow-$(hl ? "a" : "normal"))"/>""")
+    end
+    for i in 1:k, s in (-1, 1)
+        hl = chosen[i] == s
+        arrow(spine(i - 1), sidenode(i - 1, s), hl)
+        arrow(sidenode(i - 1, s), spine(i), hl)
+    end
+    for i in 0:k
+        (x, y) = spine(i)
+        lbl = i == 0 ? "A" : i == k ? "B" : ""
+        push!(parts, """<circle cx="$x" cy="$y" r="15" fill="$(C[:bg])" stroke="$(C[:edge])" stroke-width="2"/>""")
+        lbl == "" || push!(parts, """<text x="$x" y="$(y + 6)" font-family="$SANS" font-size="17" font-weight="700" text-anchor="middle" fill="$(C[:fg])">$lbl</text>""")
+    end
+    for i in 0:k-1, s in (-1, 1)
+        (x, y) = sidenode(i, s)
+        push!(parts, """<circle cx="$x" cy="$y" r="15" fill="$(C[:bg])" stroke="$(C[:edge])" stroke-width="2"/>""")
+    end
+    for i in 1:k   # bracket and label for each diamond-shaped graph
+        y0, y1 = spine(i - 1)[2] + 4, spine(i)[2] - 4
+        bx = cx + side + 45
+        push!(parts, """<path d="M$bx,$y0 h8 V$y1 h-8" fill="none" stroke="$(C[:muted])" stroke-width="1.4"/>""")
+        push!(parts, """<text x="$(bx + 18)" y="$((y0 + y1) ÷ 2 + 5)" font-family="$MONO" font-size="13" fill="$(C[:muted])">diamond $i: 2 choices</text>""")
+    end
+    push!(parts, """<text x="$(cx + side + 63)" y="$(height - 22)" font-family="$MONO" font-size="13" fill="$(C[:a])">highlighted: one of</text>""")
+    push!(parts, """<text x="$(cx + side + 63)" y="$(height - 4)" font-family="$MONO" font-size="13" fill="$(C[:a])">2 × 2 × 2 = 8 segments</text>""")
+    markers = join(["""<marker id="arrow-$s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="$(C[s == "a" ? :a : :edge])"/></marker>""" for s in ("a", "normal")], "")
+    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 $(height + 10)" width="640" height="$(height + 10)">
+  <defs>$markers</defs>
+  <rect x="0" y="0" width="640" height="$(height + 10)" rx="12" fill="$(C[:bg])"/>
+  $(join(parts, "\n  "))
+</svg>
+"""
+end
+
 outdir = isempty(ARGS) ? (@__DIR__) : ARGS[1]
 mkpath(outdir)
 seg(edges, styles) = [restyle(e, get(styles, (e.u, e.v, e.val, e.R), :faded)) for e in edges]
@@ -259,6 +309,7 @@ figures = [
                            rings=[("r", "dominating"), ("x", "dominated")]),
     "fig-final.svg" => svg(FINAL),
     "fig-final-main.svg" => svg(MAIN_FINAL),
+    "fig-diamonds.svg" => diamonds_svg(3),
     "fig-dp-step1.svg" => svg(seg(INITIAL, Dict(("r", "p", 1, "r") => :normal, ("r", "q", 1, "r") => :normal, ("q", "p", 1, "qr") => :normal));
                               faded_labels=false,
                               tables=[("r", DP_STEP1["r"], :left), ("q", DP_STEP1["q"], :right), ("p", DP_STEP1["p"], :left)]),

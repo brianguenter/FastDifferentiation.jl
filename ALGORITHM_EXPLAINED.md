@@ -549,11 +549,17 @@ subgraphs of the example that need it.
 ### Why the segments cannot simply be listed
 
 The number of segments can grow exponentially with the size of the subgraph.
-Put *k* diamonds in a row. Each diamond is a node with edges down to two
-different nodes, and both of those have an edge down to the same next node,
-where the next diamond starts. A segment through them picks one of two sides
-in every diamond, so there are 2ᵏ segments, although the region has only 4*k*
-edges. Listing them would make factoring exponential in the depth of the
+Put *k* diamond shaped graphs in a row. Each diamond shaped graph is a node
+with edges down to two different nodes, and both of those have an edge down to
+the same next node, where the next diamond shaped graph starts. A segment
+through them picks one of two sides in every diamond shaped graph, so there
+are 2ᵏ segments, although the region has only 4*k* edges.
+
+![Three diamond shaped graphs in a row from A down to B. One segment is highlighted: left side, right side, left side.](img/fig-diamonds.svg)
+
+*Figure 10. Three diamond shaped graphs in a row. Each one offers two ways
+down, so there are 2 × 2 × 2 = 8 segments from A to B; one is highlighted.
+With k of them there are 2ᵏ segments.* Listing them would make factoring exponential in the depth of the
 graph.
 
 ### The fact that makes merging safe
@@ -639,7 +645,7 @@ between the factoring step and the read-out.
 
 ![Group tables for step 1, the dominator subgraph [r, p]. G(r) = r | x y, V=1, n=1. G(q) = r | x y, V=1, n=1. G(p) = r | x y, V=2, n=2.](img/fig-dp-step1.svg)
 
-*Figure 10. The tables for step 1, the dominator subgraph [r, p]. For
+*Figure 11. The tables for step 1, the dominator subgraph [r, p]. For
 readability, every mask pair is written the same way as an edge label: root
 mask, then variable mask. In the code, the key of a dominator subgraph is
 (root mask, variable mask) and the key of a postdominator subgraph is
@@ -664,7 +670,7 @@ single group of step 1.
 
 ![Group tables for step 2, the postdominator subgraph [x, q]. G(q) = q r | x. G(p) = q | x. G(x) has two entries: q r | x and q | x, each with V=1, n=1.](img/fig-dp-step2.svg)
 
-*Figure 11. The tables for step 2, the postdominator subgraph [x, q], computed
+*Figure 12. The tables for step 2, the postdominator subgraph [x, q], computed
 on the masks left by step 1.*
 
 The upper end is q, so G(q) is the base case: variables {x} and roots {q, r}.
@@ -692,7 +698,7 @@ so computing all tables takes one mask operation per (table entry, edge)
 combination: the sum of |G(u)| over the region edges leaving u. When the masks
 are as `initialize_edge_masks!` built them, every table has one entry (section
 8), and the work grows linearly with the number of region edges. For the *k*
-diamonds above that is 4*k* extensions instead of 2ᵏ segments. Tables grow
+diamond shaped graphs above that is 4*k* extensions instead of 2ᵏ segments. Tables grow
 only when earlier factoring steps have given different edges different masks,
 as in step 2, and section 8 gives the worst-case bound.
 
