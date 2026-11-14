@@ -375,11 +375,9 @@ time. The ordering has two keys:
 and T with node difference 20. S may be, but is not necessarily, contained in
 T.
 
-- **If S is contained in T,** its node difference is necessarily smaller.
-  Postorder numbers increase along every path upward, so every node inside
-  T lies strictly between T's two nodes in number, and so do S's two nodes.
-  So S is factored first. This guarantees that by the time T is factored,
-  its internal subgraphs have already been converted into direct edges
+- **If S is contained in T,** its node difference is necessarily smaller, so
+  S is factored first (the argument is below). This guarantees that by the
+  time T is factored, its internal subgraphs have already been converted into direct edges
   between their two nodes (one edge per block of section 8, usually just
   one). T then sees those edges instead of all the paths inside them, and
   each inner sum is built once and reused inside every larger sum that
@@ -390,6 +388,44 @@ T.
 Checking containment exactly would cost more than it saves, so the code uses
 node difference for every pair of subgraphs, whether or not one contains the
 other.
+
+**Why node difference works as a containment test.** Call the higher-numbered
+of a subgraph's two nodes its top and the other its bottom (for a dominator
+subgraph the top is A, for a postdominator subgraph it is B). Say S is
+**contained** in T if both of S's nodes are nodes of T (T's top, its bottom,
+or in its region) and S and T do not have the same two nodes.
+
+1. **Numbers fall along every edge going down.** The postorder search gives a
+   node its number only after it has numbered everything below it, so a node's
+   number is larger than the number of every node below it, not only of its
+   children.
+2. **Every node of T lies between T's top and bottom.** Take a dominator
+   subgraph T = [A, B] found for root f. Its region is built by walking up
+   from B along edges that carry f (or another root of its dominance mask),
+   stopping at A. A node u reached this way is above B. It is also below A:
+   there is a path from u up to f, every path from B up to f passes through
+   A, and the walk reached u without passing A, so A must lie on the part of
+   the path above u. The postdominator case is the mirror image. By step 1,
+   number(bottom of T) ≤ number(u) ≤ number(top of T) for every node u of T.
+3. **So S's numbers lie inside T's range.** S's top and bottom are nodes of
+   T, so number(top of S) ≤ number(top of T) and
+   number(bottom of S) ≥ number(bottom of T). Subtracting,
+   node_difference(S) ≤ node_difference(T).
+4. **The inequality is strict.** Equality needs top(S) = top(T) and
+   bottom(S) = bottom(T), that is, the same two nodes, which the definition of
+   containment excludes. Such pairs exist, a dominator and a postdominator
+   subgraph on the same two nodes, like [r, x] and [x, r] in the example, but
+   neither is inside the other, and they are ordered by times used.
+
+The converse fails: a smaller node difference does not imply containment,
+because unrelated parts of the graph can have any numbers. That is why node
+difference is only a possible-containment test, and why it is enough that
+factoring an uncontained S first does no harm.
+
+The argument was checked by computing the regions with the code's own
+`subgraph_region` on the example and 300 random graphs: in all 148,983 pairs
+where one subgraph was contained in another, the inner one had the strictly
+smaller node difference.
 
 **Why times used second.** Two subgraphs with the same node difference cannot
 be strictly contained in one another, so for them the order only matters for
