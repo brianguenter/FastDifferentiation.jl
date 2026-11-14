@@ -898,7 +898,9 @@ of S's dominance mask and *m* the size of its non-dominance mask.
   and there are at most *n*·*m* blocks, hence at most *n*·*m* replacement
   edges.
 
-Measured just before each step of `factor!` by
+While the worst case complexity is exponential, the maximum number of groups
+in real world and many synthetic graphs seems to be small. Measured just
+before each step of `factor!` by
 [`scripts/measure_groups.jl`](scripts/measure_groups.jl):
 
 | problem | steps | max groups at B | max \|G(u)\| | (*n*, *m*) where max occurs |
