@@ -381,15 +381,18 @@ subgraph is built once and reused inside every larger sum that contains it.
 Two subgraphs with the same node difference cannot lie strictly inside one
 another, so their relative order does not affect this.
 
-**Why heavily used first.** Among subgraphs that do not contain each other,
-the order does not affect correctness. Factoring first the subgraph that more
+**Why heavily used first.** Times used is compared only between subgraphs
+with the same node difference, which, as shown above, cannot lie strictly
+inside one another. For those, factoring first the subgraph that more
 root–variable pairs pass through tends to produce products that more
 derivatives share. This is a cheap heuristic which produces efficient
 derivative code in practice.
 
-The converse does not hold: a smaller node difference does not mean that one
-subgraph lies inside the other, so unrelated subgraphs are also ordered by
-size. That is harmless. The order only has to put inner subgraphs before outer
+Node difference is the first key for every pair of subgraphs, not only for
+nested ones. A smaller node difference does not mean that one subgraph lies
+inside the other, so two unrelated subgraphs with different node differences
+are ordered by node difference, and times used is never consulted for them.
+That is harmless. The order only has to put inner subgraphs before outer
 ones, testing containment exactly would cost more than it saves, and
 factoring is correct in any order (section 13).
 
