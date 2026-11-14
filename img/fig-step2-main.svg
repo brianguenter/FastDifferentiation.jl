@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430" width="640" height="430">
+  <defs>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0b7285"/></marker>
+    <marker id="arrow-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3d4856"/></marker>
+    <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b2fc9"/></marker>
+    <marker id="arrow-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c0262d"/></marker>
+    <marker id="arrow-faded" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#bcc4ce"/></marker>
+    <marker id="arrow-new" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0b7285"/></marker>
+  </defs>
+  <rect x="0" y="0" width="640" height="430" rx="12" fill="#ffffff"/>
+  <path d="M200.0,73.0 L200.0,245.0" fill="none" stroke="#3d4856" stroke-width="1.8" stroke-linecap="round" marker-end="url(#arrow-normal)"/>
+  <path d="M220.2,61.1 L378.1,148.0" fill="none" stroke="#3d4856" stroke-width="1.8" stroke-linecap="round" marker-end="url(#arrow-normal)"/>
+  <path d="M400.0,183.0 L400.0,365.0" fill="none" stroke="#c0262d" stroke-width="3.4" stroke-linecap="round" marker-end="url(#arrow-bad)"/>
+  <path d="M379.8,171.1 L221.9,258.0" fill="none" stroke="#0b7285" stroke-width="3.4" stroke-linecap="round" marker-end="url(#arrow-new)"/>
+  <path d="M219.7,281.8 L378.6,377.1" fill="none" stroke="#0b7285" stroke-width="3.4" stroke-linecap="round" marker-end="url(#arrow-new)"/>
+  <path d="M183.7,286.3 L97.7,372.3" fill="none" stroke="#3d4856" stroke-width="1.8" stroke-linecap="round" marker-end="url(#arrow-normal)"/>
+  <circle cx="200" cy="270" r="23" fill="#ffffff" stroke="#3d4856" stroke-width="2"/>
+  <text x="200" y="277" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#16202b">p</text>
+  <circle cx="400" cy="160" r="23" fill="#ffffff" stroke="#1f4fd1" stroke-width="3"/>
+  <text x="400" y="167" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#1f4fd1">q</text>
+  <circle cx="200" cy="50" r="23" fill="#ffffff" stroke="#b4520a" stroke-width="3"/>
+  <text x="200" y="57" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#b4520a">r</text>
+  <rect x="377" y="367" width="46" height="46" rx="9" fill="#ffffff" stroke="#3f7a12" stroke-width="2"/>
+  <text x="400" y="397" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#3f7a12">x</text>
+  <rect x="57" y="367" width="46" height="46" rx="9" fill="#ffffff" stroke="#3f7a12" stroke-width="2"/>
+  <text x="80" y="397" font-family="'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#3f7a12">y</text>
+  <g><rect x="92.5" y="149.0" width="95.0" height="22" rx="5" fill="#ffffff" stroke="#d4dbe3" stroke-width="1"/><text x="100.5" y="165" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#16202b" font-weight="700">2</tspan><tspan fill="#16202b">  </tspan><tspan fill="#b4520a" font-weight="700">r</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">x</tspan><tspan fill="#3f7a12" font-weight="700"> y</tspan></text></g>
+  <g><rect x="278.4" y="53.0" width="79.2" height="22" rx="5" fill="#ffffff" stroke="#d4dbe3" stroke-width="1"/><text x="286.4" y="69" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#16202b" font-weight="700">1</tspan><tspan fill="#16202b">  </tspan><tspan fill="#b4520a" font-weight="700">r</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">x</tspan></text></g>
+  <g><rect x="414.5" y="264.0" width="95.0" height="22" rx="5" fill="#ffffff" stroke="#c0262d" stroke-width="1.8"/><text x="422.5" y="280" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#c0262d" font-weight="700">2</tspan><tspan fill="#16202b">  </tspan><tspan fill="#1f4fd1" font-weight="700">q</tspan><tspan fill="#b4520a" font-weight="700"> r</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">x</tspan></text></g>
+  <g><rect x="282.4" y="239.0" width="79.2" height="22" rx="5" fill="#ffffff" stroke="#0b7285" stroke-width="1.8"/><text x="290.4" y="255" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#16202b" font-weight="700">1</tspan><tspan fill="#16202b">  </tspan><tspan fill="#1f4fd1" font-weight="700">q</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">y</tspan></text></g>
+  <g><rect x="222.4" y="353.0" width="79.2" height="22" rx="5" fill="#ffffff" stroke="#0b7285" stroke-width="1.8"/><text x="230.4" y="369" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#16202b" font-weight="700">1</tspan><tspan fill="#16202b">  </tspan><tspan fill="#b4520a" font-weight="700">r</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">x</tspan></text></g>
+  <g><rect x="48.5" y="291.0" width="95.0" height="22" rx="5" fill="#ffffff" stroke="#d4dbe3" stroke-width="1"/><text x="56.5" y="307" font-family="'JetBrains Mono', Consolas, 'DejaVu Sans Mono', Menlo, monospace" font-size="13" xml:space="preserve"><tspan fill="#16202b" font-weight="700">1</tspan><tspan fill="#16202b">  </tspan><tspan fill="#1f4fd1" font-weight="700">q</tspan><tspan fill="#b4520a" font-weight="700"> r</tspan><tspan fill="#586473"> | </tspan><tspan fill="#3f7a12" font-weight="700">y</tspan></text></g>
+  
+</svg>

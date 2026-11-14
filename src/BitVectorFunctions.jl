@@ -20,6 +20,16 @@ function get_bitvector(numbits::T) where {T<:Integer}
 end
 
 
+"True if every bit set in `a` is also set in `b`.  Compares whole 64-bit chunks and allocates nothing."
+function is_subset_of(a::BitVector, b::BitVector)
+    @assert length(a) == length(b)
+    ca, cb = a.chunks, b.chunks
+    @inbounds for i in eachindex(ca)
+        ca[i] & ~cb[i] == 0 || return false
+    end
+    return true
+end
+
 """
     subset(a::BitVector, b::BitVector)
 

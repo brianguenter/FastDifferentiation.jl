@@ -170,7 +170,7 @@ struct DerivativeGraph{T<:Integer}
 
         new_roots = Vector{Node}(undef, length(roots))
         for (i, root) in pairs(roots)
-            new_roots[i] = create_NoOp(root)
+            new_roots[i] = create_NoOp(is_NoOp(root) ? children(root)[1] : root)
         end
 
         (postorder_number, nodes, var_array) = postorder(new_roots)
@@ -204,6 +204,14 @@ struct DerivativeGraph{T<:Integer}
 
         num_nodes = length(postorder_number)
         compute_edge_paths!(num_nodes, edges, variable_index_to_postorder_number, root_index_to_postorder_number)
+        initialize_edge_masks!(
+            edges,
+            num_nodes,
+            length(var_array),
+            length(new_roots),
+            variable_postorder_to_index,
+            root_postorder_to_index,
+        )
 
 
 
@@ -220,6 +228,61 @@ struct DerivativeGraph{T<:Integer}
             expression_cache
         )
     end
+end
+
+"""
+    initialize_edge_masks!(
+        edges,
+        num_nodes,
+        domain_dimension,
+        codomain_dimension,
+        variable_postorder_to_index,
+        root_postorder_to_index,
+    )
+
+Initialize each edge's reachability masks from the graph topology. An edge
+inherits the variables reachable below its bottom vertex and the roots
+reachable above its top vertex.
+"""
+function initialize_edge_masks!(
+    edges::Dict{T,EdgeRelations{T}},
+    num_nodes::T,
+    domain_dimension::T,
+    codomain_dimension::T,
+    variable_postorder_to_index::IdDict{T,T},
+    root_postorder_to_index::IdDict{T,T},
+) where {T<:Integer}
+    variable_masks = [falses(domain_dimension) for _ in 1:num_nodes]
+    for node_index in one(T):num_nodes
+        mask = variable_masks[node_index]
+        variable_index = get(variable_postorder_to_index, node_index, nothing)
+        variable_index === nothing || (mask[variable_index] = true)
+        node_edges = get(edges, node_index, nothing)
+        node_edges === nothing && continue
+        for edge in children(node_edges)
+            mask .|= variable_masks[bott_vertex(edge)]
+        end
+    end
+
+    root_masks = [falses(codomain_dimension) for _ in 1:num_nodes]
+    for node_index in num_nodes:-one(T):one(T)
+        mask = root_masks[node_index]
+        root_index = get(root_postorder_to_index, node_index, nothing)
+        root_index === nothing || (mask[root_index] = true)
+        node_edges = get(edges, node_index, nothing)
+        node_edges === nothing && continue
+        for edge in parents(node_edges)
+            mask .|= root_masks[top_vertex(edge)]
+        end
+    end
+
+    for node_edges in values(edges)
+        for edge in children(node_edges)
+            reachable_variables(edge) .= variable_masks[bott_vertex(edge)]
+            reachable_roots(edge) .= root_masks[top_vertex(edge)]
+        end
+    end
+    return nothing
 end
 
 DerivativeGraph(root::Node) = DerivativeGraph([root]) #convenience constructor for single root functions
@@ -431,8 +494,6 @@ function child_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     end
 end
 
-child_edges(graph::DerivativeGraph, curr_edge::PathEdge{T}) where {T} = child_edges(graph, (bott_vertex(curr_edge)))
-
 """
     parent_edges(dgraph::DerivativeGraph, node_index::Integer)
 
@@ -446,8 +507,6 @@ function parent_edges(dgraph::DerivativeGraph, node_index::T) where {T<:Integer}
     end
 end
 
-
-parent_edges(dgraph::DerivativeGraph, e::PathEdge) = parent_edges(dgraph, top_vertex(e))
 
 function parent_edges(dgraph::DerivativeGraph{T}, node::Node) where {T}
     num = postorder_number(dgraph, node)
