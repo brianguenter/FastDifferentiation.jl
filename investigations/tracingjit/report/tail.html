@@ -1,0 +1,176 @@
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const ALL=DATA;
+const OK=ALL.filter(r=>r.status==="ok");
+const FAIL=ALL.filter(r=>r.status!=="ok");
+const $=id=>document.getElementById(id);
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const median=a=>{if(!a.length)return NaN;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const fmt=(x,d=2)=>x==null||!isFinite(x)?"–":(Math.abs(x)>=100?x.toFixed(0):Math.abs(x)>=10?x.toFixed(1):x.toFixed(d));
+const sci=x=>x==null?"–":x===0?"0":x.toExponential(1);
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const k in(attrs||{})){if(k==="class")e.className=attrs[k];else e.setAttribute(k,attrs[k])}for(const c of kids){if(c==null)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e}
+function s(tag,attrs,text){const e=document.createElementNS(NS,tag);for(const k in(attrs||{}))e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+function table(el,head,rows,numCols){el.replaceChildren();const tr=h("tr");head.forEach((t,i)=>tr.append(h("th",{class:numCols.includes(i)?"n":""},t)));el.append(h("thead",{},tr));const tb=h("tbody");rows.forEach(r=>{const row=h("tr",r.cls?{class:r.cls}:{});r.cells.forEach((c,i)=>row.append(h("td",{class:numCols.includes(i)?"n":""},c)));tb.append(row)});el.append(tb)}
+
+const sp=OK.map(r=>r.speed).filter(x=>x!=null);
+const firsts=OK.map(r=>r.first);
+const med=median(sp);
+
+// ---- summary
+$("tiles").append(
+  ...[[`${OK.length} of ${ALL.length}`,"agree with the reference Jacobian"],
+      ["0","disagree with the reference"],
+      [fmt(med)+"×","median speedup of a cached call over ForwardDiff"],
+      [fmt(median(firsts))+" s","median cost of the first call"]]
+  .map(([b,t])=>h("div",{class:"stat"},h("b",{},b),h("span",{},t))));
+$("s-ok").textContent=`${OK.length}`;
+$("s-med").textContent=fmt(med);
+$("s-first").textContent=fmt(median(firsts));
+$("s-firstmax").textContent=fmt(Math.max(...firsts));
+
+// ---- failures table
+function classify(r){
+  const m=r.msg;
+  if(r.status==="plain_failed")return 4;
+  if(/isless|rem not defined|ldexp/.test(m))return 3;
+  if(/no method matching (_?bessel|_?airy|_erfinv|_gamma_inc|_logabsgamma|_trigamma|besseli|besselk)/.test(m))return 1;
+  if(/StackOverflow|guards of a trace failed/.test(m))return 5;
+  return 2;
+}
+const CATS={
+ 1:["Missing special-function methods","Bessels and SpecialFunctions internals have no method for Tracked. Each needs a Tracked method with a derivative rule, or a rewrite in terms of functions FD knows."],
+ 2:["Library rejects the number type","The library requires a type the Tracked number does not satisfy (for example Float64 conversions, ForwardDiff Dual checks, AbstractFloat dispatch, in-place matrix exp)."],
+ 3:["Fixed after the run, not rerun","A method (isless against AbstractFloat, rem, ldexp) was added after this result was recorded."],
+ 4:["The test case fails on plain Float64","The harness's own call to the function throws before any tracing. These are bugs in my test cases."],
+ 5:["Not diagnosed","A stack overflow in two cases, and one QuadGK case where the recorded guards failed on the input they were recorded from."]};
+{
+  const g={};FAIL.forEach(r=>{(g[classify(r)]??=[]).push(r)});
+  const rows=Object.keys(CATS).map(k=>({cells:[CATS[k][0],String((g[k]||[]).length),(g[k]||[]).map(r=>r.name).join("; "),CATS[k][1]]}));
+  table($("failtable"),["Cause","Cases","Which","Detail"],rows,[1]);
+}
+
+// ---- package bars
+{
+  const pk={};ALL.forEach(r=>{(pk[r.pkg]??=[]).push(r)});
+  const list=Object.entries(pk).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
+  const wrap=$("pkgbars");
+  list.forEach(([p,rs])=>{
+    const ok=rs.filter(r=>r.status==="ok").length,bad=rs.length-ok,mx=Math.max(...Object.values(pk).map(v=>v.length));
+    const tr=h("div",{class:"track",style:`width:${100*rs.length/mx}%`});
+    tr.append(h("i",{style:`width:${100*ok/rs.length}%;background:var(--ok)`}),h("i",{style:`width:${100*bad/rs.length}%;background:var(--bad)`}));
+    wrap.append(h("div",{class:"barrow"},h("span",{class:"nm",title:p},p),h("div",{style:"min-width:0"},tr),h("span",{class:"ct"},`${ok}/${rs.length}`)));
+  });
+}
+
+// ---- scales
+const logx=(v,lo,hi,a,b)=>a+(Math.log10(v)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo))*(b-a);
+function axes(svg,W,H,m,xt,yt,xs,ys,xl,yl,xfmt,yfmt){
+  yt.forEach(t=>{const y=ys(t);svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y,y2:y,class:"gr"}),s("text",{x:m.l-6,y:y+4,"text-anchor":"end"},yfmt(t)))});
+  xt.forEach(t=>{const x=xs(t);svg.append(s("line",{x1:x,x2:x,y1:m.t,y2:H-m.b,class:"gr"}),s("text",{x:x,y:H-m.b+14,"text-anchor":"middle"},xfmt(t)))});
+  svg.append(s("line",{x1:m.l,x2:m.l,y1:m.t,y2:H-m.b,class:"ax"}),s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,class:"ax"}));
+  if(xl)svg.append(s("text",{x:(m.l+W-m.r)/2,y:H-4,"text-anchor":"middle"},xl));
+  if(yl)svg.append(s("text",{x:12,y:(m.t+H-m.b)/2,"text-anchor":"middle",transform:`rotate(-90 12 ${(m.t+H-m.b)/2})`},yl));
+}
+
+// ---- speedup strip
+{
+  const svg=$("chart-strip"),W=900,H=340,m={l:48,r:10,t:10,b:34};
+  const lo=0.5,hi=500,sorted=[...OK].filter(r=>r.speed!=null).sort((a,b)=>a.speed-b.speed);
+  const ys=v=>logx(v,lo,hi,H-m.b,m.t),n=sorted.length,bw=(W-m.l-m.r)/n;
+  axes(svg,W,H,m,[],[1,3,10,30,100,300],()=>0,ys,"","speedup over ForwardDiff",null,v=>v+"×");
+  sorted.forEach((r,i)=>{
+    const x=m.l+i*bw,y=ys(r.speed),y0=ys(1);
+    const top=Math.min(y,y0),ht=Math.max(1,Math.abs(y0-y));
+    const rect=s("rect",{x:x+0.5,y:top,width:Math.max(1,bw-1),height:ht,fill:r.speed<1?"var(--fd)":"var(--trace)"});
+    rect.append(s("title",{},`${r.name} (${r.pkg}): ${fmt(r.speed)}×`));svg.append(rect);
+  });
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:ys(1),y2:ys(1),class:"solid"}));
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:ys(med),y2:ys(med),class:"ref"}),s("text",{x:W-m.r-4,y:ys(med)-5,"text-anchor":"end"},`median ${fmt(med)}×`));
+  svg.append(s("text",{x:m.l,y:H-8},"cases, slowest to fastest relative to ForwardDiff"));
+}
+
+// ---- histogram
+{
+  const bins=[["below 1×",0,1],["1× to 3×",1,3],["3× to 10×",3,10],["10× to 30×",10,30],["30× to 100×",30,100],["100× and above",100,1e9]];
+  const counts=bins.map(([,a,b])=>sp.filter(x=>x>=a&&x<b).length),mx=Math.max(...counts);
+  bins.forEach(([n],i)=>$("hist").append(h("div",{class:"barrow"},h("span",{class:"nm"},n),
+    h("div",{class:"track"},h("i",{style:`width:${100*counts[i]/mx}%;background:${i===0?"var(--fd)":"var(--trace)"}`})),h("span",{class:"ct"},String(counts[i])))));
+}
+
+// ---- scatter hit vs fd
+{
+  const svg=$("chart-scatter"),W=420,H=340,m={l:46,r:12,t:10,b:36};
+  const pts=OK.filter(r=>r.hit!=null&&r.fd!=null);
+  const lo=0.01,hi=100,xs=v=>logx(v,lo,hi,m.l,W-m.r),ys=v=>logx(v,lo,hi,H-m.b,m.t);
+  const tk=[0.01,0.1,1,10,100],f=v=>v>=1?String(v):String(v);
+  axes(svg,W,H,m,tk,tk,xs,ys,"ForwardDiff, µs per Jacobian","cached trace, µs",f,f);
+  [[1,"solid",""],[10,"ref","10×"],[100,"ref","100×"]].forEach(([k,c,l])=>{
+    svg.append(s("line",{x1:xs(lo*k),y1:ys(lo),x2:xs(hi),y2:ys(hi/k),class:c}));
+    if(l)svg.append(s("text",{x:xs(hi)-4,y:ys(hi/k)-4,"text-anchor":"end"},l));
+  });
+  pts.forEach(r=>{const c=s("circle",{cx:xs(Math.max(r.fd,lo)),cy:ys(Math.max(r.hit,lo)),r:3.4,fill:"var(--trace)","fill-opacity":.65});
+    c.append(s("title",{},`${r.name}: trace ${fmt(r.hit)} µs, ForwardDiff ${fmt(r.fd)} µs`));svg.append(c)});
+}
+
+// ---- package table
+{
+  const pk={};OK.forEach(r=>{(pk[r.pkg]??=[]).push(r)});
+  const tot={};ALL.forEach(r=>{tot[r.pkg]=(tot[r.pkg]||0)+1});
+  const rows=Object.entries(pk).sort((a,b)=>median(b[1].map(r=>r.speed))-median(a[1].map(r=>r.speed))).map(([p,rs])=>{
+    const v=rs.map(r=>r.speed);return {cells:[p,`${rs.length}/${tot[p]}`,fmt(median(v))+"×",fmt(Math.min(...v))+"×",fmt(Math.max(...v))+"×",fmt(median(rs.map(r=>r.first)))]}});
+  table($("pkgtable"),["Package","Agree / cases","Median speedup","Lowest","Highest","Median first call, s"],rows,[1,2,3,4,5]);
+}
+
+// ---- first call
+{
+  const svg=$("chart-first"),W=420,H=340,m={l:46,r:12,t:10,b:36};
+  const lo=0.05,hi=20,xlo=1,xhi=1e5,xs=v=>logx(Math.max(v,xlo),xlo,xhi,m.l,W-m.r),ys=v=>logx(Math.max(v,lo),lo,hi,H-m.b,m.t);
+  axes(svg,W,H,m,[1,10,100,1e3,1e4,1e5],[0.1,1,10],xs,ys,"nodes in the Jacobian","first call, seconds",v=>v>=1000?(v/1000)+"k":String(v),v=>String(v));
+  OK.forEach(r=>{const c=s("circle",{cx:xs(r.jac),cy:ys(r.first),r:3.4,fill:"var(--trace)","fill-opacity":.65});
+    c.append(s("title",{},`${r.name}: ${fmt(r.first)} s, ${r.jac} Jacobian nodes`));svg.append(c)});
+  const be=OK.filter(r=>r.fd!=null&&r.hit!=null&&r.fd>r.hit).map(r=>({r,n:r.first/((r.fd-r.hit)*1e-6)}));
+  const bins=[["under 1,000",0,1e3],["1,000 to 10,000",1e3,1e4],["10,000 to 100,000",1e4,1e5],["100,000 to 1,000,000",1e5,1e6],["over 1,000,000",1e6,Infinity]];
+  const counts=bins.map(([,a,b])=>be.filter(x=>x.n>=a&&x.n<b).length),mx=Math.max(...counts);
+  bins.forEach(([n],i)=>$("breakeven").append(h("div",{class:"barrow"},h("span",{class:"nm"},n),
+    h("div",{class:"track"},h("i",{style:`width:${100*counts[i]/mx}%;background:var(--trace)`})),h("span",{class:"ct"},String(counts[i])))));
+  $("breakeven").append(h("div",{class:"meta"},`median: ${Math.round(median(be.map(x=>x.n))).toLocaleString("en-US")} calls`));
+}
+
+// ---- method and mode tables
+{
+  const count=(k)=>{const c={};OK.forEach(r=>{c[r[k]]=(c[r[k]]||0)+1});return Object.entries(c).sort((a,b)=>b[1]-a[1])};
+  table($("methodtable"),["Method","Cases","Median first call, s"],count("method").map(([k,n])=>({cells:[k,String(n),fmt(median(OK.filter(r=>r.method===k).map(r=>r.first)))]})),[1,2]);
+  table($("modetable"),["Mode","Cases","Median guards"],count("mode").map(([k,n])=>({cells:[k,String(n),fmt(median(OK.filter(r=>r.mode===k).map(r=>r.guards)),0)]})),[1,2]);
+  const er=OK.map(r=>r.err).filter(x=>x!=null);
+  $("reuse").textContent=`Reuse under perturbation: ${OK.filter(r=>r.hits>0).length} of ${OK.length} passing cases reused their trace on at least one of the 8 perturbed inputs. In ${OK.filter(r=>r.misses>0).length} cases at least one perturbed input took a different branch and caused a new recording, as expected for functions with comparisons near a threshold or with data-dependent loop counts. Accuracy: the largest error against the reference is ${sci(Math.max(...er))} and the median is ${sci(median(er))}.`;
+}
+
+// ---- all results
+{
+  const cols=[["Case",r=>r.name,0],["Package",r=>r.pkg,0],["Outcome",r=>r.status==="ok"?"ok":"failed",0],["Guards",r=>r.guards,1],["Trace",r=>r.trace,1],["Jac",r=>r.jac,1],["Method",r=>r.method,0],["Mode",r=>r.mode,0],["First, s",r=>r.first,1],["Hit, µs",r=>r.hit,1],["FD, µs",r=>r.fd,1],["×",r=>r.speed,1],["Error",r=>r.err,1]];
+  let sortCol=-1,asc=true;
+  const t=$("alltable");
+  function render(){
+    const q=$("q").value.toLowerCase(),st=$("st").value;
+    let rows=ALL.filter(r=>(!q||(r.name+" "+r.pkg).toLowerCase().includes(q))&&(!st||(st==="ok")===(r.status==="ok")));
+    if(sortCol>=0){const g=cols[sortCol][1];rows=[...rows].sort((a,b)=>{const x=g(a),y=g(b);if(x==null)return 1;if(y==null)return -1;return(typeof x==="number"?x-y:String(x).localeCompare(String(y)))*(asc?1:-1)})}
+    t.replaceChildren();
+    const tr=h("tr");cols.forEach(([n,,num],i)=>{const th=h("th",{class:"sortable"+(num?" n":""),tabindex:"0",role:"button"},n+(i===sortCol?(asc?" ▲":" ▼"):""));
+      const go=()=>{if(sortCol===i)asc=!asc;else{sortCol=i;asc=true}render()};th.addEventListener("click",go);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}});tr.append(th)});
+    t.append(h("thead",{},tr));
+    const tb=h("tbody");
+    rows.forEach(r=>{const row=h("tr",r.status==="ok"?{}:{class:"fail",title:r.msg});
+      cols.forEach(([n,g,num])=>{let v=g(r),c;
+        if(n==="Outcome")c=h("span",{class:"tag "+(v==="ok"?"ok":"bad")},v);
+        else if(n==="Error")c=r.err==null?"–":sci(r.err);
+        else if(num)c=r.status==="ok"||n==="Guards"&&false?(["Guards","Trace","Jac"].includes(n)?String(v):fmt(v)):"–";
+        else c=v;
+        row.append(h("td",{class:num?"n":""},c))});
+      tb.append(row)});
+    t.append(tb);
+  }
+  $("q").addEventListener("input",render);$("st").addEventListener("change",render);render();
+}
+})();
+</script>

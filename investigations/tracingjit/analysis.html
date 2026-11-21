@@ -1,0 +1,591 @@
+<title>Tracing Jacobian Results</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: a single reading column with wide figures; figures use two series colours, tracing (blue) vs ForwardDiff (orange). */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --fg:#161b22; --muted:#586272; --rule:#d8dce3; --grid:#e6e9ee;
+  --trace:#1f5fd6; --fd:#d2561a; --ok:#2a7d4f; --bad:#b83a3a; --warn:#a8741a; --code:#eceff4;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-head:"Space Grotesk","IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --surface:#1a2029; --fg:#e6e9ef; --muted:#9aa5b5; --rule:#2e3643; --grid:#262d38;
+  --trace:#6aa0ff; --fd:#f08a55; --ok:#5cc58a; --bad:#ef7a7a; --warn:#e0b050; --code:#222a35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --surface:#1a2029; --fg:#e6e9ef; --muted:#9aa5b5; --rule:#2e3643; --grid:#262d38;
+  --trace:#6aa0ff; --fd:#f08a55; --ok:#5cc58a; --bad:#ef7a7a; --warn:#e0b050; --code:#222a35; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:400 16px/1.6 var(--font-body);padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:32px 80px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--font-head);font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:2.1rem;letter-spacing:-.01em}
+h2{font-size:1.45rem;padding-top:14px;border-top:1px solid var(--rule)}
+h3{font-size:1.07rem;margin-bottom:6px}
+p{margin:0 0 .8em;max-width:72ch}
+section{display:flex;flex-direction:column;gap:16px;min-width:0}
+.lede{font-size:1.1rem;color:var(--muted);max-width:68ch}
+.meta{font:400 .85rem var(--font-mono);color:var(--muted)}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--code);padding:.1em .35em;border-radius:3px}
+pre{background:var(--code);padding:14px 16px;border-radius:6px;overflow-x:auto;font:400 .84rem/1.5 var(--font-mono);margin:0}
+pre code{background:none;padding:0;font-size:inherit}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:12px 14px}
+.stat b{display:block;font:600 1.7rem var(--font-head);font-variant-numeric:tabular-nums}
+.stat span{font-size:.85rem;color:var(--muted)}
+figure{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:14px 14px 10px;min-width:0}
+figcaption{font-size:.86rem;color:var(--muted);margin-top:8px;max-width:80ch}
+figcaption b{color:var(--fg);font-weight:600}
+.scroll{overflow-x:auto;min-width:0}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--muted);font:400 11px var(--font-mono)}
+svg .ax{stroke:var(--rule);fill:none}
+svg .gr{stroke:var(--grid);fill:none}
+svg .ref{stroke:var(--muted);stroke-dasharray:4 3;fill:none}
+svg .solid{stroke:var(--muted);fill:none}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;background:var(--surface);position:sticky;top:0;white-space:nowrap}
+td.n,th.n{text-align:right}
+th.sortable{cursor:pointer}
+th.sortable:hover{color:var(--trace)}
+tr.fail td{color:var(--muted)}
+.tag{display:inline-block;padding:0 7px;border-radius:9px;font:500 .74rem var(--font-mono);border:1px solid var(--rule)}
+.tag.ok{color:var(--ok);border-color:var(--ok)} .tag.bad{color:var(--bad);border-color:var(--bad)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.cols>*{min-width:0}
+.note{border-left:3px solid var(--warn);padding:2px 0 2px 14px;max-width:74ch}
+.bars{display:flex;flex-direction:column;gap:6px}
+.barrow{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;font-size:.85rem}
+.barrow .track{display:flex;height:16px;background:var(--grid);border-radius:3px;overflow:hidden}
+.barrow .track i{display:block;height:100%}
+.barrow span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barrow span.ct{font-family:var(--font-mono);font-size:.8rem;color:var(--muted);text-align:right}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.filters{display:flex;gap:10px;flex-wrap:wrap}
+input,select{font:inherit;font-size:.88rem;padding:5px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--fg)}
+.mermaid{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:12px;overflow-x:auto}
+ol.steps,ul.list{margin:0;padding-left:1.3em;max-width:74ch} ol.steps li,ul.list li{margin-bottom:.6em}
+:focus-visible{outline:2px solid var(--trace);outline-offset:2px}
+@media (max-width:560px){.barrow{grid-template-columns:100px 1fr 56px} h1{font-size:1.65rem}}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <div class="meta">FastDifferentiation.jl · branch tracingjit · results as of 2026-11-21 · uncommitted prototype</div>
+  <h1>Tracing Jacobians: results on 144 library functions, and how the cache works</h1>
+  <p class="lede">A prototype differentiates ordinary Julia code containing data-dependent branches by recording the straight-line trace for one input, differentiating it with FastDifferentiation (FD), compiling the result, and reusing it for every later input that takes the same branches. This page reports what happened when it was run on a broad set of functions from registry packages, and describes the algorithm in full.</p>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <div class="stats" id="tiles"></div>
+  <p>Of 144 test functions, <span id="s-ok"></span> produced a Jacobian that agreed with ForwardDiff (or with finite differences where ForwardDiff could not run the function), and none disagreed. Across those, a cached trace evaluated the Jacobian in a median of <span id="s-med"></span> times less time than <code>ForwardDiff.jacobian!</code>. That excludes the one-time cost of recording, differentiating and compiling the trace, which had a median of <span id="s-first"></span> seconds and a maximum of <span id="s-firstmax"></span> seconds on these functions. The 35 failures are missing methods for the <code>Tracked</code> number type, libraries that reject it, or problems in my test cases. None is a wrong answer.</p>
+  <p class="note"><b>Read the timings with these limits in mind.</b> Timings were taken while up to four Julia processes ran in parallel on one machine, each case once, so ratios under about 2 times are not reliable. The ForwardDiff reference includes a small wrapper that reshapes the inputs and allocates the output, which the cached trace does not pay for. I chose the cases, they were not sampled, and they lean toward small problems (median 10 guards; largest Jacobian 16,771 nodes). The 35 failed cases are excluded from every speed figure.</p>
+</section>
+
+<section id="method">
+  <h2>What was run</h2>
+  <p>Each case is a function from a package, called with deterministic random arguments. For each one the harness:</p>
+  <ol class="steps">
+    <li>runs the plain function on <code>Float64</code> to confirm that it works;</li>
+    <li>computes a reference Jacobian with ForwardDiff, or with 5-point central finite differences where ForwardDiff throws;</li>
+    <li>calls the tracing Jacobian once (this records, differentiates, generates code and compiles) and compares with the reference using <code>max |J − J<sub>ref</sub>| / max(|J<sub>ref</sub>|, 1)</code>. A case passes at 1e-6 against ForwardDiff or 1e-3 against finite differences;</li>
+    <li>calls it on 8 inputs perturbed by about 0.1%, to see whether the trace is reused (a hit) or a new one is recorded (a miss);</li>
+    <li>for some cases, calls it on inputs chosen to take other branches and checks those against the reference;</li>
+    <li>times a cached call (<code>eval_jacobian!</code>, in place) against <code>ForwardDiff.jacobian!</code> with a preallocated config.</li>
+  </ol>
+  <p>The 144 cases come from 21 packages, two of them standard libraries (LinearAlgebra, Statistics). Eleven more packages are installed and imported (Distributions, Geodesy, Rotations, StaticArrays and others) but have no cases yet.</p>
+</section>
+
+<section id="coverage">
+  <h2>Coverage</h2>
+  <figure>
+    <div id="pkgbars" class="bars"></div>
+    <div class="legend"><span><i style="background:var(--ok)"></i>agrees with reference</span><span><i style="background:var(--bad)"></i>failed, no result</span></div>
+    <figcaption><b>Outcome by package.</b> A failure means the function could not be traced or could not be run at all. No case produced a Jacobian that disagreed with the reference.</figcaption>
+  </figure>
+  <h3>Why the 35 cases failed</h3>
+  <div class="scroll"><table id="failtable"></table></div>
+  <p>Some failures were addressed after their run. The <code>isless</code> ambiguity fix was rerun for the DataInterpolations and BSplineKit cases, and all 10 now pass and are counted above. The <code>rem</code> and <code>ldexp</code> methods were added after the runs and have not been rerun, so Haversine and the polynomial-roots case still appear as failures. The Interpolations "gridded linear" case failed for the same <code>isless</code> reason and has not been rerun.</p>
+</section>
+
+<section id="speed">
+  <h2>Speed of a cached trace</h2>
+  <figure>
+    <div class="scroll"><svg id="chart-strip" viewBox="0 0 900 340" role="img" aria-label="Speedup over ForwardDiff for each passing case, sorted"></svg></div>
+    <div class="legend"><span><i style="background:var(--trace)"></i>speedup of one cached Jacobian call over <code>ForwardDiff.jacobian!</code>, log scale</span></div>
+    <figcaption><b>Speedup for each passing case, sorted.</b> The dashed lines mark 1× (equal speed) and the median. Hover a bar for the case name.</figcaption>
+  </figure>
+  <div class="cols">
+    <figure><div id="hist" class="bars"></div><figcaption><b>How many cases fall in each speedup range.</b></figcaption></figure>
+    <figure><div class="scroll"><svg id="chart-scatter" viewBox="0 0 420 340" role="img" aria-label="Cached trace time against ForwardDiff time"></svg></div>
+    <figcaption><b>Time per Jacobian, one point per case.</b> Points below the solid diagonal are faster with the trace. The dashed lines are 10× and 100× faster.</figcaption></figure>
+  </div>
+  <p>The cases with small gains are those where the trace is large and guards dominate: QuadGK integrals with hundreds of adaptive-subdivision comparisons, <code>hcubature</code> (1,384 guards) and the Brent root finder. Three cases ended in replay mode (the two QuadGK/hcubature cases with the most guards and the 3D hcubature polynomial), where a call runs <code>f</code> once on a cheap value-only number to read the branch decisions and then runs a guard-free Jacobian. The <code>:auto</code> mode chose that from its own timings.</p>
+  <h3>By package</h3>
+  <div class="scroll"><table id="pkgtable"></table></div>
+</section>
+
+<section id="firstcall">
+  <h2>Cost of the first call</h2>
+  <p>Every speedup above assumes the trace is already compiled. A new trace costs one run of <code>f</code> on tracked numbers, a symbolic differentiation, code generation and LLVM compilation. Whether that pays off depends on how often the same branch pattern recurs, so these charts show the cost and the number of calls needed to recover it.</p>
+  <div class="cols">
+    <figure><div class="scroll"><svg id="chart-first" viewBox="0 0 420 340" role="img" aria-label="First call time against Jacobian size"></svg></div>
+    <figcaption><b>First-call time against Jacobian size</b> (nodes in the differentiated graph). Cost rises with size, with a large spread between cases.</figcaption></figure>
+    <figure><div id="breakeven" class="bars"></div>
+    <figcaption><b>Calls needed to recover the first-call cost</b>, per case: first-call time divided by (ForwardDiff time − cached time). The timing basis is noisy, so treat the ranges as rough.</figcaption></figure>
+  </div>
+</section>
+
+<section id="methods">
+  <h2>Choices the prototype made</h2>
+  <div class="cols">
+    <figure><div class="scroll"><table id="methodtable"></table></div>
+    <figcaption><b>Differentiation method chosen</b> by comparing operation counts. Reverse uses FD's reverse-mode rows; factoring uses <code>FD.jacobian</code>.</figcaption></figure>
+    <figure><div class="scroll"><table id="modetable"></table></div>
+    <figcaption><b>Guard mode</b> after each case finished. Compiled embeds each guard in the compiled function; replay reads the branch decisions from a run of <code>f</code> on value-only numbers.</figcaption></figure>
+  </div>
+  <p id="reuse"></p>
+</section>
+
+<section id="algorithm">
+  <h2>The algorithm</h2>
+  <p>The prototype is one file, <code>investigations/tracingjit/prototype.jl</code> (module <code>TracingPrototype</code>), built on FD's graph API and a few internals. It does not read Julia's IR. Tracing runs the user's function on a number type that records what happens.</p>
+
+  <h3>1. Tracked numbers</h3>
+  <p>A <code>Tracked</code> value holds a <code>Float64</code> (<code>val</code>) and an FD <code>Node</code> (<code>node</code>). Every arithmetic or elementary function computes both: the number for control flow and the node for the expression graph. The function receives its inputs as <code>Tracked</code> values whose nodes are FD variables. Generic code such as <code>A \ b</code>, <code>sort</code> or <code>quadgk</code> runs unchanged because <code>Tracked</code> is a <code>Real</code> and implements the numeric interface those functions use (comparisons, <code>floor</code>, <code>round</code>, <code>mod</code>, <code>rem</code>, <code>sign</code>, <code>copysign</code>, <code>isnan</code>, <code>eps</code>, <code>typemax</code> and so on).</p>
+
+  <h3>2. Guards: the record of branch decisions</h3>
+  <p>A comparison such as <code>a &lt; b</code> on tracked numbers returns an ordinary <code>Bool</code> computed from the values, so Julia's <code>if</code>, <code>while</code>, <code>&amp;&amp;</code>, <code>sort</code> and <code>max</code> work as usual. It also builds the node for the comparison and records a <b>guard</b>: the pair (comparison node, observed outcome). The resulting trace contains no branches because the run took exactly one path. It is valid for every input that makes all recorded comparisons come out the same way.</p>
+  <p>Functions that need an actual integer (<code>Int(x)</code>, <code>floor(Int, x)</code>, indexing with a computed value, <code>round</code>, <code>ceil</code>, <code>exponent</code>) are <b>concretized</b>. The integer is taken from the value, and guards are recorded saying that the node still lies in the same integer interval, such as <code>k ≤ x &lt; k+1</code>. <code>mod</code> is kept as its own node with derivative rules (<code>d/dx = 1</code>, <code>d/dy = −(x − mod(x,y))/y</code>), so a guard on <code>Int(mod(u,4))</code> holds for <code>u = 1, 5, 9, …</code>.</p>
+
+  <h3>3. Differentiate the trace</h3>
+  <p>The outputs are a vector of nodes. The prototype computes the Jacobian in two ways and keeps the one with fewer operations: FD's reverse-mode rows (<code>reverse_AD</code>) and FD's factoring Jacobian (<code>FD.jacobian</code>). Factoring is only tried when the trace has at most 20,000 nodes. Reverse rows were added after measurements showed that on large traces from iterative algorithms the factoring Jacobian came out 2 to 10 times larger and took far longer to compile. Why FD's factoring did worse there is not resolved (see the open questions).</p>
+
+  <h3>4. Generate code</h3>
+  <p>FD's code generator turns the Jacobian graph into straight-line statements that write into a preallocated result matrix (<code>in_place</code>) and return <code>true</code> or <code>false</code>, or return a matrix or <code>nothing</code> when not in place. Traces above 30,000 statements are split into chunks of 10,000, each compiled as its own function over a shared workspace vector (booleans are stored as 1.0 and 0.0). A hard cap (<code>MAX_STATEMENTS</code>) refuses traces too large to compile.</p>
+
+  <h3>5. The cache</h3>
+  <p>A <code>TracingJacobian</code> keeps a vector of traces, most recently used first, bounded by <code>max_traces</code>; the least recently used is evicted. Each <code>Trace</code> holds its generated function, its statistics, the recorded decisions as a bit vector and an integer vector, a 64-bit signature, and (in compiled mode) the guard list. A call goes one of two ways, depending on the guard mode.</p>
+  <div class="cols">
+    <div>
+      <h3>Compiled mode</h3>
+      <p>Each trace's function evaluates its own guards before computing anything. The generated code has statements of the form <code>v || return false</code> with the expected outcome baked in. The cache tries traces in most-recently-used order, and the first one that does not return <code>false</code> has written the Jacobian. If every trace rejects, <code>f</code> is recorded again as a new trace. The cost of a call is one fused call for the hit plus the guard evaluation of each trace rejected first.</p>
+    </div>
+    <div>
+      <h3>Replay mode</h3>
+      <p>Run <code>f</code> once on <code>Probe</code> numbers, which carry only a <code>Float64</code>. Every comparison and integer conversion appends its result to a <code>DecisionLog</code>: a preallocated 2048-bit <code>BitVector</code> plus a 256-entry integer vector, addressed with a counter and doubled when full. No exceptions are used. The log is hashed to a 64-bit signature, and the matching trace is found by signature plus an exact word comparison. The guard-free Jacobian is then called. The call pays one run of <code>f</code> on plain floats instead of evaluating many guard expressions, which helps when there are many guards or many cached traces.</p>
+    </div>
+  </div>
+
+  <h3>6. Choosing the mode automatically</h3>
+  <p>In <code>:auto</code> mode (the default) the cache starts in compiled mode. After each recording it times the fused call, a replay lookup and a rejection, and estimates the per-call cost of each mode. Replay is estimated as the probe run plus (the share of statements that are not guards) × the fused call time. Compiled is the fused call time plus (traces − 1)/2 × the rejection time. If replay is estimated cheaper, the cache switches once, and each trace regenerates its guard-free function the first time it is used in replay mode. An earlier version of this estimate assumed that the Jacobian was half of the fused call and wrongly switched determinants, Cholesky and SVD to replay. It now uses the measured statement counts.</p>
+
+<pre><code>function (tj::TracingJacobian)(result, args...)
+    x = flatten(args)
+    if tj.active == :compiled
+        for tr in tj.traces                       # most recently used first
+            tr.fn(result, x) && return touch!(tj, tr)      # guards pass, Jacobian written
+        end
+    else                                          # :replay
+        sig, bits, ints = run_probe(f, args)       # one run of f on Probe numbers
+        tr = lookup(tj.traces, sig, bits, ints)    # hash, then exact word comparison
+        tr !== nothing && return (tr.free(result, x); touch!(tj, tr))
+    end
+    tr = record!(tj, args, x)                     # miss: run f on Tracked numbers,
+    insert!(tj.traces, 1, tr)                     #   differentiate, generate, compile
+    evict_oldest!(tj)                             #   keep at most max_traces
+    maybe_switch!(tj)                             # the :auto decision
+    tr.fn(result, x)
+end</code></pre>
+
+  <figure>
+    <pre class="mermaid">flowchart TD
+  A[call with inputs x] --> B{mode}
+  B -- compiled --> C[try cached trace: evaluate its guards]
+  C -- all pass --> H[Jacobian written, trace moved to front]
+  C -- reject --> D{more traces?}
+  D -- yes --> C
+  D -- no --> M
+  B -- replay --> E[run f on Probe numbers, log decisions]
+  E --> F[hash log, find trace, compare words exactly]
+  F -- found --> H
+  F -- not found --> M[record: run f on Tracked numbers, collect guards]
+  M --> N[differentiate: reverse rows or factoring, keep fewer operations]
+  N --> O[generate code, chunk if large, compile]
+  O --> P[insert in cache, evict least recently used]
+  P --> Q[maybe switch compiled to replay]
+  Q --> H</pre>
+    <figcaption><b>Control flow of one call.</b> The pseudocode above is a simplification of <code>eval_jacobian!</code>.</figcaption>
+  </figure>
+
+  <h3>7. When the answer can be wrong, and when the prototype cannot run</h3>
+  <ul class="list">
+    <li><b>Validity is per path.</b> A cached trace gives the derivative of the path actually taken. At a branch boundary (equality in a comparison, a tie in <code>max</code>) the derivative is not defined, and the result follows whichever side was recorded.</li>
+    <li><b>Impure or external state.</b> If the function reads global state, random numbers, the clock or a file, the guards cannot see it, and the trace freezes whatever happened during recording. Nothing detects this.</li>
+    <li><b>Type constraints.</b> Code that insists on <code>Float64</code> or <code>AbstractFloat</code>, calls C or LAPACK on the input type, or needs a feature that <code>Tracked</code> lacks fails at trace time with a <code>MethodError</code>. That is the cause of most failures in the table above.</li>
+    <li><b>Size.</b> Compile time, not run time, limits large traces. A loop that runs for hundreds of iterations becomes hundreds of unrolled steps, and each distinct trip count is a separate trace.</li>
+    <li><b>Constants in comparisons.</b> Every comparison, including one between two constants, writes a bit to the replay log, so the log from the recording run lines up with the log from a replay run.</li>
+  </ul>
+</section>
+
+<section id="large">
+  <h2>Larger experiments from earlier in the session</h2>
+  <p>These came from earlier runs and are quoted from my notes of those runs. They were not repeated for this page.</p>
+  <div class="scroll"><table>
+    <tr><th>Experiment</th><th>Result</th></tr>
+    <tr><td>One-sided Jacobi SVD, 8×8, convergence-driven (singular values with respect to the matrix)</td><td>Trace of 14,350 nodes with 199 guards. The factoring Jacobian had 961,816 nodes and 963,763 statements. First call 314 s: 22 s differentiating, 9 s generating code, 279 s compiling (chunked). Maximum relative error against ForwardDiff 1.4e-13. It hit the 10-minute limit before the speed measurement, so no hit time exists.</td></tr>
+    <tr><td>LLVM optimisation level</td><td>A lower optimisation level cut compile time by about 28%.</td></tr>
+    <tr><td>Chunked compilation of big traces</td><td>About 2× faster compile at 61,000 statements and about 7× at 155,000.</td></tr>
+    <tr><td>Reverse rows against factoring on SVD traces</td><td>Reverse rows gave Jacobian code 2 to 10 times smaller and compiled orders of magnitude faster. By operation count the factoring Jacobian was 9.5 to 32 times the size of the trace, against about 3.2 times for reverse AD.</td></tr>
+    <tr><td>Hits against ForwardDiff on earlier examples</td><td>Often 10 to 300 times faster than <code>ForwardDiff.jacobian!</code>, consistent with the suite.</td></tr>
+  </table></div>
+</section>
+
+<section id="open">
+  <h2>Open questions and work not done</h2>
+  <ul class="list">
+    <li><b>FD against reverse mode.</b> I expected FD's factoring to match or beat reverse differentiation, but on the SVD traces it came out several times larger. The cause is unresolved. A graph with a wide bottleneck is one suspect and a mistake in how I call FD is another.</li>
+    <li><b>Timings under load.</b> Rerun the suite on an idle machine, with several repeats, before quoting any ratio under about 3×.</li>
+    <li><b>Failure fixes.</b> Add <code>Tracked</code> methods for the Bessels and SpecialFunctions internals. Fix the Optim and TaylorIntegration test cases, which fail on plain <code>Float64</code>. Look at NaNMath, Krylov and Tsit5, which reject the number type. Rerun the cases changed since their last run.</li>
+    <li><b>More cases.</b> Program-like functions (a bouncing ball, saturating controllers, tax brackets, power iteration, golden-section search) and packages such as Distributions, Rotations, StaticArrays and Quaternions are installed but not yet written as cases.</li>
+    <li><b>Ideas not yet tried.</b> An interpreter tier for traces used only a few times, compiling after N uses. A packed 64-bit logging path for replay. A dictionary on the signature for large caches. Sharing one compiled trace between structurally identical traces. A 10×10 SVD with reverse rows and chunking.</li>
+  </ul>
+</section>
+
+<section id="all">
+  <h2>All results</h2>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Filter by name or package" aria-label="Filter results">
+    <select id="st" aria-label="Filter by outcome"><option value="">All outcomes</option><option value="ok">Agrees with reference</option><option value="fail">Failed</option></select>
+  </div>
+  <div class="scroll" style="max-height:640px;overflow-y:auto"><table id="alltable"></table></div>
+  <p class="meta">guards = comparisons recorded; trace = nodes in the traced expression; jac = nodes in the Jacobian; first = seconds for the first call; hit and FD = microseconds per call for the cached trace and for ForwardDiff; × = FD ÷ hit. Click a column heading to sort.</p>
+</section>
+</div>
+
+<script>const DATA=
+[{"status":"ok","name":"A\\b 8x8 generic LU","pkg":"LinearAlgebra","err":1.4e-17,"ref":"forwarddiff","guards":108,"trace":508,"jac":6986,"method":"reverse","first":8.99,"hit":0.42,"fd":29.08,"speed":69.03,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"det 5x5","pkg":"LinearAlgebra","err":1.6e-15,"ref":"forwarddiff","guards":20,"trace":104,"jac":267,"method":"reverse","first":0.73,"hit":0.06,"fd":3.75,"speed":67.7,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"logdet SPD 6x6","pkg":"LinearAlgebra","err":2.8e-17,"ref":"forwarddiff","guards":39,"trace":186,"jac":467,"method":"reverse","first":0.67,"hit":0.09,"fd":8.07,"speed":85.92,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"inv 5x5","pkg":"LinearAlgebra","err":1.4e-17,"ref":"forwarddiff","guards":45,"trace":256,"jac":4539,"method":"reverse","first":2.06,"hit":0.34,"fd":11.09,"speed":32.37,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"A^5 4x4","pkg":"LinearAlgebra","err":2.2e-16,"ref":"forwarddiff","guards":0,"trace":352,"jac":3591,"method":"factoring","first":1.73,"hit":0.22,"fd":4.53,"speed":20.58,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"exp(A) 4x4","pkg":"LinearAlgebra","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching exp!(::Matrix{Tracked})"},
+{"status":"ok","name":"norm 2 of 8-vector","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":11,"trace":24,"jac":44,"method":"factoring","first":0.30,"hit":0.03,"fd":0.34,"speed":13.38,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"norm 1 plus Inf of 8-vector","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":7,"trace":24,"jac":26,"method":"factoring","first":0.32,"hit":0.02,"fd":0.4,"speed":18.09,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"opnorm 1 of 5x5","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":5,"trace":14,"jac":16,"method":"factoring","first":0.39,"hit":0.03,"fd":2.09,"speed":78.54,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"opnorm Inf of 5x5","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":5,"trace":14,"jac":16,"method":"factoring","first":0.04,"hit":0.02,"fd":2.25,"speed":103.18,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"dot and cross","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":0,"trace":20,"jac":13,"method":"factoring","first":0.18,"hit":0.02,"fd":0.64,"speed":28.8,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"tr(A*B) and kron","pkg":"LinearAlgebra","err":0.0,"ref":"forwarddiff","guards":0,"trace":40,"jac":19,"method":"factoring","first":0.18,"hit":0.03,"fd":6.23,"speed":201.36,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"cholesky solve 6x6","pkg":"LinearAlgebra","err":1.0e-17,"ref":"forwarddiff","guards":18,"trace":202,"jac":2022,"method":"reverse","first":1.10,"hit":0.21,"fd":10.52,"speed":49.27,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"least squares 8x4","pkg":"LinearAlgebra","err":1.1e-16,"ref":"forwarddiff","guards":124,"trace":404,"jac":3175,"method":"reverse","first":1.18,"hit":0.3,"fd":18.89,"speed":63.79,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"lower triangular solve 6x6","pkg":"LinearAlgebra","err":6.9e-18,"ref":"forwarddiff","guards":6,"trace":63,"jac":218,"method":"reverse","first":0.06,"hit":0.05,"fd":8.16,"speed":155.08,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"SymTridiagonal solve 8","pkg":"LinearAlgebra","err":2.8e-17,"ref":"forwarddiff","guards":7,"trace":88,"jac":958,"method":"reverse","first":0.85,"hit":0.12,"fd":4.33,"speed":36.31,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"qr: abs diag of R 6x6","pkg":"LinearAlgebra","err":1.1e-16,"ref":"forwarddiff","guards":60,"trace":367,"jac":2101,"method":"reverse","first":0.96,"hit":0.24,"fd":13.79,"speed":57.93,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"normalize and angle","pkg":"LinearAlgebra","err":1.8e-16,"ref":"forwarddiff","guards":18,"trace":43,"jac":116,"method":"reverse","first":0.41,"hit":0.1,"fd":0.75,"speed":7.88,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"matrix chain A*B*A","pkg":"LinearAlgebra","err":3.6e-16,"ref":"forwarddiff","guards":0,"trace":256,"jac":537,"method":"reverse","first":0.73,"hit":0.09,"fd":8.68,"speed":98.0,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"eigvals sym 3x3 (LAPACK only)","pkg":"LinearAlgebra","err":2.2e-15,"ref":"forwarddiff","guards":29,"trace":157,"jac":1079,"method":"reverse","first":1.57,"hit":0.26,"fd":3.98,"speed":15.05,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"svdvals 3x3 (LAPACK only)","pkg":"LinearAlgebra","err":7.5e-16,"ref":"forwarddiff","guards":378,"trace":478,"jac":4465,"method":"reverse","first":2.30,"hit":1.12,"fd":3.9,"speed":3.48,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"mean, var, std of 20","pkg":"Statistics","err":5.6e-17,"ref":"forwarddiff","guards":0,"trace":103,"jac":293,"method":"reverse","first":4.98,"hit":0.06,"fd":2.78,"speed":46.98,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"median of 21 (odd)","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":121,"trace":1,"jac":2,"method":"factoring","first":0.71,"hit":0.04,"fd":7.19,"speed":177.61,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"median of 20 (even)","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":129,"trace":6,"jac":2,"method":"factoring","first":0.08,"hit":0.03,"fd":4.23,"speed":125.29,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quantile 0.3 of 20","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":139,"trace":7,"jac":3,"method":"factoring","first":0.26,"hit":0.03,"fd":3.39,"speed":115.38,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quantiles [.1,.5,.9] of 30","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":180,"trace":20,"jac":7,"method":"factoring","first":0.14,"hit":0.04,"fd":11.73,"speed":291.15,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"cor and cov of two 15-vectors","pkg":"Statistics","err":5.6e-17,"ref":"forwarddiff","guards":3,"trace":213,"jac":533,"method":"reverse","first":0.89,"hit":0.07,"fd":5.76,"speed":81.13,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"5th order statistic by sort","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":40,"trace":1,"jac":2,"method":"factoring","first":0.11,"hit":0.02,"fd":0.98,"speed":48.17,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"max minus min","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":21,"trace":3,"jac":3,"method":"factoring","first":0.10,"hit":0.02,"fd":0.59,"speed":29.67,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"sum of abs and cumsum","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":0,"trace":46,"jac":37,"method":"factoring","first":0.13,"hit":0.02,"fd":0.84,"speed":33.88,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"sort descending","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":14,"trace":10,"jac":2,"method":"factoring","first":0.17,"hit":0.02,"fd":1.12,"speed":51.85,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"partialsort k=3","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":24,"trace":1,"jac":2,"method":"factoring","first":0.04,"hit":0.02,"fd":0.82,"speed":44.28,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"mean of abs deviations","pkg":"Statistics","err":2.8e-17,"ref":"forwarddiff","guards":86,"trace":61,"jac":100,"method":"reverse","first":0.49,"hit":0.05,"fd":2.75,"speed":60.66,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"clamp and sum","pkg":"Statistics","err":0.0,"ref":"forwarddiff","guards":20,"trace":20,"jac":3,"method":"factoring","first":0.70,"hit":0.02,"fd":1.69,"speed":87.58,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"NaNMath.sum","pkg":"NaNMath","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching sum(::Vector{Tracked})"},
+{"status":"trace_failed","name":"NaNMath.max and min","pkg":"NaNMath","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"StackOverflowError:"},
+{"status":"ok","name":"NaNMath.pow and log, sqrt","pkg":"NaNMath","err":0.0,"ref":"forwarddiff","guards":1,"trace":5,"jac":19,"method":"factoring","first":0.16,"hit":0.06,"fd":0.32,"speed":5.19,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"NaNMath.maximum","pkg":"NaNMath","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching maximum(::Vector{Tracked})"},
+{"status":"trace_failed","name":"NaNMath.mean","pkg":"NaNMath","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching mean(::Vector{Tracked})"},
+{"status":"ok","name":"euclidean, sqeuclidean","pkg":"Distances","err":0.0,"ref":"forwarddiff","guards":0,"trace":30,"jac":59,"method":"factoring","first":0.21,"hit":0.03,"fd":0.78,"speed":30.84,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"cityblock, chebyshev","pkg":"Distances","err":0.0,"ref":"forwarddiff","guards":6,"trace":29,"jac":37,"method":"factoring","first":0.07,"hit":0.02,"fd":0.78,"speed":35.91,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"cosine and correlation distance","pkg":"Distances","err":5.6e-17,"ref":"forwarddiff","guards":2,"trace":114,"jac":268,"method":"reverse","first":0.65,"hit":0.05,"fd":1.21,"speed":23.86,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"braycurtis","pkg":"Distances","err":1.4e-17,"ref":"forwarddiff","guards":0,"trace":47,"jac":93,"method":"factoring","first":0.60,"hit":0.05,"fd":0.65,"speed":12.92,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"KL divergence","pkg":"Distances","err":6.9e-17,"ref":"forwarddiff","guards":5,"trace":47,"jac":139,"method":"reverse","first":0.69,"hit":0.06,"fd":0.92,"speed":14.92,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Jensen-Shannon","pkg":"Distances","err":2.4e-17,"ref":"forwarddiff","guards":15,"trace":93,"jac":206,"method":"reverse","first":0.15,"hit":0.07,"fd":1.03,"speed":14.37,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"weighted euclidean","pkg":"Distances","err":1.1e-16,"ref":"forwarddiff","guards":0,"trace":35,"jac":64,"method":"factoring","first":0.12,"hit":0.03,"fd":1.14,"speed":40.85,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Mahalanobis","pkg":"Distances","err":2.1e-16,"ref":"forwarddiff","guards":44,"trace":73,"jac":101,"method":"factoring","first":2.89,"hit":0.2,"fd":1.52,"speed":7.66,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"rmsd and meanad","pkg":"Distances","err":8.3e-17,"ref":"forwarddiff","guards":0,"trace":44,"jac":82,"method":"factoring","first":0.08,"hit":0.03,"fd":0.74,"speed":24.46,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"haversine","pkg":"Distances","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"rem not defined for Tracked"},
+{"status":"ok","name":"pairwise euclidean 4 points","pkg":"Distances","err":3.3e-16,"ref":"forwarddiff","guards":6,"trace":64,"jac":142,"method":"factoring","first":0.92,"hit":0.04,"fd":1.73,"speed":41.69,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"weighted mean and var","pkg":"StatsBase","err":5.6e-17,"ref":"forwarddiff","guards":1,"trace":92,"jac":228,"method":"reverse","first":5.07,"hit":0.03,"fd":3.14,"speed":94.19,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"skewness and kurtosis","pkg":"StatsBase","err":1.6e-15,"ref":"forwarddiff","guards":0,"trace":189,"jac":527,"method":"reverse","first":0.33,"hit":0.08,"fd":2.62,"speed":32.65,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"mad and iqr","pkg":"StatsBase","err":0.0,"ref":"forwarddiff","guards":230,"trace":30,"jac":28,"method":"factoring","first":1.34,"hit":0.05,"fd":7.16,"speed":142.74,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"zscore","pkg":"StatsBase","err":1.1e-16,"ref":"forwarddiff","guards":1,"trace":53,"jac":406,"method":"reverse","first":0.78,"hit":0.05,"fd":0.84,"speed":17.74,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"geomean and harmmean","pkg":"StatsBase","err":2.8e-17,"ref":"forwarddiff","guards":0,"trace":44,"jac":90,"method":"factoring","first":0.21,"hit":0.06,"fd":0.41,"speed":6.97,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"percentile 30","pkg":"StatsBase","err":0.0,"ref":"forwarddiff","guards":127,"trace":7,"jac":3,"method":"factoring","first":0.10,"hit":0.03,"fd":3.8,"speed":138.31,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"entropy and crossentropy","pkg":"StatsBase","err":5.6e-17,"ref":"forwarddiff","guards":5,"trace":58,"jac":159,"method":"reverse","first":0.85,"hit":0.08,"fd":1.18,"speed":14.65,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"mean_and_var","pkg":"StatsBase","err":1.1e-16,"ref":"forwarddiff","guards":0,"trace":52,"jac":74,"method":"reverse","first":0.04,"hit":0.03,"fd":0.63,"speed":23.5,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"third moment","pkg":"StatsBase","err":5.6e-17,"ref":"forwarddiff","guards":0,"trace":62,"jac":101,"method":"reverse","first":0.73,"hit":0.03,"fd":0.61,"speed":20.83,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"polynomial value, degree 5","pkg":"Polynomials","err":1.1e-16,"ref":"forwarddiff","guards":2,"trace":17,"jac":27,"method":"factoring","first":0.63,"hit":0.02,"fd":0.61,"speed":29.1,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"polynomial derivative at x","pkg":"Polynomials","err":0.0,"ref":"forwarddiff","guards":8,"trace":22,"jac":34,"method":"factoring","first":0.59,"hit":0.02,"fd":0.86,"speed":42.05,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"polynomial integral at 1","pkg":"Polynomials","err":0.0,"ref":"forwarddiff","guards":8,"trace":21,"jac":6,"method":"factoring","first":0.11,"hit":0.03,"fd":0.45,"speed":16.41,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"product of two polynomials","pkg":"Polynomials","err":5.6e-17,"ref":"forwarddiff","guards":5,"trace":36,"jac":58,"method":"factoring","first":0.73,"hit":0.02,"fd":0.98,"speed":47.11,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"least squares polynomial fit","pkg":"Polynomials","err":1.7e-16,"ref":"forwarddiff","guards":71,"trace":238,"jac":331,"method":"reverse","first":3.20,"hit":0.04,"fd":4.62,"speed":126.26,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Chebyshev series value","pkg":"Polynomials","err":1.1e-16,"ref":"forwarddiff","guards":3,"trace":23,"jac":41,"method":"reverse","first":0.26,"hit":0.02,"fd":0.56,"speed":28.03,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"polynomial roots (companion eigvals)","pkg":"Polynomials","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching ldexp(::Tracked, ::Int64)"},
+{"status":"ok","name":"itp linear: wrt t","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":5,"trace":10,"jac":1,"method":"factoring","first":4.82,"hit":0.02,"fd":0.17,"speed":9.46,"hits":8,"misses":0,"mode":"compiled","extra":"ok,ok","msg":""},
+{"status":"ok","name":"itp quadratic: wrt t","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":7,"trace":22,"jac":14,"method":"factoring","first":0.40,"hit":0.02,"fd":0.8,"speed":43.43,"hits":8,"misses":0,"mode":"compiled","extra":"ok","msg":""},
+{"status":"ok","name":"itp cubic spline: wrt y and t","pkg":"Interpolations","err":5.6e-17,"ref":"forwarddiff","guards":7,"trace":145,"jac":256,"method":"reverse","first":1.33,"hit":0.06,"fd":5.17,"speed":88.99,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"itp constant: wrt y","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":7,"trace":1,"jac":2,"method":"factoring","first":0.10,"hit":0.02,"fd":0.87,"speed":44.41,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"itp gridded linear (nonuniform xs)","pkg":"Interpolations","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: isless(::Float64, ::Tracked) is ambiguous."},
+{"status":"ok","name":"itp linear with flat extrapolation","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":6,"trace":10,"jac":1,"method":"factoring","first":0.06,"hit":0.02,"fd":0.18,"speed":8.99,"hits":8,"misses":0,"mode":"compiled","extra":"ok,ok","msg":""},
+{"status":"ok","name":"itp linear with line extrapolation","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":6,"trace":10,"jac":1,"method":"factoring","first":0.04,"hit":0.03,"fd":0.24,"speed":6.97,"hits":8,"misses":0,"mode":"compiled","extra":"ok","msg":""},
+{"status":"ok","name":"itp scaled cubic","pkg":"Interpolations","err":1.9e-16,"ref":"forwarddiff","guards":8,"trace":32,"jac":32,"method":"reverse","first":0.11,"hit":0.02,"fd":3.15,"speed":160.85,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"itp 2D linear: wrt s and t","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":10,"trace":21,"jac":25,"method":"factoring","first":0.64,"hit":0.05,"fd":0.29,"speed":6.17,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"itp 2D cubic: wrt s and t","pkg":"Interpolations","err":0.0,"ref":"forwarddiff","guards":14,"trace":85,"jac":155,"method":"reverse","first":0.12,"hit":0.03,"fd":5.07,"speed":146.29,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI LinearInterpolation","pkg":"DataInterpolations","err":0.0,"ref":"forwarddiff","guards":16,"trace":8,"jac":10,"method":"factoring","first":5.67,"hit":0.02,"fd":0.7,"speed":36.11,"hits":8,"misses":0,"mode":"compiled","extra":"ok","msg":""},
+{"status":"ok","name":"DI QuadraticInterpolation","pkg":"DataInterpolations","err":1.1e-16,"ref":"forwarddiff","guards":10,"trace":16,"jac":30,"method":"reverse","first":1.48,"hit":0.02,"fd":0.68,"speed":33.75,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI CubicSpline","pkg":"DataInterpolations","err":1.7e-16,"ref":"forwarddiff","guards":10,"trace":79,"jac":128,"method":"reverse","first":3.11,"hit":0.04,"fd":2.36,"speed":60.73,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI AkimaInterpolation","pkg":"DataInterpolations","err":5.6e-17,"ref":"forwarddiff","guards":26,"trace":47,"jac":111,"method":"reverse","first":1.12,"hit":0.03,"fd":1.49,"speed":45.58,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI PCHIPInterpolation","pkg":"DataInterpolations","err":0.0,"ref":"forwarddiff","guards":25,"trace":16,"jac":25,"method":"factoring","first":0.96,"hit":0.02,"fd":1.55,"speed":73.2,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI QuadraticSpline","pkg":"DataInterpolations","err":1.1e-16,"ref":"forwarddiff","guards":10,"trace":52,"jac":78,"method":"factoring","first":1.15,"hit":0.03,"fd":2.09,"speed":67.91,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI ConstantInterpolation","pkg":"DataInterpolations","err":0.0,"ref":"forwarddiff","guards":10,"trace":1,"jac":2,"method":"factoring","first":0.33,"hit":0.02,"fd":0.56,"speed":29.09,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"DI LagrangeInterpolation","pkg":"DataInterpolations","err":1.1e-16,"ref":"forwarddiff","guards":6,"trace":80,"jac":152,"method":"factoring","first":0.26,"hit":0.03,"fd":0.83,"speed":26.94,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"BSplineKit cubic interpolation","pkg":"BSplineKit","err":3.3e-16,"ref":"forwarddiff","guards":4,"trace":88,"jac":170,"method":"reverse","first":0.21,"hit":0.04,"fd":1.05,"speed":24.68,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"BSplineKit spline derivative","pkg":"BSplineKit","err":1.7e-16,"ref":"forwarddiff","guards":4,"trace":83,"jac":143,"method":"reverse","first":0.12,"hit":0.04,"fd":1.31,"speed":32.0,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quadgk exp(-a x^2) on [0,1]","pkg":"QuadGK","err":1.4e-17,"ref":"forwarddiff","guards":4,"trace":79,"jac":92,"method":"reverse","first":3.61,"hit":0.05,"fd":0.26,"speed":4.93,"hits":8,"misses":0,"mode":"compiled","extra":"ok,ok","msg":""},
+{"status":"ok","name":"quadgk cos(a x) on [0,5]","pkg":"QuadGK","err":2.5e-16,"ref":"forwarddiff","guards":451,"trace":2216,"jac":3360,"method":"reverse","first":1.84,"hit":10.24,"fd":8.9,"speed":0.87,"hits":8,"misses":0,"mode":"replay","extra":"ok","msg":""},
+{"status":"ok","name":"quadgk Gaussian on (-Inf, Inf)","pkg":"QuadGK","err":1.7e-16,"ref":"forwarddiff","guards":74,"trace":527,"jac":404,"method":"reverse","first":0.72,"hit":0.34,"fd":2.44,"speed":7.18,"hits":3,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quadgk x^(-p) singular at 0","pkg":"QuadGK","err":0.0,"ref":"forwarddiff","guards":481,"trace":1932,"jac":4035,"method":"factoring","first":9.66,"hit":17.85,"fd":20.09,"speed":1.13,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quadgk |x-a| kink","pkg":"QuadGK","err":1.1e-16,"ref":"forwarddiff","guards":94,"trace":706,"jac":972,"method":"reverse","first":0.81,"hit":0.15,"fd":1.18,"speed":8.03,"hits":0,"misses":8,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quadgk with a breakpoint","pkg":"QuadGK","err":1.4e-17,"ref":"forwarddiff","guards":6,"trace":146,"jac":180,"method":"reverse","first":0.65,"hit":0.16,"fd":0.39,"speed":2.51,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"quadgk vector integrand","pkg":"QuadGK","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"the guards of a trace failed on the input it was recorded from. Is the function deterministic?"},
+{"status":"ok","name":"quadgk log(x) exp(-a x)","pkg":"QuadGK","err":2.8e-16,"ref":"forwarddiff","guards":259,"trace":2085,"jac":1892,"method":"reverse","first":1.13,"hit":1.49,"fd":5.56,"speed":3.74,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"quadgk with tolerance 1e-3","pkg":"QuadGK","err":1.4e-17,"ref":"forwarddiff","guards":4,"trace":79,"jac":92,"method":"reverse","first":0.56,"hit":0.05,"fd":0.34,"speed":6.66,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"hcubature 2D Gaussian","pkg":"HCubature","err":1.4e-16,"ref":"forwarddiff","guards":1384,"trace":3955,"jac":4646,"method":"reverse","first":3.55,"hit":15.27,"fd":15.99,"speed":1.05,"hits":0,"misses":8,"mode":"replay","extra":"","msg":""},
+{"status":"ok","name":"hcubature 3D polynomial","pkg":"HCubature","err":0.0,"ref":"forwarddiff","guards":8,"trace":118,"jac":1,"method":"factoring","first":0.27,"hit":0.12,"fd":0.36,"speed":2.92,"hits":3,"misses":5,"mode":"replay","extra":"","msg":""},
+{"status":"ok","name":"Roots Newton","pkg":"Roots","err":5.6e-17,"ref":"forwarddiff","guards":51,"trace":40,"jac":94,"method":"factoring","first":0.32,"hit":0.04,"fd":0.26,"speed":6.29,"hits":7,"misses":1,"mode":"compiled","extra":"ok,ok","msg":""},
+{"status":"ok","name":"Roots Halley","pkg":"Roots","err":0.0,"ref":"forwarddiff","guards":32,"trace":50,"jac":144,"method":"reverse","first":0.17,"hit":0.06,"fd":0.3,"speed":5.04,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots Bisection (bracket)","pkg":"Roots","err":0.0,"ref":"forwarddiff","guards":293,"trace":1,"jac":1,"method":"constant","first":0.44,"hit":0.03,"fd":1.09,"speed":31.56,"hits":0,"misses":8,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots Brent","pkg":"Roots","err":5.6e-17,"ref":"forwarddiff","guards":170,"trace":128,"jac":466,"method":"factoring","first":0.39,"hit":0.34,"fd":0.42,"speed":1.24,"hits":0,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots A42","pkg":"Roots","err":4.2e-15,"ref":"forwarddiff","guards":99,"trace":185,"jac":622,"method":"reverse","first":0.59,"hit":0.2,"fd":0.68,"speed":3.45,"hits":0,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots Order2 (Steffensen)","pkg":"Roots","err":0.0,"ref":"forwarddiff","guards":93,"trace":68,"jac":176,"method":"factoring","first":0.19,"hit":0.06,"fd":0.28,"speed":4.24,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots Order5","pkg":"Roots","err":5.6e-17,"ref":"forwarddiff","guards":79,"trace":75,"jac":222,"method":"factoring","first":0.24,"hit":0.08,"fd":0.31,"speed":3.86,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots Order8","pkg":"Roots","err":1.1e-16,"ref":"forwarddiff","guards":90,"trace":96,"jac":301,"method":"reverse","first":0.25,"hit":0.14,"fd":0.3,"speed":2.1,"hits":7,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots default bracket","pkg":"Roots","err":4.2e-15,"ref":"forwarddiff","guards":99,"trace":185,"jac":622,"method":"reverse","first":0.14,"hit":0.17,"fd":0.9,"speed":5.16,"hits":0,"misses":1,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"Roots cos(x) = a x","pkg":"Roots","err":3.3e-16,"ref":"forwarddiff","guards":134,"trace":96,"jac":363,"method":"factoring","first":0.25,"hit":0.15,"fd":1.69,"speed":10.95,"hits":1,"misses":2,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"IterativeSolvers cg 6x6","pkg":"IterativeSolvers","err":5.6e-17,"ref":"forwarddiff","guards":70,"trace":780,"jac":8878,"method":"reverse","first":7.59,"hit":1.01,"fd":20.94,"speed":20.72,"hits":5,"misses":3,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"IterativeSolvers gmres 6x6","pkg":"IterativeSolvers","err":1.1e-16,"ref":"forwarddiff","guards":83,"trace":1292,"jac":16771,"method":"reverse","first":5.32,"hit":1.98,"fd":40.43,"speed":20.44,"hits":4,"misses":4,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"IterativeSolvers minres 6x6","pkg":"IterativeSolvers","err":6.9e-17,"ref":"forwarddiff","guards":109,"trace":1070,"jac":11171,"method":"reverse","first":2.97,"hit":1.2,"fd":25.52,"speed":21.27,"hits":3,"misses":5,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"IterativeSolvers bicgstabl 6x6","pkg":"IterativeSolvers","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching Random.Sampler(::Type{TaskLocalRNG}, ::Random.SamplerType{Tracked}, ::Val{1})"},
+{"status":"ok","name":"IterativeSolvers lsmr 8x4","pkg":"IterativeSolvers","err":5.0e-16,"ref":"forwarddiff","guards":158,"trace":1004,"jac":8414,"method":"reverse","first":3.30,"hit":0.85,"fd":24.09,"speed":28.46,"hits":6,"misses":2,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"IterativeSolvers lsqr 8x4","pkg":"IterativeSolvers","err":2.9e-16,"ref":"forwarddiff","guards":157,"trace":885,"jac":7359,"method":"reverse","first":2.31,"hit":0.71,"fd":27.18,"speed":38.49,"hits":6,"misses":2,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"Krylov cg 6x6","pkg":"Krylov","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching cg(::Matrix{Tracked}, ::Vector{Tracked}; rtol::Float64)"},
+{"status":"trace_failed","name":"Krylov minres 6x6","pkg":"Krylov","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching minres(::Matrix{Tracked}, ::Vector{Tracked}; rtol::Float64)"},
+{"status":"trace_failed","name":"Krylov gmres 6x6","pkg":"Krylov","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching gmres(::Matrix{Tracked}, ::Vector{Tracked}; rtol::Float64)"},
+{"status":"trace_failed","name":"Krylov bicgstab 6x6","pkg":"Krylov","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching bicgstab(::Matrix{Tracked}, ::Vector{Tracked}; rtol::Float64)"},
+{"status":"plain_failed","name":"Optim NelderMead (Rosenbrock p)","pkg":"Optim","err":null,"ref":"none","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching optimize(::var\"#rosen##0#rosen##1\"{Float64}, ::Vector{Float64}, ::Optim.NelderMead{Optim.AffineSimplexer, Optim.Adapti"},
+{"status":"plain_failed","name":"Optim GradientDescent (analytic gradient)","pkg":"Optim","err":null,"ref":"none","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching optimize(::var\"#rosen##0#rosen##1\"{Float64}, ::var\"#rosen_g!##0#rosen_g!##1\"{Float64}, ::Vector{Float64}, ::Optim.Grad"},
+{"status":"plain_failed","name":"Optim BFGS (analytic gradient)","pkg":"Optim","err":null,"ref":"none","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching optimize(::var\"#rosen##0#rosen##1\"{Float64}, ::var\"#rosen_g!##0#rosen_g!##1\"{Float64}, ::Vector{Float64}, ::Optim.BFGS"},
+{"status":"plain_failed","name":"Optim quadratic LBFGS","pkg":"Optim","err":null,"ref":"none","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching optimize(::var\"#825#826\"{Vector{Float64}}, ::var\"#827#828\"{Vector{Float64}}, ::Vector{Float64}, ::Optim.LBFGS{Nothing,"},
+{"status":"trace_failed","name":"LsqFit exponential fit","pkg":"LsqFit","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"ArgumentError: Model is not compatible with `AutoForwardDiff`: `-` has no method accepting `ForwardDiff.Dual` numbers."},
+{"status":"trace_failed","name":"Tsit5 exponential decay","pkg":"OrdinaryDiffEqTsit5","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching Float64(::Tracked)"},
+{"status":"trace_failed","name":"Tsit5 Lotka-Volterra","pkg":"OrdinaryDiffEqTsit5","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching Float64(::Tracked)"},
+{"status":"plain_failed","name":"TaylorIntegration decay","pkg":"TaylorIntegration","err":null,"ref":"none","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching getindex(::TaylorIntegration.TaylorSolution{Float64, Float64, 1, SubArray{Float64, 1, Vector{Float64}, Tuple{UnitRange"},
+{"status":"ok","name":"erf and erfc","pkg":"SpecialFunctions","err":0.0,"ref":"forwarddiff","guards":0,"trace":3,"jac":9,"method":"factoring","first":2.71,"hit":0.02,"fd":0.46,"speed":19.19,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"gamma and loggamma","pkg":"SpecialFunctions","err":0.0,"ref":"forwarddiff","guards":0,"trace":3,"jac":4,"method":"factoring","first":0.08,"hit":0.04,"fd":0.22,"speed":5.1,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"digamma","pkg":"SpecialFunctions","err":0.0,"ref":"forwarddiff","guards":0,"trace":2,"jac":2,"method":"factoring","first":0.05,"hit":0.03,"fd":0.17,"speed":5.92,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"trace_failed","name":"beta and logbeta","pkg":"SpecialFunctions","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _logabsgamma(::Tracked)"},
+{"status":"trace_failed","name":"erfinv","pkg":"SpecialFunctions","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _erfinv(::Tracked)"},
+{"status":"trace_failed","name":"trigamma","pkg":"SpecialFunctions","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _trigamma(::Tracked)"},
+{"status":"trace_failed","name":"gamma_inc","pkg":"SpecialFunctions","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _gamma_inc(::Tracked, ::Tracked, ::Int64)"},
+{"status":"trace_failed","name":"besselj (Float64 only)","pkg":"SpecialFunctions","err":null,"ref":"forwarddiff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"StackOverflowError:"},
+{"status":"trace_failed","name":"Bessels besselj0 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _besselj0(::Tracked)"},
+{"status":"trace_failed","name":"Bessels besselj1 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _besselj1(::Tracked)"},
+{"status":"trace_failed","name":"Bessels bessely0 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _bessely0(::Tracked)"},
+{"status":"trace_failed","name":"Bessels bessely1 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _bessely1(::Tracked)"},
+{"status":"trace_failed","name":"Bessels besseli0 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching besseli0(::Tracked)"},
+{"status":"trace_failed","name":"Bessels besselk0 (3 ranges)","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching besselk0(::Tracked)"},
+{"status":"trace_failed","name":"Bessels besselj order 2.5","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _besselj(::Float64, ::Tracked)"},
+{"status":"trace_failed","name":"Bessels airyai","pkg":"Bessels","err":null,"ref":"finitediff","guards":0,"trace":0,"jac":0,"method":"none","first":0.00,"hit":null,"fd":null,"speed":null,"hits":0,"misses":0,"mode":"none","extra":"","msg":"MethodError: no method matching _airyai(::Tracked)"},
+{"status":"ok","name":"logsumexp 8","pkg":"LogExpFunctions","err":0.0,"ref":"forwarddiff","guards":24,"trace":36,"jac":62,"method":"factoring","first":2.70,"hit":0.05,"fd":0.55,"speed":10.29,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"softmax 6","pkg":"LogExpFunctions","err":2.8e-17,"ref":"forwarddiff","guards":6,"trace":31,"jac":118,"method":"factoring","first":0.79,"hit":0.05,"fd":0.82,"speed":15.25,"hits":8,"misses":0,"mode":"compiled","extra":"","msg":""},
+{"status":"ok","name":"log1pexp (4 ranges)","pkg":"LogExpFunctions","err":0.0,"ref":"forwarddiff","guards":2,"trace":2,"jac":2,"method":"factoring","first":0.10,"hit":0.04,"fd":0.17,"speed":4.08,"hits":8,"misses":0,"mode":"compiled","extra":"ok,ok,ok,ok","msg":""}]
+;</script>
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const ALL=DATA;
+const OK=ALL.filter(r=>r.status==="ok");
+const FAIL=ALL.filter(r=>r.status!=="ok");
+const $=id=>document.getElementById(id);
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const median=a=>{if(!a.length)return NaN;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const fmt=(x,d=2)=>x==null||!isFinite(x)?"–":(Math.abs(x)>=100?x.toFixed(0):Math.abs(x)>=10?x.toFixed(1):x.toFixed(d));
+const sci=x=>x==null?"–":x===0?"0":x.toExponential(1);
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const k in(attrs||{})){if(k==="class")e.className=attrs[k];else e.setAttribute(k,attrs[k])}for(const c of kids){if(c==null)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e}
+function s(tag,attrs,text){const e=document.createElementNS(NS,tag);for(const k in(attrs||{}))e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+function table(el,head,rows,numCols){el.replaceChildren();const tr=h("tr");head.forEach((t,i)=>tr.append(h("th",{class:numCols.includes(i)?"n":""},t)));el.append(h("thead",{},tr));const tb=h("tbody");rows.forEach(r=>{const row=h("tr",r.cls?{class:r.cls}:{});r.cells.forEach((c,i)=>row.append(h("td",{class:numCols.includes(i)?"n":""},c)));tb.append(row)});el.append(tb)}
+
+const sp=OK.map(r=>r.speed).filter(x=>x!=null);
+const firsts=OK.map(r=>r.first);
+const med=median(sp);
+
+// ---- summary
+$("tiles").append(
+  ...[[`${OK.length} of ${ALL.length}`,"agree with the reference Jacobian"],
+      ["0","disagree with the reference"],
+      [fmt(med)+"×","median speedup of a cached call over ForwardDiff"],
+      [fmt(median(firsts))+" s","median cost of the first call"]]
+  .map(([b,t])=>h("div",{class:"stat"},h("b",{},b),h("span",{},t))));
+$("s-ok").textContent=`${OK.length}`;
+$("s-med").textContent=fmt(med);
+$("s-first").textContent=fmt(median(firsts));
+$("s-firstmax").textContent=fmt(Math.max(...firsts));
+
+// ---- failures table
+function classify(r){
+  const m=r.msg;
+  if(r.status==="plain_failed")return 4;
+  if(/isless|rem not defined|ldexp/.test(m))return 3;
+  if(/no method matching (_?bessel|_?airy|_erfinv|_gamma_inc|_logabsgamma|_trigamma|besseli|besselk)/.test(m))return 1;
+  if(/StackOverflow|guards of a trace failed/.test(m))return 5;
+  return 2;
+}
+const CATS={
+ 1:["Missing special-function methods","Bessels and SpecialFunctions internals have no method for Tracked. Each needs a Tracked method with a derivative rule, or a rewrite in terms of functions FD knows."],
+ 2:["Library rejects the number type","The library requires a type the Tracked number does not satisfy (for example Float64 conversions, ForwardDiff Dual checks, AbstractFloat dispatch, in-place matrix exp)."],
+ 3:["Fixed after the run, not rerun","A method (isless against AbstractFloat, rem, ldexp) was added after this result was recorded."],
+ 4:["The test case fails on plain Float64","The harness's own call to the function throws before any tracing. These are bugs in my test cases."],
+ 5:["Not diagnosed","A stack overflow in two cases, and one QuadGK case where the recorded guards failed on the input they were recorded from."]};
+{
+  const g={};FAIL.forEach(r=>{(g[classify(r)]??=[]).push(r)});
+  const rows=Object.keys(CATS).map(k=>({cells:[CATS[k][0],String((g[k]||[]).length),(g[k]||[]).map(r=>r.name).join("; "),CATS[k][1]]}));
+  table($("failtable"),["Cause","Cases","Which","Detail"],rows,[1]);
+}
+
+// ---- package bars
+{
+  const pk={};ALL.forEach(r=>{(pk[r.pkg]??=[]).push(r)});
+  const list=Object.entries(pk).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
+  const wrap=$("pkgbars");
+  list.forEach(([p,rs])=>{
+    const ok=rs.filter(r=>r.status==="ok").length,bad=rs.length-ok,mx=Math.max(...Object.values(pk).map(v=>v.length));
+    const tr=h("div",{class:"track",style:`width:${100*rs.length/mx}%`});
+    tr.append(h("i",{style:`width:${100*ok/rs.length}%;background:var(--ok)`}),h("i",{style:`width:${100*bad/rs.length}%;background:var(--bad)`}));
+    wrap.append(h("div",{class:"barrow"},h("span",{class:"nm",title:p},p),h("div",{style:"min-width:0"},tr),h("span",{class:"ct"},`${ok}/${rs.length}`)));
+  });
+}
+
+// ---- scales
+const logx=(v,lo,hi,a,b)=>a+(Math.log10(v)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo))*(b-a);
+function axes(svg,W,H,m,xt,yt,xs,ys,xl,yl,xfmt,yfmt){
+  yt.forEach(t=>{const y=ys(t);svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y,y2:y,class:"gr"}),s("text",{x:m.l-6,y:y+4,"text-anchor":"end"},yfmt(t)))});
+  xt.forEach(t=>{const x=xs(t);svg.append(s("line",{x1:x,x2:x,y1:m.t,y2:H-m.b,class:"gr"}),s("text",{x:x,y:H-m.b+14,"text-anchor":"middle"},xfmt(t)))});
+  svg.append(s("line",{x1:m.l,x2:m.l,y1:m.t,y2:H-m.b,class:"ax"}),s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,class:"ax"}));
+  if(xl)svg.append(s("text",{x:(m.l+W-m.r)/2,y:H-4,"text-anchor":"middle"},xl));
+  if(yl)svg.append(s("text",{x:12,y:(m.t+H-m.b)/2,"text-anchor":"middle",transform:`rotate(-90 12 ${(m.t+H-m.b)/2})`},yl));
+}
+
+// ---- speedup strip
+{
+  const svg=$("chart-strip"),W=900,H=340,m={l:48,r:10,t:10,b:34};
+  const lo=0.5,hi=500,sorted=[...OK].filter(r=>r.speed!=null).sort((a,b)=>a.speed-b.speed);
+  const ys=v=>logx(v,lo,hi,H-m.b,m.t),n=sorted.length,bw=(W-m.l-m.r)/n;
+  axes(svg,W,H,m,[],[1,3,10,30,100,300],()=>0,ys,"","speedup over ForwardDiff",null,v=>v+"×");
+  sorted.forEach((r,i)=>{
+    const x=m.l+i*bw,y=ys(r.speed),y0=ys(1);
+    const top=Math.min(y,y0),ht=Math.max(1,Math.abs(y0-y));
+    const rect=s("rect",{x:x+0.5,y:top,width:Math.max(1,bw-1),height:ht,fill:r.speed<1?"var(--fd)":"var(--trace)"});
+    rect.append(s("title",{},`${r.name} (${r.pkg}): ${fmt(r.speed)}×`));svg.append(rect);
+  });
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:ys(1),y2:ys(1),class:"solid"}));
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:ys(med),y2:ys(med),class:"ref"}),s("text",{x:W-m.r-4,y:ys(med)-5,"text-anchor":"end"},`median ${fmt(med)}×`));
+  svg.append(s("text",{x:m.l,y:H-8},"cases, slowest to fastest relative to ForwardDiff"));
+}
+
+// ---- histogram
+{
+  const bins=[["below 1×",0,1],["1× to 3×",1,3],["3× to 10×",3,10],["10× to 30×",10,30],["30× to 100×",30,100],["100× and above",100,1e9]];
+  const counts=bins.map(([,a,b])=>sp.filter(x=>x>=a&&x<b).length),mx=Math.max(...counts);
+  bins.forEach(([n],i)=>$("hist").append(h("div",{class:"barrow"},h("span",{class:"nm"},n),
+    h("div",{class:"track"},h("i",{style:`width:${100*counts[i]/mx}%;background:${i===0?"var(--fd)":"var(--trace)"}`})),h("span",{class:"ct"},String(counts[i])))));
+}
+
+// ---- scatter hit vs fd
+{
+  const svg=$("chart-scatter"),W=420,H=340,m={l:46,r:12,t:10,b:36};
+  const pts=OK.filter(r=>r.hit!=null&&r.fd!=null);
+  const lo=0.01,hi=100,xs=v=>logx(v,lo,hi,m.l,W-m.r),ys=v=>logx(v,lo,hi,H-m.b,m.t);
+  const tk=[0.01,0.1,1,10,100],f=v=>v>=1?String(v):String(v);
+  axes(svg,W,H,m,tk,tk,xs,ys,"ForwardDiff, µs per Jacobian","cached trace, µs",f,f);
+  [[1,"solid",""],[10,"ref","10×"],[100,"ref","100×"]].forEach(([k,c,l])=>{
+    svg.append(s("line",{x1:xs(lo*k),y1:ys(lo),x2:xs(hi),y2:ys(hi/k),class:c}));
+    if(l)svg.append(s("text",{x:xs(hi)-4,y:ys(hi/k)-4,"text-anchor":"end"},l));
+  });
+  pts.forEach(r=>{const c=s("circle",{cx:xs(Math.max(r.fd,lo)),cy:ys(Math.max(r.hit,lo)),r:3.4,fill:"var(--trace)","fill-opacity":.65});
+    c.append(s("title",{},`${r.name}: trace ${fmt(r.hit)} µs, ForwardDiff ${fmt(r.fd)} µs`));svg.append(c)});
+}
+
+// ---- package table
+{
+  const pk={};OK.forEach(r=>{(pk[r.pkg]??=[]).push(r)});
+  const tot={};ALL.forEach(r=>{tot[r.pkg]=(tot[r.pkg]||0)+1});
+  const rows=Object.entries(pk).sort((a,b)=>median(b[1].map(r=>r.speed))-median(a[1].map(r=>r.speed))).map(([p,rs])=>{
+    const v=rs.map(r=>r.speed);return {cells:[p,`${rs.length}/${tot[p]}`,fmt(median(v))+"×",fmt(Math.min(...v))+"×",fmt(Math.max(...v))+"×",fmt(median(rs.map(r=>r.first)))]}});
+  table($("pkgtable"),["Package","Agree / cases","Median speedup","Lowest","Highest","Median first call, s"],rows,[1,2,3,4,5]);
+}
+
+// ---- first call
+{
+  const svg=$("chart-first"),W=420,H=340,m={l:46,r:12,t:10,b:36};
+  const lo=0.05,hi=20,xlo=1,xhi=1e5,xs=v=>logx(Math.max(v,xlo),xlo,xhi,m.l,W-m.r),ys=v=>logx(Math.max(v,lo),lo,hi,H-m.b,m.t);
+  axes(svg,W,H,m,[1,10,100,1e3,1e4,1e5],[0.1,1,10],xs,ys,"nodes in the Jacobian","first call, seconds",v=>v>=1000?(v/1000)+"k":String(v),v=>String(v));
+  OK.forEach(r=>{const c=s("circle",{cx:xs(r.jac),cy:ys(r.first),r:3.4,fill:"var(--trace)","fill-opacity":.65});
+    c.append(s("title",{},`${r.name}: ${fmt(r.first)} s, ${r.jac} Jacobian nodes`));svg.append(c)});
+  const be=OK.filter(r=>r.fd!=null&&r.hit!=null&&r.fd>r.hit).map(r=>({r,n:r.first/((r.fd-r.hit)*1e-6)}));
+  const bins=[["under 1,000",0,1e3],["1,000 to 10,000",1e3,1e4],["10,000 to 100,000",1e4,1e5],["100,000 to 1,000,000",1e5,1e6],["over 1,000,000",1e6,Infinity]];
+  const counts=bins.map(([,a,b])=>be.filter(x=>x.n>=a&&x.n<b).length),mx=Math.max(...counts);
+  bins.forEach(([n],i)=>$("breakeven").append(h("div",{class:"barrow"},h("span",{class:"nm"},n),
+    h("div",{class:"track"},h("i",{style:`width:${100*counts[i]/mx}%;background:var(--trace)`})),h("span",{class:"ct"},String(counts[i])))));
+  $("breakeven").append(h("div",{class:"meta"},`median: ${Math.round(median(be.map(x=>x.n))).toLocaleString("en-US")} calls`));
+}
+
+// ---- method and mode tables
+{
+  const count=(k)=>{const c={};OK.forEach(r=>{c[r[k]]=(c[r[k]]||0)+1});return Object.entries(c).sort((a,b)=>b[1]-a[1])};
+  table($("methodtable"),["Method","Cases","Median first call, s"],count("method").map(([k,n])=>({cells:[k,String(n),fmt(median(OK.filter(r=>r.method===k).map(r=>r.first)))]})),[1,2]);
+  table($("modetable"),["Mode","Cases","Median guards"],count("mode").map(([k,n])=>({cells:[k,String(n),fmt(median(OK.filter(r=>r.mode===k).map(r=>r.guards)),0)]})),[1,2]);
+  const er=OK.map(r=>r.err).filter(x=>x!=null);
+  $("reuse").textContent=`Reuse under perturbation: ${OK.filter(r=>r.hits>0).length} of ${OK.length} passing cases reused their trace on at least one of the 8 perturbed inputs. In ${OK.filter(r=>r.misses>0).length} cases at least one perturbed input took a different branch and caused a new recording, as expected for functions with comparisons near a threshold or with data-dependent loop counts. Accuracy: the largest error against the reference is ${sci(Math.max(...er))} and the median is ${sci(median(er))}.`;
+}
+
+// ---- all results
+{
+  const cols=[["Case",r=>r.name,0],["Package",r=>r.pkg,0],["Outcome",r=>r.status==="ok"?"ok":"failed",0],["Guards",r=>r.guards,1],["Trace",r=>r.trace,1],["Jac",r=>r.jac,1],["Method",r=>r.method,0],["Mode",r=>r.mode,0],["First, s",r=>r.first,1],["Hit, µs",r=>r.hit,1],["FD, µs",r=>r.fd,1],["×",r=>r.speed,1],["Error",r=>r.err,1]];
+  let sortCol=-1,asc=true;
+  const t=$("alltable");
+  function render(){
+    const q=$("q").value.toLowerCase(),st=$("st").value;
+    let rows=ALL.filter(r=>(!q||(r.name+" "+r.pkg).toLowerCase().includes(q))&&(!st||(st==="ok")===(r.status==="ok")));
+    if(sortCol>=0){const g=cols[sortCol][1];rows=[...rows].sort((a,b)=>{const x=g(a),y=g(b);if(x==null)return 1;if(y==null)return -1;return(typeof x==="number"?x-y:String(x).localeCompare(String(y)))*(asc?1:-1)})}
+    t.replaceChildren();
+    const tr=h("tr");cols.forEach(([n,,num],i)=>{const th=h("th",{class:"sortable"+(num?" n":""),tabindex:"0",role:"button"},n+(i===sortCol?(asc?" ▲":" ▼"):""));
+      const go=()=>{if(sortCol===i)asc=!asc;else{sortCol=i;asc=true}render()};th.addEventListener("click",go);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}});tr.append(th)});
+    t.append(h("thead",{},tr));
+    const tb=h("tbody");
+    rows.forEach(r=>{const row=h("tr",r.status==="ok"?{}:{class:"fail",title:r.msg});
+      cols.forEach(([n,g,num])=>{let v=g(r),c;
+        if(n==="Outcome")c=h("span",{class:"tag "+(v==="ok"?"ok":"bad")},v);
+        else if(n==="Error")c=r.err==null?"–":sci(r.err);
+        else if(num)c=r.status==="ok"||n==="Guards"&&false?(["Guards","Trace","Jac"].includes(n)?String(v):fmt(v)):"–";
+        else c=v;
+        row.append(h("td",{class:num?"n":""},c))});
+      tb.append(row)});
+    t.append(tb);
+  }
+  $("q").addEventListener("input",render);$("st").addEventListener("change",render);render();
+}
+})();
+</script>
